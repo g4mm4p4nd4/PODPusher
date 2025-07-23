@@ -8,6 +8,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="container mx-auto flex gap-4">
           <Link href="/" className="hover:underline">Home</Link>
           <Link href="/generate" className="hover:underline">Generate</Link>
+          <Link href="/categories" className="hover:underline">Categories</Link>
         </div>
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>

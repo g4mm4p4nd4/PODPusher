@@ -58,3 +58,11 @@ returns Valentine’s Day, the Super Bowl and more.
 Top print‑on‑demand categories include apparel, home decor, drinkware and
 accessories. Among apparel, t‑shirts, sportswear and leggings are the most
 popular products.
+
+## Trending Product Categories
+The `/product-categories` endpoint returns 2025’s leading niches based on market
+research. Categories include apparel, home_decor, pet_items, jewelry,
+accessories, tech_accessories, athletic_accessories and holiday_items. These
+lists show that unisex t‑shirts, hoodies, leggings, mugs and posters lead sales.
+
+Start the frontend and navigate to `/categories` to view them.

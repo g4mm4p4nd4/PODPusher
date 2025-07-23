@@ -57,6 +57,81 @@ FALLBACK_TRENDS = {
     ],
 }
 
+# Fallback product categories for 2025 based on market research
+FALLBACK_CATEGORIES = {
+    "apparel": [
+        "unisex t-shirts",
+        "oversized hoodies",
+        "athleisure",
+        "yoga pants",
+        "leggings",
+    ],
+    "home_decor": [
+        "coffee mugs",
+        "canvases",
+        "posters",
+        "acrylic plaques",
+        "metal prints",
+        "wall decals",
+        "doormats",
+        "carpets",
+        "pillows",
+        "blankets",
+        "candles",
+        "coasters",
+    ],
+    "pet_items": [
+        "harnesses",
+        "leashes",
+        "bandanas",
+        "pet clothing",
+        "beds",
+        "bowls",
+        "collars",
+        "tags",
+        "blankets",
+    ],
+    "jewelry": ["engraved bracelets", "engraved necklaces"],
+    "accessories": [
+        "tote bags",
+        "stickers",
+        "caps",
+        "backpacks",
+        "bandanas",
+        "patches",
+        "socks",
+        "beanies",
+        "bucket hats",
+        "flip-flops",
+        "belt bags",
+    ],
+    "tech_accessories": [
+        "phone cases",
+        "wireless chargers",
+        "mousepads",
+        "laptop sleeves",
+        "popsocket grips",
+        "bluetooth speakers",
+        "water bottles",
+    ],
+    "athletic_accessories": [
+        "yoga mats",
+        "gym gear",
+        "gloves",
+        "backpacks",
+        "duffle bags",
+    ],
+    "holiday_items": [
+        "Valentine’s shirts",
+        "Mother’s Day tote bags",
+        "Father’s Day cards",
+        "Halloween costumes",
+        "Christmas ornaments",
+        "New Year greeting cards",
+        "back-to-school stationery",
+    ],
+}
+
 
 async def fetch_trends(category: str | None = None) -> List[dict]:
     terms = []
@@ -90,3 +165,17 @@ async def fetch_trends(category: str | None = None) -> List[dict]:
             await session.refresh(trend)
             trends.append({"term": trend.term, "category": trend.category})
     return trends
+
+
+def get_trending_categories(category: str | None = None) -> List[dict]:
+    """Return 2025 trending product categories and popular items."""
+
+    if category:
+        key = category.lower()
+        items = FALLBACK_CATEGORIES.get(key)
+        if items:
+            return [{"name": key, "items": items}]
+        return []
+    return [
+        {"name": name, "items": items} for name, items in FALLBACK_CATEGORIES.items()
+    ]
