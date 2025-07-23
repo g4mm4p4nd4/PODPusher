@@ -23,8 +23,12 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
     key = os.getenv("OPENAI_API_KEY")
     month = datetime.utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])
+    prompt_events = ", ".join(events)
     prompts = [
-        f"Generate a product idea for the {cat} niche around '{term}'. Consider upcoming {', '.join(events)}"
+        (
+            f"Generate a product idea for the {cat} niche around '{term}'. "
+            f"Consider upcoming {prompt_events}"
+        )
         for term, cat in formatted
     ]
 

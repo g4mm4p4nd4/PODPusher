@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
-from .service import fetch_trends
+from .service import fetch_trends, get_trending_categories
 from .events import EVENTS
 from ..tasks import celery_app
 
@@ -23,8 +23,18 @@ class EventsResponse(BaseModel):
     events: list[str]
 
 
+class ProductCategory(BaseModel):
+    name: str
+    items: list[str]
+
+
 @app.get("/events/{month}", response_model=EventsResponse)
 async def get_events(month: str):
     month_key = month.lower() if month else datetime.utcnow().strftime("%B").lower()
     events = EVENTS.get(month_key, [])
     return {"month": month_key.capitalize(), "events": events}
+
+
+@app.get("/categories", response_model=list[ProductCategory])
+async def get_categories(category: str | None = None):
+    return get_trending_categories(category)

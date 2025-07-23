@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import FastAPI
-from ..trend_scraper.service import fetch_trends
+from ..trend_scraper.service import fetch_trends, get_trending_categories
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
@@ -21,3 +21,8 @@ async def generate():
     listing["listing_url"] = listing.get("etsy_url")
     listing["events"] = events
     return listing
+
+
+@app.get("/product-categories")
+async def product_categories(category: str | None = None):
+    return get_trending_categories(category)
