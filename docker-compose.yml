@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: pod
+  trend_scraper:
+    build: .
+    command: uvicorn services.trend_scraper.api:app --port 8001 --host 0.0.0.0
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+  ideation:
+    build: .
+    command: uvicorn services.ideation.api:app --port 8002 --host 0.0.0.0
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+  image_gen:
+    build: .
+    command: uvicorn services.image_gen.api:app --port 8003 --host 0.0.0.0
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+  integration:
+    build: .
+    command: uvicorn services.integration.api:app --port 8004 --host 0.0.0.0
+    environment:
+      - PRINTIFY_API_KEY=${PRINTIFY_API_KEY}
+      - ETSY_API_KEY=${ETSY_API_KEY}
+  gateway:
+    build: .
+    command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
+  worker:
+    build: .
+    command: celery -A services.tasks worker -l info
+    environment:
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - redis
+      - db

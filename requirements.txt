@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pytrends
+openai
+celery
+redis
+sqlmodel
+psycopg[binary]
+pytest
+pytest-asyncio
+flake8
+black
+aiosqlite
