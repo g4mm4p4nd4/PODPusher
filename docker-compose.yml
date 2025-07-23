@@ -32,6 +32,16 @@ services:
   gateway:
     build: .
     command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
+  frontend:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - ./client:/app
+    command: sh -c "npm install && npm run build && npm start"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
   worker:
     build: .
     command: celery -A services.tasks worker -l info

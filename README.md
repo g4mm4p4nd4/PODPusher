@@ -28,6 +28,17 @@ flake8
 pytest
 ```
 
+## Frontend Dashboard
+
+The dashboard lives in the `client/` directory and uses Next.js with Tailwind CSS.
+To start it locally:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
 ## Trend Categories
 The `/trends` service exposes popular niches such as animals and pets, activism,
 families and couples, humor and memes, job or hobby related topics, health and
