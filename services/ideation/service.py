@@ -1,33 +1,62 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 import os
+from datetime import datetime
 from ..models import Idea
 from ..common.database import get_session
+from ..trend_scraper.events import EVENTS
 
 
-async def generate_ideas(trends: List[str]) -> List[Dict]:
-    if os.getenv("OPENAI_API_KEY"):
+TrendInput = Union[str, Dict]
+
+
+async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
+    formatted = []
+    for t in trends:
+        if isinstance(t, dict):
+            term = t.get("term")
+            category = t.get("category", "general")
+        else:
+            term = t
+            category = "general"
+        formatted.append((term, category))
+
+    key = os.getenv("OPENAI_API_KEY")
+    month = datetime.utcnow().strftime("%B").lower()
+    events = EVENTS.get(month, [])
+    prompts = [
+        f"Generate a product idea for the {cat} niche around '{term}'. Consider upcoming {', '.join(events)}"
+        for term, cat in formatted
+    ]
+
+    if key:
         try:
             import openai
 
             responses = [
                 openai.ChatCompletion.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Idea for {t}"}],
+                    messages=[{"role": "user", "content": p}],
                 )
-                for t in trends
+                for p in prompts
             ]
             ideas_text = [r.choices[0].message.content for r in responses]
         except Exception:
-            ideas_text = [f"idea about {t}" for t in trends]
+            ideas_text = prompts
     else:
-        ideas_text = [f"idea about {t}" for t in trends]
+        product_types = ["t-shirt", "mug", "sticker", "tote bag"]
+        ideas_text = []
+        for term, _cat in formatted:
+            for ptype in product_types[:2]:
+                ideas_text.append(f"{term} {ptype}")
 
     ideas = []
     async with get_session() as session:
-        for trend, text in zip(trends, ideas_text):
+        for (term, cat), text in zip(formatted, ideas_text):
             idea = Idea(trend_id=0, description=text)  # stub trend_id
             session.add(idea)
             await session.commit()
             await session.refresh(idea)
-            ideas.append({"description": idea.description})
+            ideas.append(
+                {"description": idea.description, "term": term, "category": cat}
+            )
     return ideas
