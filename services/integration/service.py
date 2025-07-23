@@ -24,4 +24,5 @@ def publish_listing(product: dict) -> dict:
     else:
         url = "http://etsy.example/listing"
     product["etsy_url"] = url
+    product["listing_url"] = url
     return product
