@@ -132,6 +132,94 @@ FALLBACK_CATEGORIES = {
     ],
 }
 
+# Trending design inspiration categories for 2025
+FALLBACK_DESIGN_INSPIRATIONS = {
+    "photo_upload": [
+        "personalized acrylic plaques",
+        "photo blankets",
+        "photo puzzles",
+    ],
+    "besties_couples": [
+        "matching t-shirts",
+        "custom mugs",
+        "friendship bracelets",
+    ],
+    "word_repeat": [
+        "stacked text hoodies",
+        "monotone word art posters",
+    ],
+    "text_quotes": [
+        "motivational quote canvas",
+        "sassy statement mugs",
+        "hand-lettered wall art",
+    ],
+    "animals_pets": [
+        "pet portrait tees",
+        "custom pet bandanas",
+        "paw print blankets",
+    ],
+    "landscapes": [
+        "sunset mountain posters",
+        "beach scene canvases",
+        "city skyline art",
+    ],
+    "cartoon_characters_superheroes": [
+        "fan art hoodies",
+        "superhero mugs",
+        "comic style stickers",
+    ],
+    "3d_effects": [
+        "holographic decals",
+        "3D typography shirts",
+        "layered shadow posters",
+    ],
+    "brush_strokes": [
+        "abstract brush stroke prints",
+        "paint splatter tees",
+        "modern art canvases",
+    ],
+    "pop_culture": [
+        "viral meme shirts",
+        "nostalgic tv quote mugs",
+        "music lyric posters",
+    ],
+    "crypto_themes": [
+        "bitcoin slogan shirts",
+        "blockchain meme stickers",
+        "NFT-inspired prints",
+    ],
+    "funny_daily_life": [
+        "work-from-home humor mugs",
+        "parenting fails tees",
+        "coffee addiction stickers",
+    ],
+    "minimalism": [
+        "simple line art tees",
+        "monochrome posters",
+        "clean typography stickers",
+    ],
+    "vintage_retro": [
+        "70s sunset tees",
+        "retro typography posters",
+        "distressed logo mugs",
+    ],
+    "y2k_nostalgia": [
+        "2000s clipart stickers",
+        "sparkle gradient shirts",
+        "vaporwave canvases",
+    ],
+    "goblincore_cottagecore": [
+        "mushroom forest art",
+        "gothic cottage mugs",
+        "garden sprite tees",
+    ],
+    "eco_humor": [
+        "recycle joke stickers",
+        "sustainability pun tees",
+        "green living posters",
+    ],
+}
+
 
 async def fetch_trends(category: str | None = None) -> List[dict]:
     terms = []
@@ -178,4 +266,19 @@ def get_trending_categories(category: str | None = None) -> List[dict]:
         return []
     return [
         {"name": name, "items": items} for name, items in FALLBACK_CATEGORIES.items()
+    ]
+
+
+def get_design_ideas(category: str | None = None) -> List[dict]:
+    """Return trending design inspirations filtered by category."""
+
+    if category:
+        key = category.lower()
+        ideas = FALLBACK_DESIGN_INSPIRATIONS.get(key)
+        if ideas:
+            return [{"name": key, "ideas": ideas}]
+        return []
+    return [
+        {"name": name, "ideas": ideas}
+        for name, ideas in FALLBACK_DESIGN_INSPIRATIONS.items()
     ]

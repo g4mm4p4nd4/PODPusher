@@ -66,3 +66,9 @@ accessories, tech_accessories, athletic_accessories and holiday_items. These
 lists show that unisex t‑shirts, hoodies, leggings, mugs and posters lead sales.
 
 Start the frontend and navigate to `/categories` to view them.
+
+## Design Inspirations
+The `/design-ideas` endpoint returns trending design themes for 2025 such as
+photo uploads, besties & couples, animals & pets and more. Each category
+includes example product ideas like personalized acrylic plaques or photo
+blankets. View them in the dashboard at `/design`.

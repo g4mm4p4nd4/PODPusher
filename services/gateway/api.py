@@ -1,6 +1,10 @@
 from datetime import datetime
 from fastapi import FastAPI
-from ..trend_scraper.service import fetch_trends, get_trending_categories
+from ..trend_scraper.service import (
+    fetch_trends,
+    get_trending_categories,
+    get_design_ideas,
+)
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
@@ -26,3 +30,8 @@ async def generate():
 @app.get("/product-categories")
 async def product_categories(category: str | None = None):
     return get_trending_categories(category)
+
+
+@app.get("/design-ideas")
+async def design_ideas(category: str | None = None):
+    return get_design_ideas(category)
