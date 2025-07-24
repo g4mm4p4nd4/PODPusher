@@ -6,7 +6,7 @@ from ..trend_scraper.service import (
     get_design_ideas,
     get_product_suggestions,
 )
-from ..ideation.service import generate_ideas
+from ..ideation.service import generate_ideas, suggest_tags
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
 from ..trend_scraper.events import EVENTS
@@ -41,3 +41,9 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+@app.post("/suggest-tags")
+async def suggest_tags_route(data: dict):
+    description = data.get("description", "") if data else ""
+    return await suggest_tags(description)
