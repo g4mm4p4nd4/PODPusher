@@ -1,4 +1,5 @@
 import Link from 'next/link';
+
 import { ReactNode, useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -22,12 +23,19 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/categories" className="hover:underline">Categories</Link>
           <Link href="/design" className="hover:underline">Design Ideas</Link>
           <Link href="/suggestions" className="hover:underline">Suggestions</Link>
+
+          
           <span className="ml-auto text-sm" data-testid="quota">
             {usage ? `${usage.images_used}/${usage.limit} images` : ''}
           </span>
         </div>
+        
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>
     </div>
   );
 }
+://.com/g4mm4p4nd4/PODPusher/blob/codex/implement-user-plans-and-quotas/client/components/Layout.tsx
+
+
+X
