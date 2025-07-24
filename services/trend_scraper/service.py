@@ -282,3 +282,43 @@ def get_design_ideas(category: str | None = None) -> List[dict]:
         {"name": name, "ideas": ideas}
         for name, ideas in FALLBACK_DESIGN_INSPIRATIONS.items()
     ]
+
+
+def get_product_suggestions(
+    category: str | None = None, design: str | None = None
+) -> List[dict]:
+    """Return combined product suggestions using categories and design themes."""
+
+    import random
+
+    categories = (
+        {category.lower(): FALLBACK_CATEGORIES.get(category.lower(), [])}
+        if category
+        else FALLBACK_CATEGORIES
+    )
+    designs = (
+        {design.lower(): FALLBACK_DESIGN_INSPIRATIONS.get(design.lower(), [])}
+        if design
+        else FALLBACK_DESIGN_INSPIRATIONS
+    )
+
+    suggestions: list[dict] = []
+    design_keys = list(designs.keys())
+
+    for cat_name, items in categories.items():
+        if not items or not design_keys:
+            continue
+        theme = random.choice(design_keys)
+        idea = random.choice(designs[theme])
+        item = random.choice(items)
+        suggestions.append(
+            {
+                "category": cat_name,
+                "design_theme": theme,
+                "suggestion": f"{idea} {item}",
+            }
+        )
+        if len(suggestions) >= 10:
+            break
+
+    return suggestions

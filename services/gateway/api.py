@@ -4,6 +4,7 @@ from ..trend_scraper.service import (
     fetch_trends,
     get_trending_categories,
     get_design_ideas,
+    get_product_suggestions,
 )
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
@@ -35,3 +36,8 @@ async def product_categories(category: str | None = None):
 @app.get("/design-ideas")
 async def design_ideas(category: str | None = None):
     return get_design_ideas(category)
+
+
+@app.get("/product-suggestions")
+async def product_suggestions(category: str | None = None, design: str | None = None):
+    return get_product_suggestions(category, design)

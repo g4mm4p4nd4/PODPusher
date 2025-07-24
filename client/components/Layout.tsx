@@ -10,6 +10,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/generate" className="hover:underline">Generate</Link>
           <Link href="/categories" className="hover:underline">Categories</Link>
           <Link href="/design" className="hover:underline">Design Ideas</Link>
+          <Link href="/suggestions" className="hover:underline">Suggestions</Link>
         </div>
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>
