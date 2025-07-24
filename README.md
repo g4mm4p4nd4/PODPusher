@@ -72,3 +72,14 @@ The `/design-ideas` endpoint returns trending design themes for 2025 such as
 photo uploads, besties & couples, animals & pets and more. Each category
 includes example product ideas like personalized acrylic plaques or photo
 blankets. View them in the dashboard at `/design`.
+
+## Product Suggestions
+`/product-suggestions` combines trending categories with design inspirations so
+you can quickly brainstorm new listings. Categories include apparel, home decor,
+pet items, jewelry, accessories, tech accessories, athletic accessories and
+holiday items. Design themes span photo upload, besties/couples, word repeat,
+text quotes, animals/pets, landscapes, cartoon characters/superheroes, 3D
+effects, brush strokes, pop culture, crypto themes, funny daily life,
+minimalism, vintage/retro, y2k nostalgia, goblincore/cottagecore and eco humor.
+Visit `/suggestions` in the dashboard to see up to ten phrases like "sunset
+mountain posters" or "paw print blankets" mixed with product types.
