@@ -1,5 +1,6 @@
 from typing import List, Dict, Union
 import os
+import json
 from datetime import datetime
 from ..models import Idea
 from ..common.database import get_session
@@ -64,3 +65,35 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
                 {"description": idea.description, "term": term, "category": cat}
             )
     return ideas
+
+
+async def suggest_tags(description: str) -> List[str]:
+    """Return a simple list of tag suggestions for a description."""
+    key = os.getenv("OPENAI_API_KEY")
+    if key:
+        try:
+            import openai
+
+            resp = openai.ChatCompletion.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Suggest up to 13 Etsy tags as a JSON array for: "
+                            f"{description}"
+                        ),
+                    }
+                ],
+            )
+            text = resp.choices[0].message.content
+            tags = (
+                json.loads(text)
+                if text.strip().startswith("[")
+                else [t.strip() for t in text.split(",")]
+            )
+        except Exception:
+            tags = description.split()[:5]
+    else:
+        tags = list({w.strip("#,.") for w in description.split()})[:5]
+    return tags
