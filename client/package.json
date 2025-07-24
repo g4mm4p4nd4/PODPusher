@@ -16,5 +16,7 @@
     "postcss": "8.4.38",
     "autoprefixer": "10.4.17",
     "axios": "1.6.8"
+    ,"chart.js": "4.4.3"
+    ,"react-chartjs-2": "5.2.0"
   }
 }
