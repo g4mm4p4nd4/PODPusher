@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "next": "14.2.3",
@@ -16,5 +17,8 @@
     "postcss": "8.4.38",
     "autoprefixer": "10.4.17",
     "axios": "1.6.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.43.1"
   }
 }

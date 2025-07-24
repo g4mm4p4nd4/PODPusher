@@ -22,6 +22,9 @@ class Product(SQLModel, table=True):
     idea_id: int
     image_url: str
     sku: Optional[str] = None
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    tags: Optional[str] = None
+    flagged: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

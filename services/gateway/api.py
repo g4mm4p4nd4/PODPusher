@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from ..trend_scraper.service import (
     fetch_trends,
     get_trending_categories,
@@ -10,6 +10,8 @@ from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
 from ..trend_scraper.events import EVENTS
+from ..image_review.api import ReviewUpdate
+from ..image_review.service import list_reviews, update_review
 
 app = FastAPI()
 
@@ -41,3 +43,16 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+@app.get("/api/images/review")
+async def get_image_reviews():
+    return await list_reviews()
+
+
+@app.post("/api/images/review/{product_id}")
+async def review_image(product_id: int, data: ReviewUpdate):
+    product = await update_review(product_id, data.rating, data.tags, data.flagged)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
