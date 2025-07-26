@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from .service import generate_images
+from ..common.quotas import quota_middleware
 
 app = FastAPI()
+app.middleware("http")(quota_middleware)
 
 
 class IdeaList(BaseModel):
