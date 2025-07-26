@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+mport { defineConfig } from '@playwright/test';
 
 export default defineConfig({
     webServer: {
