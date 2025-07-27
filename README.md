@@ -87,3 +87,7 @@ mountain posters" or "paw print blankets" mixed with product types.
 ## Localization
 
 The dashboard is fully translated using `next-i18next`. Translation files are located in `client/locales/<lang>/common.json`. Use the language switcher in the navigation bar to change languages. To add a new locale, create a folder with translations matching the keys in the English file and update `client/next-i18next.config.js`.
+
+## Notifications & Scheduling
+
+The backend includes a notifications service with a background scheduler. Monthly jobs reset image quotas for all users and create a reminder notification. Weekly jobs send a trending keywords summary based on the latest scraped data. Visit `/notifications` in the dashboard to view and mark messages as read. Unread counts appear beside a bell icon in the navigation bar.

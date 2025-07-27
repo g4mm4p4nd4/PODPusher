@@ -41,5 +41,9 @@
   "analytics": {
     "title": "Analítica de palabras clave",
     "revenue": "Ingresos"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markRead": "Marcar como leído"
   }
 }

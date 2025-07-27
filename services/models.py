@@ -41,3 +41,11 @@ class User(SQLModel, table=True):
     plan: str = "free"
     images_used: int = 0
     last_reset: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Notification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    message: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    read: bool = False
