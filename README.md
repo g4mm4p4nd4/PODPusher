@@ -83,3 +83,14 @@ effects, brush strokes, pop culture, crypto themes, funny daily life,
 minimalism, vintage/retro, y2k nostalgia, goblincore/cottagecore and eco humor.
 Visit `/suggestions` in the dashboard to see up to ten phrases like "sunset
 mountain posters" or "paw print blankets" mixed with product types.
+
+## Notifications & Scheduling
+
+Users receive in‑app alerts for monthly quota resets and weekly trend summaries.
+The notifications API is available under `/api/notifications` with endpoints to
+list, create and mark notifications as read. A background scheduler triggers the
+quota reset on the first day of each month and sends trending category summaries
+every week.
+
+The dashboard shows a bell icon with unread counts in the navigation bar. Click
+it to reveal recent notifications and mark them as read.

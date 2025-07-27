@@ -1,4 +1,3 @@
-import os
 import pytest
 from httpx import AsyncClient, ASGITransport
 from services.image_gen.api import app as image_app

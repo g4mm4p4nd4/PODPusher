@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
 import axios from 'axios';
+import Notifications from './Notifications';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [usage, setUsage] = useState<{ plan: string; images_used: number; limit: number } | null>(null);
@@ -26,6 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span className="ml-auto text-sm" data-testid="quota">
             {usage ? `${usage.images_used}/${usage.limit} images` : ''}
           </span>
+          <Notifications />
         </div>
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>
