@@ -7,6 +7,7 @@ from ..models import User
 
 PLAN_LIMITS = {"free": 20}
 
+
 async def quota_middleware(request: Request, call_next):
     if request.url.path != "/images" or request.method.upper() != "POST":
         return await call_next(request)
