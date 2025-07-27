@@ -24,6 +24,7 @@
 16. [Marketing & Growth Strategy](#16-marketing--growth-strategy)
 17. [Definition of Done](#17-definition-of-done)
 18. [Appendices](#18-appendices)
+19. [Status & Next Steps](#19-status--next-steps)
 
 ---
 
@@ -295,6 +296,18 @@ A feature or pull request is DONE when:
 - **A.** *POD Development Prompt* (POD.md) – parsed reference for system requirements.
 - **B.** Glossary – definitions for trend, brief, SKU, listing, etc.
 - **C.** External API Docs index – links to Etsy v3, Printify, Stripe, OpenAI images.
+
+---
+
+## 19 | Status & Next Steps
+
+- **Pending pull requests:** new PRs from Codex for user quota features and the image review & tagging feature await review and merge.
+- **Backend_Coder:** integrate real Printify and Etsy APIs by replacing stubs in `services/integration/service.py`; implement the social media generator service; enhance analytics endpoints to return real metrics; remove placeholder code once integrations pass tests.
+- **Frontend_Coder:** finalise UI components for user quota display, the image review & rating tool, listing composer enhancements, social media generator, and analytics dashboard improvements.
+- **Integrations_Engineer:** build Printify, Etsy (with OAuth flow), and Stripe billing integrations with robust authentication and error handling.
+- **QA:** expand unit, integration and e2e tests to cover all new features and verify system performance and reliability.
+- **Docs_Writer:** update `/docs/internal_docs.md` with the latest architecture and features, and document new services.
+- **Additional improvements:** add structured logging, health checks and metrics across services, finalise listing composer updates, and remove all stubs after testing completes.
 
 ---
 
