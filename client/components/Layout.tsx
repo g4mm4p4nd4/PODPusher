@@ -22,6 +22,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/categories" className="hover:underline">Categories</Link>
           <Link href="/design" className="hover:underline">Design Ideas</Link>
           <Link href="/suggestions" className="hover:underline">Suggestions</Link>
+          <Link href="/search" className="hover:underline">Search</Link>
           <Link href="/analytics" className="hover:underline">Analytics</Link>
           <span className="ml-auto text-sm" data-testid="quota">
             {usage ? `${usage.images_used}/${usage.limit} images` : ''}

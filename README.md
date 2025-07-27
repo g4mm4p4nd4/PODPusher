@@ -83,3 +83,9 @@ effects, brush strokes, pop culture, crypto themes, funny daily life,
 minimalism, vintage/retro, y2k nostalgia, goblincore/cottagecore and eco humor.
 Visit `/suggestions` in the dashboard to see up to ten phrases like "sunset
 mountain posters" or "paw print blankets" mixed with product types.
+## Search API
+Use `/api/search` to search products by keyword and filters.
+
+```bash
+curl "http://localhost:8000/api/search?q=cat&category=animals&rating_min=4"
+```

@@ -9,6 +9,7 @@ from ..trend_scraper.service import (
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
+from ..search.service import search_products
 from ..image_review.api import app as review_app
 from ..trend_scraper.events import EVENTS
 
@@ -43,3 +44,22 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+@app.get("/api/search")
+async def search(
+    q: str | None = None,
+    category: str | None = None,
+    tags: list[str] | None = None,
+    rating_min: int | None = None,
+    rating_max: int | None = None,
+    sort: str | None = None,
+):
+    return await search_products(
+        q=q,
+        category=category,
+        tags=tags,
+        rating_min=rating_min,
+        rating_max=rating_max,
+        sort=sort,
+    )
