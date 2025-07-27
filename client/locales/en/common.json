@@ -41,5 +41,9 @@
   "analytics": {
     "title": "Keyword Analytics",
     "revenue": "Revenue"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markRead": "Mark as read"
   }
 }

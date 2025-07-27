@@ -7,12 +7,18 @@ import LanguageSwitcher from './LanguageSwitcher';
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
   const [usage, setUsage] = useState<{ plan: string; images_used: number; limit: number } | null>(null);
+  const [unread, setUnread] = useState(0);
   const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
     axios
       .get(`${api}/api/user/plan`, { headers: { 'X-User-Id': '1' } })
       .then((res) => setUsage(res.data))
+      .catch((err) => console.error(err));
+
+    axios
+      .get(`${api}/api/notifications`, { headers: { 'X-User-Id': '1' } })
+      .then((res) => setUnread(res.data.filter((n: any) => !n.read).length))
       .catch((err) => console.error(err));
   }, [api]);
 
@@ -27,6 +33,18 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/suggestions" className="hover:underline">{t('nav.suggestions')}</Link>
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
           <LanguageSwitcher />
+          <Link
+            href="/notifications"
+            aria-label={t('nav.notifications')}
+            className="relative flex items-center"
+          >
+            <span>🔔</span>
+            {unread > 0 && (
+              <span data-testid="unread-count" className="ml-1 text-xs bg-red-500 rounded-full px-1">
+                {unread}
+              </span>
+            )}
+          </Link>
           <span className="ml-auto text-sm" data-testid="quota">
             {usage ? `${usage.images_used}/${usage.limit} images` : ''}
           </span>
