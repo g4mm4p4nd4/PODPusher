@@ -41,3 +41,19 @@ class User(SQLModel, table=True):
     plan: str = "free"
     images_used: int = 0
     last_reset: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ABTest(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ABVariant(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    test_id: int = Field(foreign_key="abtest.id")
+    variant_name: str
+    title: str
+    description: str
+    tags: List[str] = Field(sa_column=Column(JSON))
+    impressions: int = 0
+    clicks: int = 0

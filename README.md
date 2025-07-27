@@ -83,3 +83,10 @@ effects, brush strokes, pop culture, crypto themes, funny daily life,
 minimalism, vintage/retro, y2k nostalgia, goblincore/cottagecore and eco humor.
 Visit `/suggestions` in the dashboard to see up to ten phrases like "sunset
 mountain posters" or "paw print blankets" mixed with product types.
+
+## A/B Testing Listings
+The gateway now exposes `/api/ab_tests` to manage listing A/B tests. Post two
+variants to create a test and then record clicks for each variant. Retrieve the
+metrics at `/api/ab_tests/{id}` to see impressions, clicks and conversion rates
+for your title, description and tag variations. Use the dashboard page
+`/ab-tests` to create new tests and monitor performance.
