@@ -91,3 +91,7 @@ The dashboard is fully translated using `next-i18next`. Translation files are lo
 ## Notifications & Scheduling
 
 The backend includes a notifications service with a background scheduler. Monthly jobs reset image quotas for all users and create a reminder notification. Weekly jobs send a trending keywords summary based on the latest scraped data. Visit `/notifications` in the dashboard to view and mark messages as read. Unread counts appear beside a bell icon in the navigation bar.
+
+## Listing Composer
+
+The `/listings` page now features a rich listing composer. It displays live character counts for the title and description fields and can generate tag suggestions using the new `/suggest-tags` endpoint. Click **Suggest Tags** to automatically populate recommended search tags based on your description.

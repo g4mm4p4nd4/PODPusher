@@ -64,3 +64,31 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
                 {"description": idea.description, "term": term, "category": cat}
             )
     return ideas
+
+
+async def suggest_tags(description: str) -> List[str]:
+    key = os.getenv("OPENAI_API_KEY")
+    if key:
+        try:
+            import openai
+
+            resp = await openai.ChatCompletion.acreate(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Suggest Etsy listing tags as a JSON array for: "
+                            f"{description}"
+                        ),
+                    }
+                ],
+            )
+            import json
+
+            tags = json.loads(resp.choices[0].message.content)
+            if isinstance(tags, list):
+                return [str(t) for t in tags]
+        except Exception:
+            pass
+    return description.lower().split()[:5]

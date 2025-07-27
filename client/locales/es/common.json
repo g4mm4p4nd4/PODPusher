@@ -5,7 +5,8 @@
     "categories": "Categorías",
     "designIdeas": "Ideas de diseño",
     "suggestions": "Sugerencias",
-    "analytics": "Analíticas"
+    "analytics": "Analíticas",
+    "listings": "Listados"
   },
   "index": {
     "trending": "Palabras clave en tendencia",
@@ -45,5 +46,13 @@
   "notifications": {
     "title": "Notificaciones",
     "markRead": "Marcar como leído"
+  },
+  "listings": {
+    "title": "Compositor de listado",
+    "titleLabel": "Título",
+    "descriptionLabel": "Descripción",
+    "tagsLabel": "Etiquetas",
+    "suggest": "Sugerir etiquetas",
+    "characters": "caracteres"
   }
 }

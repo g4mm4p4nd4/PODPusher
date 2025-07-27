@@ -5,7 +5,8 @@
     "categories": "Categories",
     "designIdeas": "Design Ideas",
     "suggestions": "Suggestions",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "listings": "Listings"
   },
   "index": {
     "trending": "Trending Keywords",
@@ -45,5 +46,13 @@
   "notifications": {
     "title": "Notifications",
     "markRead": "Mark as read"
+  },
+  "listings": {
+    "title": "Listing Composer",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "tagsLabel": "Tags",
+    "suggest": "Suggest Tags",
+    "characters": "characters"
   }
 }
