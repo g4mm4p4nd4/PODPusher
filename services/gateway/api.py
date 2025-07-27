@@ -9,9 +9,11 @@ from ..trend_scraper.service import (
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
+from ..image_review.api import app as review_app
 from ..trend_scraper.events import EVENTS
 
 app = FastAPI()
+app.mount("/api/images/review", review_app)
 
 
 @app.post("/generate")
