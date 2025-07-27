@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Home",
+    "generate": "Generate",
+    "categories": "Categories",
+    "designIdeas": "Design Ideas",
+    "suggestions": "Suggestions",
+    "analytics": "Analytics"
+  },
+  "index": {
+    "trending": "Trending Keywords",
+    "events": "This Month's Events"
+  },
+  "categories": {
+    "title": "Trending Categories"
+  },
+  "design": {
+    "title": "Design Ideas"
+  },
+  "generate": {
+    "title": "Generate Product Idea",
+    "placeholder": "Enter trend term",
+    "button": "Generate"
+  },
+  "suggestions": {
+    "title": "Product Suggestions",
+    "category": "Category",
+    "designTheme": "Design Theme",
+    "fetch": "Fetch"
+  },
+  "review": {
+    "title": "Image Review",
+    "noProducts": "No products to review.",
+    "rating": "Rating",
+    "unrated": "Unrated",
+    "stars_one": "{{count}} Star",
+    "stars_other": "{{count}} Stars",
+    "tags": "Tags",
+    "flag": "Flag as inappropriate"
+  },
+  "analytics": {
+    "title": "Keyword Analytics",
+    "revenue": "Revenue"
+  }
+}

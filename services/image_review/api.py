@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from .service import list_products, update_product
+from ..common.localization import get_message
 
 app = FastAPI()
 
@@ -18,7 +19,9 @@ async def get_products():
 
 
 @app.post("/{product_id}")
-async def update_product_endpoint(product_id: int, payload: UpdatePayload):
+async def update_product_endpoint(
+    request: Request, product_id: int, payload: UpdatePayload
+):
     product = await update_product(
         product_id,
         rating=payload.rating,
@@ -26,5 +29,7 @@ async def update_product_endpoint(product_id: int, payload: UpdatePayload):
         flagged=payload.flagged,
     )
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        lang = request.headers.get('Accept-Language', 'en')
+        msg = get_message(lang, 'product_not_found')
+        raise HTTPException(status_code=404, detail=msg)
     return product
