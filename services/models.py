@@ -49,3 +49,20 @@ class Notification(SQLModel, table=True):
     message: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     read: bool = False
+
+
+class ABTest(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    description: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ABVariant(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    test_id: int = Field(foreign_key="abtest.id")
+    variant_name: str
+    tags: list[str] | None = Field(default=None, sa_column=Column(JSON))
+    impressions: int = 0
+    clicks: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)

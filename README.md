@@ -91,3 +91,7 @@ The dashboard is fully translated using `next-i18next`. Translation files are lo
 ## Notifications & Scheduling
 
 The backend includes a notifications service with a background scheduler. Monthly jobs reset image quotas for all users and create a reminder notification. Weekly jobs send a trending keywords summary based on the latest scraped data. Visit `/notifications` in the dashboard to view and mark messages as read. Unread counts appear beside a bell icon in the navigation bar.
+
+## A/B Testing
+Create a test by visiting `/ab-tests` on the dashboard. Enter the title, description and tags for two variants. After submission the test ID and metrics are displayed. Click the variant buttons to simulate clicks and watch the conversion rate update.
+
