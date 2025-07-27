@@ -11,11 +11,13 @@ from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
 from ..image_review.api import app as review_app
 from ..notifications.api import app as notifications_app
+from ..search.api import app as search_app
 from ..trend_scraper.events import EVENTS
 
 app = FastAPI()
 app.mount("/api/images/review", review_app)
 app.mount("/api/notifications", notifications_app)
+app.mount("/api/search", search_app)
 
 
 @app.post("/generate")
