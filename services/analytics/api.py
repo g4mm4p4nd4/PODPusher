@@ -8,6 +8,7 @@ app = FastAPI()
 class KeywordClicks(BaseModel):
     keyword: str
     clicks: int
+    revenue: float
 
 
 @app.get("/analytics", response_model=list[KeywordClicks])

@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
+import { useTranslation } from 'next-i18next';
 
 const Chart = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), {
   ssr: false,
@@ -9,6 +10,7 @@ const Chart = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), {
 export type KeywordClicks = {
   keyword: string;
   clicks: number;
+  revenue: number;
 };
 
 interface AnalyticsProps {
@@ -16,6 +18,7 @@ interface AnalyticsProps {
 }
 
 export default function Analytics({ data }: AnalyticsProps) {
+  const { t, i18n } = useTranslation('common');
   const chartData = {
     labels: data.map(d => d.keyword),
     datasets: [
@@ -27,10 +30,22 @@ export default function Analytics({ data }: AnalyticsProps) {
     ],
   };
 
+  const nf = new Intl.NumberFormat(i18n.language === 'es' ? 'es-ES' : 'en-US', {
+    style: 'currency',
+    currency: i18n.language === 'es' ? 'EUR' : 'USD',
+  });
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Keyword Analytics</h1>
+      <h1 className="text-2xl font-bold mb-4">{t('analytics.title')}</h1>
       <Chart data={chartData} />
+      <ul className="list-disc list-inside">
+        {data.map(d => (
+          <li key={d.keyword}>
+            {d.keyword}: {nf.format(d.revenue)}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

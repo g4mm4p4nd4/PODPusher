@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
 import axios from 'axios';
 import { useState } from 'react';
+import { useTranslation } from 'next-i18next';
 
 export type Suggestion = {
   category: string;
@@ -15,6 +16,7 @@ interface SuggestionsProps {
 }
 
 export default function Suggestions({ suggestions: initial, categories, designs }: SuggestionsProps) {
+  const { t } = useTranslation('common');
   const [suggestions, setSuggestions] = useState<Suggestion[]>(initial);
   const [category, setCategory] = useState('');
   const [design, setDesign] = useState('');
@@ -37,10 +39,10 @@ export default function Suggestions({ suggestions: initial, categories, designs 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Product Suggestions</h1>
+      <h1 className="text-2xl font-bold mb-4">{t('suggestions.title')}</h1>
       <form onSubmit={submit} className="flex flex-wrap gap-2 items-end">
         <div>
-          <label className="block text-sm font-medium">Category</label>
+          <label className="block text-sm font-medium">{t('suggestions.category')}</label>
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
@@ -55,7 +57,7 @@ export default function Suggestions({ suggestions: initial, categories, designs 
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium">Design Theme</label>
+          <label className="block text-sm font-medium">{t('suggestions.designTheme')}</label>
           <select
             value={design}
             onChange={e => setDesign(e.target.value)}
@@ -70,7 +72,7 @@ export default function Suggestions({ suggestions: initial, categories, designs 
           </select>
         </div>
         <button type="submit" className="bg-blue-600 text-white px-4 py-2">
-          Fetch
+          {t('suggestions.fetch')}
         </button>
       </form>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

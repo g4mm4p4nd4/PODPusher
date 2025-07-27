@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import axios from 'axios';
+import { useTranslation } from 'next-i18next';
 
 export type ProductCategory = {
   name: string;
@@ -11,9 +12,10 @@ type CategoriesProps = {
 };
 
 export default function Categories({ categories }: CategoriesProps) {
+  const { t } = useTranslation('common');
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Trending Categories</h1>
+      <h1 className="text-2xl font-bold mb-4">{t('categories.title')}</h1>
       {categories.map(cat => (
         <div key={cat.name} className="mb-4">
           <h2 className="text-xl font-semibold capitalize">{cat.name}</h2>

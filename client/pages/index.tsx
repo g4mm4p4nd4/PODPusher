@@ -1,11 +1,13 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 
 type Trend = { term: string; category: string };
 
 type TrendsByCategory = Record<string, string[]>;
 
 export default function Home() {
+  const { t } = useTranslation('common');
   const [trends, setTrends] = useState<TrendsByCategory>({});
   const [events, setEvents] = useState<string[]>([]);
   const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -32,7 +34,7 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Trending Keywords</h1>
+      <h1 className="text-2xl font-bold">{t('index.trending')}</h1>
       {Object.entries(trends).map(([cat, terms]) => (
         <div key={cat}>
           <h2 className="text-xl font-semibold capitalize">{cat}</h2>
@@ -44,7 +46,7 @@ export default function Home() {
         </div>
       ))}
       <div>
-        <h2 className="text-xl font-semibold mt-4">This Month's Events</h2>
+        <h2 className="text-xl font-semibold mt-4">{t('index.events')}</h2>
         <ul className="list-disc list-inside pl-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
           {events.map(ev => (
             <li key={ev}>{ev}</li>

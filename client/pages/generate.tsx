@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { useState } from 'react';
+import { useTranslation } from 'next-i18next';
 
 export default function Generate() {
+  const { t } = useTranslation('common');
   const [term, setTerm] = useState('');
   const [result, setResult] = useState<any>(null);
   const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -19,17 +21,17 @@ export default function Generate() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-2">Generate Product Idea</h1>
+      <h1 className="text-2xl font-bold mb-2">{t('generate.title')}</h1>
       <form onSubmit={submit} className="flex gap-2">
         <input
           type="text"
           className="border p-2 flex-grow"
-          placeholder="Enter trend term"
+          placeholder={t('generate.placeholder')}
           value={term}
           onChange={e => setTerm(e.target.value)}
         />
         <button type="submit" className="bg-blue-600 text-white px-4 py-2">
-          Generate
+          {t('generate.button')}
         </button>
       </form>
       {result && (
