@@ -30,3 +30,10 @@ class Listing(SQLModel, table=True):
     product_id: int
     etsy_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    plan: str = "free"
+    images_used: int = 0
+    last_reset: datetime = Field(default_factory=datetime.utcnow)
