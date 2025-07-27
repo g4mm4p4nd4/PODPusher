@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, JSON
 from datetime import datetime
 
 
@@ -22,6 +23,9 @@ class Product(SQLModel, table=True):
     idea_id: int
     image_url: str
     sku: Optional[str] = None
+    rating: Optional[int] = None
+    tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    flagged: Optional[bool] = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
