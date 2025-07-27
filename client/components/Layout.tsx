@@ -8,7 +8,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     axios
-      .get(`${api}/user/plan`, { headers: { 'X-User-Id': '1' } })
+      .get(`${api}/api/user/plan`, { headers: { 'X-User-Id': '1' } })
       .then((res) => setUsage(res.data))
       .catch((err) => console.error(err));
   }, [api]);
