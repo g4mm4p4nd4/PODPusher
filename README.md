@@ -91,3 +91,12 @@ The dashboard is fully translated using `next-i18next`. Translation files are lo
 ## Notifications & Scheduling
 
 The backend includes a notifications service with a background scheduler. Monthly jobs reset image quotas for all users and create a reminder notification. Weekly jobs send a trending keywords summary based on the latest scraped data. Visit `/notifications` in the dashboard to view and mark messages as read. Unread counts appear beside a bell icon in the navigation bar.
+
+## Search API
+
+Filter products using the `/api/search` endpoint. You can pass `q`, `category`,
+`tag` and `rating_min` query parameters. Example:
+
+```bash
+curl "http://localhost:8000/api/search?q=dog&category=apparel&tag=funny&rating_min=3"
+```
