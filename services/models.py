@@ -49,3 +49,21 @@ class Notification(SQLModel, table=True):
     message: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     read: bool = False
+
+
+class ABTest(SQLModel, table=True):
+    """Top level A/B test container."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ABVariant(SQLModel, table=True):
+    """Variant belonging to an A/B test."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    test_id: int
+    name: str
+    impressions: int = 0
+    clicks: int = 0
