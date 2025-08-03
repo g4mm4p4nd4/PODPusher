@@ -33,6 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/suggestions" className="hover:underline">{t('nav.suggestions')}</Link>
           <Link href="/search" className="hover:underline">{t('nav.search')}</Link>
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
+          <Link href="/ab_tests" className="hover:underline">{t('nav.abTests')}</Link>
           <LanguageSwitcher />
           <Link
             href="/notifications"
