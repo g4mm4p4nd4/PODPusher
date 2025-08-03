@@ -64,3 +64,31 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
                 {"description": idea.description, "term": term, "category": cat}
             )
     return ideas
+
+
+def suggest_tags(title: str, description: str) -> List[str]:
+    """Return a list of up to 13 tag suggestions based on title and description."""
+    text = f"{title} {description}"
+    words = [w.strip(".,!?:;\"'()[]{}").lower() for w in text.split()]
+    stop = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "of",
+        "in",
+        "with",
+        "to",
+        "for",
+        "on",
+        "at",
+        "by",
+    }
+    tags: List[str] = []
+    for w in words:
+        if w and w not in stop and w not in tags:
+            tags.append(w)
+        if len(tags) >= 13:
+            break
+    return tags

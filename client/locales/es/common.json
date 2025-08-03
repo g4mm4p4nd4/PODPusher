@@ -1,4 +1,62 @@
 {
+  "nav": {
+    "home": "Inicio",
+    "generate": "Generar",
+    "categories": "Categorías",
+    "designIdeas": "Ideas de diseño",
+    "suggestions": "Sugerencias",
+    "search": "Buscar",
+    "analytics": "Analíticas",
+    "listings": "Publicaciones",
+    "notifications": "Notificaciones"
+  },
+  "index": {
+    "trending": "Palabras clave en tendencia",
+    "events": "Eventos del mes"
+  },
+  "categories": {
+    "title": "Categorías en tendencia"
+  },
+  "design": {
+    "title": "Ideas de diseño"
+  },
+  "generate": {
+    "title": "Generar idea de producto",
+    "placeholder": "Introduce un término",
+    "button": "Generar"
+  },
+  "suggestions": {
+    "title": "Sugerencias de producto",
+    "category": "Categoría",
+    "designTheme": "Tema de diseño",
+    "fetch": "Buscar"
+  },
+  "review": {
+    "title": "Revisión de imágenes",
+    "noProducts": "No hay productos para revisar.",
+    "rating": "Calificación",
+    "unrated": "Sin calificar",
+    "stars_one": "{{count}} estrella",
+    "stars_other": "{{count}} estrellas",
+    "tags": "Etiquetas",
+    "flag": "Marcar como inapropiado"
+  },
+  "listings": {
+    "title": "Compositor de publicaciones",
+    "description": "Descripción",
+    "tags": "Etiquetas",
+    "suggest": "Sugerir etiquetas",
+    "publish": "Publicar"
+  },
+  "analytics": {
+    "title": "Analítica de palabras clave",
+    "revenue": "Ingresos"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markRead": "Marcar como leído"
+  }
+=======
     "nav": {
         "home": "Inicio",
         "generate": "Generar",
