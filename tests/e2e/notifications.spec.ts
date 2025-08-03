@@ -5,7 +5,7 @@ test('notifications page lists items', async ({ page }) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([{ id: 1, message: 'hello', read: false, created_at: '' }]),
+      body: JSON.stringify([{ id: 1, message: 'hello', type: 'info', read_status: false, created_at: '' }]),
     });
   });
 
@@ -13,7 +13,7 @@ test('notifications page lists items', async ({ page }) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ id: 1, message: 'hello', read: true, created_at: '' }),
+      body: JSON.stringify({ id: 1, message: 'hello', type: 'info', read_status: true, created_at: '' }),
     });
   });
 

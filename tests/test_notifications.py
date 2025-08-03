@@ -12,19 +12,21 @@ async def test_notification_crud():
     await init_db()
     transport = ASGITransport(app=notif_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/", json={"message": "hello"}, headers={"X-User-Id": "1"})
+        resp = await client.post("/", json={"message": "hello", "type": "info"}, headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["message"] == "hello"
+        assert data["type"] == "info"
 
         resp = await client.get("/", headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         notifs = resp.json()
         assert len(notifs) == 1
+        assert notifs[0]["read_status"] is False
 
         resp = await client.put(f"/{data['id']}/read")
         assert resp.status_code == 200
-        assert resp.json()["read"] is True
+        assert resp.json()["read_status"] is True
 
 
 @pytest.mark.asyncio

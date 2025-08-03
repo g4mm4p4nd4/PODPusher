@@ -18,6 +18,7 @@ async def start() -> None:
 
 class NotificationCreate(BaseModel):
     message: str
+    type: str = "info"
     user_id: int | None = None
 
 
@@ -32,7 +33,7 @@ async def create_notification_endpoint(
     x_user_id: str = Header(None, alias="X-User-Id"),
 ):
     user_id = payload.user_id or int(x_user_id)
-    return await create_notification(user_id, payload.message)
+    return await create_notification(user_id, payload.message, payload.type)
 
 
 @app.put("/{notification_id}/read")
