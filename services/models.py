@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, JSON
 from datetime import datetime
@@ -67,3 +67,14 @@ class ABVariant(SQLModel, table=True):
     name: str
     impressions: int = 0
     clicks: int = 0
+
+
+class AnalyticsEvent(SQLModel, table=True):
+    """Stored analytics event for dashboards."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    event_type: str
+    path: str
+    user_id: Optional[int] = None
+    meta: Dict[str, Any] | None = Field(default=None, sa_column=Column("metadata", JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -10,6 +10,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 ## Outstanding Tasks
 
 1. **Real Integrations** – Implement Printify and Etsy clients, replacing stubs in `services/integration/service.py`. Use environment variables for API keys and handle retries. Stripe billing integration also needs to be built for subscription plans.
+
 2. **Analytics Enhancements** – Replace mocked analytics with real metrics collected from the database and user interactions.
 3. **Listing Composer Enhancements** – Finalise the character-count and tag-suggestion features; ensure they are merged and tested.
 4. **Testing & QA** – Increase unit, integration and end-to-end test coverage. Ensure Playwright tests run reliably in CI.
@@ -23,6 +24,8 @@ This file tracks the remaining work required to bring PODPusher to production re
 11. **Localization & Internationalization (i18n)** – Integrate translation support (e.g., next-i18next), provide a language switcher in the UI and adapt currency formats for different locales.
 12. Maintain architecture and schema diagrams.
 13. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
+14. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
+
 
 ## Instructions to Agents
 

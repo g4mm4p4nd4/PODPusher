@@ -1,62 +1,75 @@
+import React from 'react';
 import { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
-import axios from 'axios';
 import { useTranslation } from 'next-i18next';
+import { useState } from 'react';
+import { fetchSummary } from '../services/analytics';
 
-const Chart = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), {
-  ssr: false,
-});
+const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
 
-export type KeywordClicks = {
-  keyword: string;
-  clicks: number;
-  revenue: number;
+export type SummaryRecord = {
+  path: string;
+  count: number;
 };
 
 interface AnalyticsProps {
-  data: KeywordClicks[];
+  initialData: SummaryRecord[];
 }
 
-export default function Analytics({ data }: AnalyticsProps) {
-  const { t, i18n } = useTranslation('common');
+export default function Analytics({ initialData }: AnalyticsProps) {
+  const { t } = useTranslation('common');
+  const [eventType, setEventType] = useState('page_view');
+  const [data, setData] = useState<SummaryRecord[]>(initialData);
+
+  const fetchData = async (type: string) => {
+    const res = await fetchSummary(type);
+    setData(res);
+  };
+
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const type = e.target.value;
+    setEventType(type);
+    await fetchData(type);
+  };
+
   const chartData = {
-    labels: data.map(d => d.keyword),
+    labels: data.map((d) => d.path),
     datasets: [
       {
-        label: 'Clicks',
-        data: data.map(d => d.clicks),
-        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+        label: t('analytics.events'),
+        data: data.map((d) => d.count),
+        backgroundColor: 'rgba(99,102,241,0.5)',
       },
     ],
   };
 
-  const nf = new Intl.NumberFormat(i18n.language === 'es' ? 'es-ES' : 'en-US', {
-    style: 'currency',
-    currency: i18n.language === 'es' ? 'EUR' : 'USD',
-  });
-
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold mb-4">{t('analytics.title')}</h1>
-      <Chart data={chartData} />
-      <ul className="list-disc list-inside">
-        {data.map(d => (
-          <li key={d.keyword}>
-            {d.keyword}: {nf.format(d.revenue)}
-          </li>
-        ))}
-      </ul>
+      <label htmlFor="eventType" className="block text-sm font-medium">
+        {t('analytics.filter')}
+      </label>
+      <select
+        id="eventType"
+        value={eventType}
+        onChange={handleChange}
+        className="border p-2 rounded w-full md:w-60"
+      >
+        <option value="page_view">Page Views</option>
+        <option value="click">Clicks</option>
+        <option value="conversion">Conversions</option>
+      </select>
+      <Bar data={chartData} aria-label="analytics chart" role="img" />
     </div>
   );
 }
 
 export const getServerSideProps: GetServerSideProps<AnalyticsProps> = async () => {
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
   try {
-    const res = await axios.get<KeywordClicks[]>(`${api}/analytics`);
-    return { props: { data: res.data } };
+    const data = await fetchSummary('page_view');
+    return { props: { initialData: data } };
   } catch (err) {
     console.error(err);
-    return { props: { data: [] } };
+    return { props: { initialData: [] } };
   }
 };
