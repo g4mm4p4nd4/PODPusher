@@ -6,7 +6,9 @@
     "designIdeas": "Design Ideas",
     "suggestions": "Suggestions",
     "search": "Search",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "listings": "Listings",
+    "notifications": "Notifications"
   },
   "index": {
     "trending": "Trending Keywords",
@@ -38,6 +40,13 @@
     "stars_other": "{{count}} Stars",
     "tags": "Tags",
     "flag": "Flag as inappropriate"
+  },
+  "listings": {
+    "title": "Listing Composer",
+    "description": "Description",
+    "tags": "Tags",
+    "suggest": "Suggest Tags",
+    "publish": "Publish"
   },
   "analytics": {
     "title": "Keyword Analytics",

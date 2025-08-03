@@ -6,7 +6,9 @@
     "designIdeas": "Ideas de diseño",
     "suggestions": "Sugerencias",
     "search": "Buscar",
-    "analytics": "Analíticas"
+    "analytics": "Analíticas",
+    "listings": "Publicaciones",
+    "notifications": "Notificaciones"
   },
   "index": {
     "trending": "Palabras clave en tendencia",
@@ -38,6 +40,13 @@
     "stars_other": "{{count}} estrellas",
     "tags": "Etiquetas",
     "flag": "Marcar como inapropiado"
+  },
+  "listings": {
+    "title": "Compositor de publicaciones",
+    "description": "Descripción",
+    "tags": "Etiquetas",
+    "suggest": "Sugerir etiquetas",
+    "publish": "Publicar"
   },
   "analytics": {
     "title": "Analítica de palabras clave",
