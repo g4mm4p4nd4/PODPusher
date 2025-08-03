@@ -18,7 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
     axios
       .get(`${api}/api/notifications`, { headers: { 'X-User-Id': '1' } })
-      .then((res) => setUnread(res.data.filter((n: any) => !n.read).length))
+      .then((res) => setUnread(res.data.filter((n: any) => !n.read_status).length))
       .catch((err) => console.error(err));
   }, [api]);
 

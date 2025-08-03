@@ -5,8 +5,9 @@ import { useTranslation } from 'next-i18next';
 export type Notification = {
   id: number;
   message: string;
+  type: string;
   created_at: string;
-  read: boolean;
+  read_status: boolean;
 };
 
 export default function Notifications() {
@@ -25,7 +26,7 @@ export default function Notifications() {
 
   const markRead = async (id: number) => {
     await axios.put(`${api}/api/notifications/${id}/read`);
-    setItems(items.map(n => (n.id === id ? { ...n, read: true } : n)));
+    setItems(items.map(n => (n.id === id ? { ...n, read_status: true } : n)));
   };
 
   return (
@@ -35,11 +36,11 @@ export default function Notifications() {
         {items.map(n => (
           <li
             key={n.id}
-            className={`p-2 border rounded ${n.read ? 'opacity-50' : ''}`}
+            className={`p-2 border rounded ${n.read_status ? 'opacity-50' : ''}`}
           >
             <div className="flex justify-between items-center">
-              <span>{n.message}</span>
-              {!n.read && (
+              <span>[{n.type}] {n.message}</span>
+              {!n.read_status && (
                 <button
                   data-testid={`read-${n.id}`}
                   onClick={() => markRead(n.id)}

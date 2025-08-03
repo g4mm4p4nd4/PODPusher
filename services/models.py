@@ -47,8 +47,9 @@ class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int
     message: str
+    type: str = "info"
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    read: bool = False
+    read_status: bool = False
 
 
 class ABTest(SQLModel, table=True):

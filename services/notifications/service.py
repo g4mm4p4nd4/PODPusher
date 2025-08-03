@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from ..common.database import get_session
 from ..models import Notification, User
 from ..trend_scraper.service import fetch_trends
+from packages.integrations.notifications import send_email, send_push
 
 
 def _to_dict(notification: Notification) -> dict:
@@ -16,18 +17,22 @@ def _to_dict(notification: Notification) -> dict:
         "id": notification.id,
         "user_id": notification.user_id,
         "message": notification.message,
+        "type": notification.type,
         "created_at": notification.created_at.isoformat(),
-        "read": notification.read,
+        "read_status": notification.read_status,
     }
 
 
-async def create_notification(user_id: int, message: str) -> dict:
+async def create_notification(user_id: int, message: str, notif_type: str = "info") -> dict:
     async with get_session() as session:
-        n = Notification(user_id=user_id, message=message)
+        n = Notification(user_id=user_id, message=message, type=notif_type)
         session.add(n)
         await session.commit()
         await session.refresh(n)
-        return _to_dict(n)
+    # send stubs
+    send_email(user_id, message, notif_type)
+    send_push(user_id, message, notif_type)
+    return _to_dict(n)
 
 
 async def list_notifications(user_id: int) -> List[dict]:
@@ -46,7 +51,7 @@ async def mark_read(notification_id: int) -> Optional[dict]:
         notif = await session.get(Notification, notification_id)
         if not notif:
             return None
-        notif.read = True
+        notif.read_status = True
         session.add(notif)
         await session.commit()
         await session.refresh(notif)
@@ -65,7 +70,7 @@ async def reset_monthly_quotas() -> None:
             session.add(u)
         await session.commit()
     for uid in ids:
-        await create_notification(uid, "Monthly quota has been reset.")
+        await create_notification(uid, "Monthly quota has been reset.", "system")
 
 
 async def weekly_trending_summary() -> None:
@@ -75,7 +80,7 @@ async def weekly_trending_summary() -> None:
         result = await session.exec(select(User.id))
         user_ids = result.all()
     for uid in user_ids:
-        await create_notification(uid, f"Weekly trending keywords: {summary}")
+        await create_notification(uid, f"Weekly trending keywords: {summary}", "summary")
 
 
 scheduler = AsyncIOScheduler()
