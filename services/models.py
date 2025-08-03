@@ -78,3 +78,12 @@ class AnalyticsEvent(SQLModel, table=True):
     user_id: Optional[int] = None
     meta: Dict[str, Any] | None = Field(default=None, sa_column=Column("metadata", JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Metric(SQLModel, table=True):
+    """Aggregated metric stored for analytics dashboards."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    value: float
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -1,4 +1,3 @@
-
 # Internal Documentation
 
 ## Social Media Generator Service
@@ -36,7 +35,7 @@ The `/social-generator` page renders the `SocialMediaGenerator` component. Users
 enter a prompt and the page displays the generated caption and image. The
 component uses the shared translation files and the design system classes for a
 responsive layout.
-=======
+
 # Analytics Service
 
 ## Architecture
@@ -44,11 +43,15 @@ The analytics module records user interactions and exposes aggregated metrics fo
 
 ### Components
 - **Model**: `AnalyticsEvent` in `services/models.py` stores `event_type`, `path`, optional `user_id` and `metadata`.
+- **Model**: `Metric` captures aggregated values (`name`, `value`) for dashboard visualisations.
 - **API** (`services/analytics/api.py`):
   - `POST /analytics/events` – record an event.
   - `GET /analytics/events` – list events by type.
   - `GET /analytics/summary` – aggregate counts per path.
+  - `POST /analytics/metrics` – store a metric value.
+  - `GET /analytics/metrics` – list stored metrics.
 - **Middleware**: `AnalyticsMiddleware` attaches to FastAPI apps and logs `page_view` events asynchronously to keep p95 latency under 300 ms.
+- **Exporter**: events are forwarded to `EXTERNAL_ANALYTICS_URL` using a rate‑limited connector with retry and error logging.
 - **Stripe Usage**: conversion events trigger an async usage report to Stripe for billing (skipped when `STRIPE_API_KEY` is absent).
 
 ### Data Flow
@@ -58,7 +61,9 @@ The analytics module records user interactions and exposes aggregated metrics fo
 
 ## Usage
 Mount the middleware on additional services as needed:
+
 ```python
 from services.analytics.middleware import AnalyticsMiddleware
-app.add_middleware(AnalyticsMiddleware)
 
+app.add_middleware(AnalyticsMiddleware)
+```

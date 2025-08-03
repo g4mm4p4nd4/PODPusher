@@ -33,3 +33,20 @@ async def test_middleware_logs_page_view():
         await client.get("/analytics/summary")
     events = await list_events("page_view")
     assert any(e.path == "/analytics/summary" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_metric_crud():
+    await init_db()
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/analytics/metrics",
+            json={"name": "visitors", "value": 10},
+        )
+        assert resp.status_code == 201
+        created = resp.json()
+        resp = await client.get("/analytics/metrics")
+        assert resp.status_code == 200
+        metrics = resp.json()
+        assert any(m["id"] == created["id"] for m in metrics)

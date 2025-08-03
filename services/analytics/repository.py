@@ -1,7 +1,8 @@
 from sqlmodel import select
 from sqlalchemy.sql import func
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from ..models import AnalyticsEvent
+from ..models import AnalyticsEvent, Metric
 
 
 async def create_event(session: AsyncSession, event: AnalyticsEvent) -> AnalyticsEvent:
@@ -29,4 +30,16 @@ async def aggregate_events(session: AsyncSession, event_type: str | None = None)
         stmt = stmt.where(AnalyticsEvent.event_type == event_type)
     stmt = stmt.group_by(AnalyticsEvent.path)
     result = await session.exec(stmt)
+    return result.all()
+
+
+async def create_metric(session: AsyncSession, metric: Metric) -> Metric:
+    session.add(metric)
+    await session.commit()
+    await session.refresh(metric)
+    return metric
+
+
+async def fetch_metrics(session: AsyncSession) -> list[Metric]:
+    result = await session.exec(select(Metric))
     return result.all()

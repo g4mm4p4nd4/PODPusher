@@ -1,10 +1,22 @@
 import asyncio
 import os
 import httpx
+import asyncio
+import os
 from typing import Dict, Any
-from .repository import create_event, fetch_events, aggregate_events
+
+import httpx
+
+from .repository import (
+    create_event,
+    fetch_events,
+    aggregate_events,
+    create_metric,
+    fetch_metrics,
+)
 from ..common.database import get_session
-from ..models import AnalyticsEvent
+from ..models import AnalyticsEvent, Metric
+from .exporter import export_event
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 
@@ -40,6 +52,7 @@ async def log_event(
         created = await create_event(session, event)
     if event_type == "conversion":
         asyncio.create_task(_report_conversion_to_stripe())
+    asyncio.create_task(export_event(created))
     return created
 
 
@@ -54,3 +67,14 @@ async def get_summary(event_type: str | None = None):
     return [
         {"path": path, "count": count} for path, count in rows
     ]
+
+
+async def create_metric_entry(name: str, value: float) -> Metric:
+    async with get_session() as session:
+        metric = Metric(name=name, value=value)
+        return await create_metric(session, metric)
+
+
+async def list_metrics() -> list[Metric]:
+    async with get_session() as session:
+        return await fetch_metrics(session)
