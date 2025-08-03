@@ -8,6 +8,12 @@ Provide sellers with an automated tool to generate platform-ready social media p
 - ≥ 99% generation success rate.
 - At least 30% of beta users share generated posts within the first week.
 
+## Scope
+- Generate AI captions and mock-up images for selected listings.
+- Support Instagram, TikTok, Twitter and Pinterest.
+- Allow optional scheduling metadata for future publishing.
+- Provide copy-to-clipboard and asset download; no direct publishing (see Non-Goals).
+
 ## Personas & Needs
 - **Side-Hustle Seller** – wants one-click posts for new listings to save time.
 - **Social Influencer** – wants to monetise memes quickly across platforms.
@@ -102,6 +108,14 @@ See [AGENTS.md §4](../../agents.md#4--personas--problem-statements) for full pe
 - Backend implementation: [AGENTS.Backend_Coder.md](../../agents_backend_coder.md)
 - Frontend implementation: [AGENTS.Frontend_Coder.md](../../agents_frontend_coder.md)
 
-## Feasibility
-- **Backend-Coder:** API shapes align with BC‑01/BC‑02; asynchronous job pattern fits existing Celery setup.
-- **Frontend-Coder:** Page and state usage align with FC‑01/FC‑02; no blockers identified for Next.js 14.
+## Feasibility & Open Questions
+- **Backend-Coder**
+  - *Feasibility:* API shapes align with BC‑01/BC‑02; asynchronous job pattern fits existing Celery setup.
+  - *Open Questions:*
+    - Should caption/image generation reuse existing prompt templates or require new ones?
+    - Where will scheduled posts run if auto-publishing is added later?
+- **Frontend-Coder**
+  - *Feasibility:* Page and state usage align with FC‑01/FC‑02; no blockers identified for Next.js 14.
+  - *Open Questions:*
+    - Are design assets available for multi-platform previews?
+    - How should unsaved caption edits be handled on navigation?
