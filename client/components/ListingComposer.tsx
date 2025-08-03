@@ -39,10 +39,11 @@ export default function ListingComposer({ onPublish }: Props) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label htmlFor="title" className="block text-sm font-medium mb-1">
           {t('listings.title')} ({title.length}/140)
         </label>
         <input
+          id="title"
           className="border p-2 w-full"
           maxLength={140}
           value={title}
@@ -50,10 +51,11 @@ export default function ListingComposer({ onPublish }: Props) {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label htmlFor="description" className="block text-sm font-medium mb-1">
           {t('listings.description')} ({description.length}/1000)
         </label>
         <textarea
+          id="description"
           className="border p-2 w-full"
           maxLength={1000}
           rows={4}

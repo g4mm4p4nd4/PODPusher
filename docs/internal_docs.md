@@ -40,6 +40,23 @@ The `/social-generator` page renders the `SocialMediaGenerator` component. Users
 enter a prompt and the page displays the generated caption and image. The
 component uses the shared translation files and the design system classes for a
 responsive layout.
+
+## Listing Composer
+
+The `ideation` service exposes a tag suggestion helper for Etsy listings. It
+inspects the listing title and description and returns up to 13 concise tags.
+
+### API
+
+- **POST `/api/ideation/suggest-tags`**
+  - Body: `{ "title": string, "description": string }`
+  - Response: `string[]` of tag suggestions
+
+### Frontend Page
+
+The `/listings` page renders the `ListingComposer` component. Users type a title
+and description, see character counters update in real time and can request tag
+suggestions which populate clickable chips for easy selection.
 =======
 # Analytics Service
 

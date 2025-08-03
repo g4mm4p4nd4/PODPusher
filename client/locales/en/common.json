@@ -37,7 +37,8 @@
     "flag": "Flag as inappropriate"
   },
   "listings": {
-    "title": "Listing Composer",
+    "pageTitle": "Listing Composer",
+    "title": "Title",
     "description": "Description",
     "tags": "Tags",
     "suggest": "Suggest Tags",
