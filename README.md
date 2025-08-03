@@ -101,6 +101,23 @@ Filter products using the `/api/search` endpoint. You can pass `q`, `category`,
 curl "http://localhost:8000/api/search?q=dog&category=apparel&tag=funny&rating_min=3"
 ```
 
+
 ## Listing Composer
 
 Create Etsy listings with optimised metadata. Navigate to `/listings` in the dashboard and enter a title and description. Character counters show how many characters remain for each field. Click **Suggest Tags** to fetch recommended tags from the backend via the `/suggest-tags` endpoint. Select up to 13 tags before publishing your listing.
+=======
+## A/B Testing
+
+Create experiments using the `/ab_tests` API. Post a JSON payload with a test
+name and variant list:
+
+```bash
+curl -X POST http://localhost:8000/ab_tests -H 'Content-Type: application/json' \
+  -d '{"name": "Title Test", "variants": ["A", "B"]}'
+```
+
+Record user interactions with `/ab_tests/{variant_id}/impression` and
+`/ab_tests/{variant_id}/click`. Retrieve conversion metrics with
+`/ab_tests/{test_id}/metrics` or `/ab_tests/metrics` for all tests. The dashboard
+page at `/ab_tests` lets you create tests and view results.
+
