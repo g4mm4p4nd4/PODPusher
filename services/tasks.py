@@ -1,9 +1,11 @@
 import os
+import asyncio
 from celery import Celery
 from .trend_scraper.service import fetch_trends
 from .ideation.service import generate_ideas
 from .image_gen.service import generate_images
 from .integration.service import create_sku, publish_listing
+from .social_generator.service import generate_post
 
 CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery("worker", broker=CELERY_BROKER_URL, backend=CELERY_BROKER_URL)
@@ -36,3 +38,9 @@ def create_sku_task(images):
 @celery_app.task
 def publish_listing_task(product):
     return publish_listing(product)
+
+
+@celery_app.task
+def generate_social_post_task(prompt: str):
+    """Celery task to create social media content."""
+    return asyncio.run(generate_post(prompt))
