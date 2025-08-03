@@ -12,14 +12,21 @@ from .service import (
 app = FastAPI()
 
 
+class VariantIn(BaseModel):
+    listing_id: int
+    title: str
+    description: str
+
+
 class TestCreate(BaseModel):
     name: str
-    variants: list[str]
+    variants: list[VariantIn]
 
 
 @app.post("/")
 async def create(payload: TestCreate):
-    return await create_test(payload.name, payload.variants)
+    variants = [v.model_dump() for v in payload.variants]
+    return await create_test(payload.name, variants)
 
 
 @app.get("/metrics")

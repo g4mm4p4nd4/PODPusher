@@ -11,7 +11,21 @@ from services.common.database import init_db
 @pytest.mark.asyncio
 async def test_ab_service_flow():
     await init_db()
-    test = await create_test("Example", ["A", "B"])
+    test = await create_test(
+        "Example",
+        [
+            {
+                "listing_id": 1,
+                "title": "A",
+                "description": "First",
+            },
+            {
+                "listing_id": 2,
+                "title": "B",
+                "description": "Second",
+            },
+        ],
+    )
     assert test["name"] == "Example"
     assert len(test["variants"]) == 2
     vid = test["variants"][0]["id"]

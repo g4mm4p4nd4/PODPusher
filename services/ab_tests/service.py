@@ -11,14 +11,16 @@ def _variant_dict(variant: ABVariant) -> dict:
     return {
         "id": variant.id,
         "test_id": variant.test_id,
-        "name": variant.name,
+        "listing_id": variant.listing_id,
+        "title": variant.title,
+        "description": variant.description,
         "impressions": variant.impressions,
         "clicks": variant.clicks,
         "conversion_rate": rate,
     }
 
 
-async def create_test(name: str, variants: List[str]) -> dict:
+async def create_test(name: str, variants: List[dict]) -> dict:
     """Create a new A/B test with variants."""
     async with get_session() as session:
         test = ABTest(name=name)
@@ -28,7 +30,12 @@ async def create_test(name: str, variants: List[str]) -> dict:
         test_id = test.id
         variant_dicts = []
         for v in variants:
-            variant = ABVariant(test_id=test_id, name=v)
+            variant = ABVariant(
+                test_id=test_id,
+                listing_id=v["listing_id"],
+                title=v["title"],
+                description=v["description"],
+            )
             session.add(variant)
             await session.commit()
             await session.refresh(variant)

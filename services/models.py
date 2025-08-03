@@ -64,7 +64,9 @@ class ABVariant(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     test_id: int
-    name: str
+    listing_id: int
+    title: str
+    description: str
     impressions: int = 0
     clicks: int = 0
 

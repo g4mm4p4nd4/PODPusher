@@ -20,7 +20,7 @@ app = FastAPI()
 app.mount("/api/images/review", review_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)
-app.mount("/ab_tests", ab_app)
+app.mount("/api/ab-tests", ab_app)
 app.add_middleware(AnalyticsMiddleware)
 
 

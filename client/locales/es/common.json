@@ -48,12 +48,16 @@
   "ab": {
     "title": "Pruebas A/B",
     "name": "Nombre de prueba",
-    "variants": "Variantes separadas por coma",
+    "listingId": "ID de publicación",
+    "variantTitle": "Título de variante",
+    "variantDescription": "Descripción de variante",
+    "addVariant": "Añadir variante",
     "create": "Crear",
     "variant": "Variante",
     "impressions": "Impresiones",
     "clicks": "Clics",
-    "rate": "Tasa de conversión"
+    "rate": "Tasa de conversión",
+    "chart": "Gráfico de conversión"
   },
   "social": {
     "title": "Generador de Redes Sociales",

@@ -108,16 +108,16 @@ Create Etsy listings with optimised metadata. Navigate to `/listings` in the das
 =======
 ## A/B Testing
 
-Create experiments using the `/ab_tests` API. Post a JSON payload with a test
-name and variant list:
+Create experiments using the `/api/ab-tests` API. Post a JSON payload with a test
+name and variant list including listing IDs and copy:
 
 ```bash
-curl -X POST http://localhost:8000/ab_tests -H 'Content-Type: application/json' \
-  -d '{"name": "Title Test", "variants": ["A", "B"]}'
+curl -X POST http://localhost:8000/api/ab-tests -H 'Content-Type: application/json' \
+  -d '{"name": "Title Test", "variants": [{"listing_id":1,"title":"A","description":"Desc"}]}'
 ```
 
-Record user interactions with `/ab_tests/{variant_id}/impression` and
-`/ab_tests/{variant_id}/click`. Retrieve conversion metrics with
-`/ab_tests/{test_id}/metrics` or `/ab_tests/metrics` for all tests. The dashboard
-page at `/ab_tests` lets you create tests and view results.
+Record user interactions with `/api/ab-tests/{variant_id}/impression` and
+`/api/ab-tests/{variant_id}/click`. Retrieve conversion metrics with
+`/api/ab-tests/{test_id}/metrics` or `/api/ab-tests/metrics` for all tests. The dashboard
+page at `/ab-tests` lets you create tests and view results.
 

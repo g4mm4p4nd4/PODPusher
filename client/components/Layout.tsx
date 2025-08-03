@@ -35,7 +35,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/listings" className="hover:underline">{t('nav.listings')}</Link>
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
           <Link href="/social-generator" className="hover:underline">{t('nav.socialGenerator')}</Link>
-          <Link href="/ab_tests" className="hover:underline">{t('nav.abTests')}</Link>
+          <Link href="/ab-tests" className="hover:underline">{t('nav.abTests')}</Link>
           <LanguageSwitcher />
           <Link
             href="/notifications"

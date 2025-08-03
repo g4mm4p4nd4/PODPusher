@@ -48,12 +48,16 @@
   "ab": {
     "title": "A/B Tests",
     "name": "Test Name",
-    "variants": "Variants (comma separated)",
+    "listingId": "Listing ID",
+    "variantTitle": "Variant Title",
+    "variantDescription": "Variant Description",
+    "addVariant": "Add Variant",
     "create": "Create",
     "variant": "Variant",
     "impressions": "Impressions",
     "clicks": "Clicks",
-    "rate": "Conversion Rate"
+    "rate": "Conversion Rate",
+    "chart": "Conversion chart"
   },
   "social": {
     "title": "Social Media Generator",
