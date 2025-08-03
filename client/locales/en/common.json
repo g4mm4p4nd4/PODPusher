@@ -49,10 +49,12 @@
     "suggest": "Suggest Tags",
     "publish": "Publish"
   },
-  "analytics": {
-    "title": "Keyword Analytics",
-    "revenue": "Revenue"
-  },
+    "analytics": {
+      "title": "Keyword Analytics",
+      "revenue": "Revenue",
+      "filter": "Event Type",
+      "events": "Events"
+    },
   "notifications": {
     "title": "Notifications",
     "markRead": "Mark as read"

@@ -11,7 +11,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 1. **Real Integrations** – Implement Printify and Etsy clients, replacing stubs in `services/integration/service.py`. Use environment variables for API keys and handle retries. Stripe billing integration also needs to be built for subscription plans.
 2. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
-3. **Analytics Enhancements** – Replace mocked analytics with real metrics collected from the database and user interactions.
+3. **Analytics Enhancements** – DONE. Real metrics are now collected from the database and exposed via a dashboard.
 4. **Listing Composer Enhancements** – Finalise the character-count and tag-suggestion features; ensure they are merged and tested.
 5. **Testing & QA** – Increase unit, integration and end-to-end test coverage. Ensure Playwright tests run reliably in CI.
 6. **Monitoring & Observability** – Add structured logging, health checks and metrics for each service.

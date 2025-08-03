@@ -48,10 +48,12 @@
     "suggest": "Sugerir etiquetas",
     "publish": "Publicar"
   },
-  "analytics": {
-    "title": "Analítica de palabras clave",
-    "revenue": "Ingresos"
-  },
+    "analytics": {
+      "title": "Analítica de palabras clave",
+      "revenue": "Ingresos",
+      "filter": "Tipo de evento",
+      "events": "Eventos"
+    },
   "notifications": {
     "title": "Notificaciones",
     "markRead": "Marcar como leído"
