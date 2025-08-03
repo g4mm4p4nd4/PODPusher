@@ -12,23 +12,23 @@ class ProductList(BaseModel):
 
 @app.post("/sku")
 async def sku(data: ProductList):
-    return create_sku(data.products)
+    return await create_sku(data.products)
 
 
 @app.post("/listing")
 async def listing(product: dict):
-    return publish_listing(product)
+    return await publish_listing(product)
 
 
 @app.post("/create-sku")
 async def create_sku_legacy(data: ProductList):
     """Backward compatible endpoint from early stubs."""
-    products = create_sku(data.products)
+    products = await create_sku(data.products)
     return {"product": products}
 
 
 @app.post("/publish-listing")
 async def publish_listing_legacy(product: dict):
     """Backward compatible endpoint from early stubs."""
-    listing = publish_listing(product)
+    listing = await publish_listing(product)
     return {"listing": listing.get("etsy_url"), "product": listing}
