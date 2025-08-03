@@ -1,6 +1,10 @@
 
 # Internal Documentation
 
+## Integration Service Stubs
+
+Temporary stub implementations live in `services/integration/service.py`. Unit tests in `tests/test_integration_service.py` verify these stubs and should be removed once the real Printify and Etsy clients are integrated.
+
 ## Social Media Generator Service
 
 The `social_generator` service provides an endpoint to create social media
