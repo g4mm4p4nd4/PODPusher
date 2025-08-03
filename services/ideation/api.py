@@ -21,4 +21,4 @@ async def ideas(data: TrendList):
 
 @app.post("/suggest-tags")
 async def tags(data: ListingData):
-    return suggest_tags(data.title, data.description)
+    return await suggest_tags(data.title, data.description)

@@ -37,7 +37,8 @@
     "flag": "Marcar como inapropiado"
   },
   "listings": {
-    "title": "Compositor de publicaciones",
+    "pageTitle": "Compositor de publicaciones",
+    "title": "Título",
     "description": "Descripción",
     "tags": "Etiquetas",
     "suggest": "Sugerir etiquetas",

@@ -4,6 +4,7 @@ from datetime import datetime
 from ..models import Idea
 from ..common.database import get_session
 from ..trend_scraper.events import EVENTS
+from packages.integrations import openai
 
 
 TrendInput = Union[str, Dict]
@@ -66,9 +67,14 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
     return ideas
 
 
-def suggest_tags(title: str, description: str) -> List[str]:
+async def suggest_tags(title: str, description: str) -> List[str]:
     """Return a list of up to 13 tag suggestions based on title and description."""
-    text = f"{title} {description}"
+    text = f"{title} {description}".strip()
+    if openai.API_KEY and not openai.USE_STUB:
+        try:
+            return await openai.suggest_tags(text)
+        except Exception:
+            pass
     words = [w.strip(".,!?:;\"'()[]{}").lower() for w in text.split()]
     stop = {
         "the",

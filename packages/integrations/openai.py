@@ -62,3 +62,49 @@ async def generate_image(prompt: str) -> str:
         {"model": "gpt-image-1", "prompt": prompt, "size": "512x512"},
     )
     return data["data"][0]["url"]
+
+
+async def suggest_tags(text: str) -> list[str]:
+    """Suggest up to 13 tags for the given text."""
+    if USE_STUB or not API_KEY:
+        words = [w.strip(".,!?:;\"'()[]{}").lower() for w in text.split()]
+        stop = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "of",
+            "in",
+            "with",
+            "to",
+            "for",
+            "on",
+            "at",
+            "by",
+        }
+        tags: list[str] = []
+        for w in words:
+            if w and w not in stop and w not in tags:
+                tags.append(w)
+            if len(tags) >= 13:
+                break
+        return tags
+
+    data = await _post(
+        "/chat/completions",
+        {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "Suggest up to 13 concise Etsy tags for the following listing: "
+                        f"{text}. Return the tags separated by commas."
+                    ),
+                }
+            ],
+        },
+    )
+    content = data["choices"][0]["message"]["content"]
+    return [t.strip() for t in content.split(",") if t.strip()][:13]
