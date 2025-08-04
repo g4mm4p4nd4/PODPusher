@@ -33,7 +33,7 @@ async def test_notification_crud():
 async def test_scheduler_jobs(monkeypatch):
     await init_db()
     async with get_session() as session:
-        user = User(id=1, images_used=5)
+        user = User(id=1, quota_used=5)
         session.add(user)
         await session.commit()
 
@@ -45,7 +45,7 @@ async def test_scheduler_jobs(monkeypatch):
     await reset_monthly_quotas()
     async with get_session() as session:
         user = await session.get(User, 1)
-        assert user.images_used == 0
+        assert user.quota_used == 0
 
     await weekly_trending_summary()
     transport = ASGITransport(app=notif_app)

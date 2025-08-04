@@ -65,7 +65,7 @@ async def reset_monthly_quotas() -> None:
         users = result.all()
         ids = [u.id for u in users]
         for u in users:
-            u.images_used = 0
+            u.quota_used = 0
             u.last_reset = now
             session.add(u)
         await session.commit()

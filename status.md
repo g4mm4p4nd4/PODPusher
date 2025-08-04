@@ -4,7 +4,6 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 ## Pending PRs
 
-- **User Plans & Quotas PR** – Coming from the `feat/user-quota-merge` branch via Codex. Review and merge once it passes tests.
 - **Image Review & Tagging PR** – Coming from the `feat/image-review-merge` branch via Codex. Review and merge once complete.
 
 ## Outstanding Tasks
