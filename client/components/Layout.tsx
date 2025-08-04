@@ -3,19 +3,14 @@ import { ReactNode, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'next-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import QuotaDisplay from './QuotaDisplay';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
-  const [usage, setUsage] = useState<{ plan: string; images_used: number; limit: number } | null>(null);
   const [unread, setUnread] = useState(0);
   const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
-    axios
-      .get(`${api}/api/user/plan`, { headers: { 'X-User-Id': '1' } })
-      .then((res) => setUsage(res.data))
-      .catch((err) => console.error(err));
-
     axios
       .get(`${api}/api/notifications`, { headers: { 'X-User-Id': '1' } })
       .then((res) => setUnread(res.data.filter((n: any) => !n.read).length))
@@ -49,9 +44,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               </span>
             )}
           </Link>
-          <span className="ml-auto text-sm" data-testid="quota">
-            {usage ? `${usage.images_used}/${usage.limit} images` : ''}
-          </span>
+          <QuotaDisplay />
         </div>
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>

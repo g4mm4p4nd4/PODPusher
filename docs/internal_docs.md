@@ -62,3 +62,23 @@ Mount the middleware on additional services as needed:
 from services.analytics.middleware import AnalyticsMiddleware
 app.add_middleware(AnalyticsMiddleware)
 
+```
+
+## User Plans and Quotas
+
+The platform tracks usage limits per subscription plan and exposes endpoints
+for the dashboard to display remaining credits.
+
+### API
+
+- **GET `/api/user/plan`** – returns `{ plan, quota_used, limit }` and resets
+  monthly usage when needed.
+- **POST `/api/user/plan`** – increment usage by `count`; returns updated
+  `{ plan, quota_used, limit }` or 403 when the quota would be exceeded.
+
+### Frontend
+
+The `QuotaDisplay` component in the dashboard navigation calls the GET endpoint
+via a typed client and shows the remaining credits. When fewer than 10 % of
+credits remain, the counter turns red to warn the user.
+

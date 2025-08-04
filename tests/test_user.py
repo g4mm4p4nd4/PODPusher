@@ -16,10 +16,23 @@ async def test_user_plan_endpoint():
             await session.commit()
     transport = ASGITransport(app=user_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/user/plan", headers={"X-User-Id": "1"})
+        resp = await client.get("/api/user/plan", headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["plan"] == "free"
-        assert data["images_used"] == 0
+        assert data["quota_used"] == 0
         assert data["limit"] == PLAN_LIMITS["free"]
-        assert set(data.keys()) == {"plan", "images_used", "limit"}
+        assert set(data.keys()) == {"plan", "quota_used", "limit"}
+
+
+@pytest.mark.asyncio
+async def test_increment_quota():
+    await init_db()
+    transport = ASGITransport(app=user_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/user/plan", json={"count": 5}, headers={"X-User-Id": "2"}
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["quota_used"] == 5
