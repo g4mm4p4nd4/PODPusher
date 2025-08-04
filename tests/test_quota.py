@@ -25,4 +25,4 @@ async def test_quota_enforcement():
             if i < 20:
                 assert resp.status_code == 200
             else:
-                assert resp.status_code == 402
+                assert resp.status_code == 403

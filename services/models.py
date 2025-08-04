@@ -39,7 +39,7 @@ class Listing(SQLModel, table=True):
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     plan: str = "free"
-    images_used: int = 0
+    quota_used: int = 0
     last_reset: datetime = Field(default_factory=datetime.utcnow)
 
 

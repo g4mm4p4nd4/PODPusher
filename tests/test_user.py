@@ -16,10 +16,28 @@ async def test_user_plan_endpoint():
             await session.commit()
     transport = ASGITransport(app=user_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/user/plan", headers={"X-User-Id": "1"})
+        resp = await client.get("/plan", headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["plan"] == "free"
-        assert data["images_used"] == 0
+        assert data["quota_used"] == 0
         assert data["limit"] == PLAN_LIMITS["free"]
-        assert set(data.keys()) == {"plan", "images_used", "limit"}
+        assert set(data.keys()) == {"plan", "quota_used", "limit"}
+
+
+@pytest.mark.asyncio
+async def test_quota_update_endpoint():
+    await init_db()
+    transport = ASGITransport(app=user_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/plan", json={"increment": 5}, headers={"X-User-Id": "2"}
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["quota_used"] == 5
+        # exceeding limit
+        resp2 = await client.post(
+            "/plan", json={"increment": 100}, headers={"X-User-Id": "2"}
+        )
+        assert resp2.status_code == 403
