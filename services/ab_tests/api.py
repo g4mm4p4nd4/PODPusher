@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from datetime import datetime
 
 from .service import (
     create_test,
@@ -7,19 +8,36 @@ from .service import (
     record_click,
     record_impression,
 )
-
+from ..models import ExperimentType
 
 app = FastAPI()
 
 
+class VariantCreate(BaseModel):
+    name: str
+    weight: float = 1.0
+
+
 class TestCreate(BaseModel):
     name: str
-    variants: list[str]
+    experiment_type: ExperimentType
+    variants: list[VariantCreate]
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
 
 @app.post("/")
 async def create(payload: TestCreate):
-    return await create_test(payload.name, payload.variants)
+    try:
+        return await create_test(
+            payload.name,
+            payload.experiment_type,
+            [v.model_dump() for v in payload.variants],
+            payload.start_time,
+            payload.end_time,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.get("/metrics")

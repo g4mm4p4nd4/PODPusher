@@ -13,9 +13,16 @@
     "socialGenerator": "Social Generator",
     "searchPlaceholder": "Search..."
   },
-  "index": { "trending": "Trending Keywords", "events": "This Month's Events" },
-  "categories": { "title": "Trending Categories" },
-  "design": { "title": "Design Ideas" },
+  "index": {
+    "trending": "Trending Keywords",
+    "events": "This Month's Events"
+  },
+  "categories": {
+    "title": "Trending Categories"
+  },
+  "design": {
+    "title": "Design Ideas"
+  },
   "generate": {
     "title": "Generate Product Idea",
     "placeholder": "Enter trend term",
@@ -47,8 +54,14 @@
     "save": "Save Draft",
     "language": "Language"
   },
-  "analytics": { "title": "Keyword Analytics", "revenue": "Revenue" },
-  "notifications": { "title": "Notifications", "markRead": "Mark as read" },
+  "analytics": {
+    "title": "Keyword Analytics",
+    "revenue": "Revenue"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markRead": "Mark as read"
+  },
   "ab": {
     "title": "A/B Tests",
     "name": "Test Name",
@@ -57,7 +70,17 @@
     "variant": "Variant",
     "impressions": "Impressions",
     "clicks": "Clicks",
-    "rate": "Conversion Rate"
+    "rate": "Conversion Rate",
+    "type": "Experiment Type",
+    "weights": "Traffic Weights (comma separated)",
+    "start": "Start Time",
+    "end": "End Time",
+    "weight": "Weight",
+    "types": {
+      "image": "Image",
+      "description": "Description",
+      "price": "Price"
+    }
   },
   "social": {
     "title": "Social Media Generator",

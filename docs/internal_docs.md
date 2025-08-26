@@ -136,3 +136,17 @@ On the frontend, the `/search` page provides controls for each filter and
 consumes the endpoint. The navbar now includes a quick search box which routes
 to the page and pre-fills the query parameter.
 
+
+## A/B Testing Engine
+
+The `ab_tests` service manages experiments defined by an `ABTest` record and one or more `ABVariant` rows. Each test stores the experiment type (`image`, `description` or `price`), optional start and end times for scheduling, and variants with explicit traffic weights.
+
+```mermaid
+flowchart TD
+    A[Create Experiment] -->|POST /ab_tests| B[Store ABTest + ABVariant]
+    B --> C[Active? schedule]
+    C -->|yes| D[Record Click/Impression]
+    D --> E[Metrics]
+```
+
+During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the current time against the experiment schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
