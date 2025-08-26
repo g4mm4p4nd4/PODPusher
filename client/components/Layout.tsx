@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import axios from 'axios';
 import { useTranslation } from 'next-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -8,7 +9,9 @@ import QuotaDisplay from './QuotaDisplay';
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
   const [unread, setUnread] = useState(0);
+  const [navQuery, setNavQuery] = useState('');
   const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  const router = useRouter();
 
   useEffect(() => {
     axios
@@ -31,6 +34,21 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
           <Link href="/social-generator" className="hover:underline">{t('nav.socialGenerator')}</Link>
           <Link href="/ab_tests" className="hover:underline">{t('nav.abTests')}</Link>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.push(`/search?q=${encodeURIComponent(navQuery)}`);
+              setNavQuery('');
+            }}
+            className="flex items-center ml-auto"
+          >
+            <input
+              value={navQuery}
+              onChange={(e) => setNavQuery(e.target.value)}
+              placeholder={t('nav.searchPlaceholder')}
+              className="p-1 rounded text-black"
+            />
+          </form>
           <LanguageSwitcher />
           <Link
             href="/notifications"

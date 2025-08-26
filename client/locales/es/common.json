@@ -10,7 +10,8 @@
     "listings": "Publicaciones",
     "abTests": "Pruebas A/B",
     "notifications": "Notificaciones",
-    "socialGenerator": "Generador Social"
+    "socialGenerator": "Generador Social",
+    "searchPlaceholder": "Buscar..."
   },
   "index": { "trending": "Palabras clave en tendencia", "events": "Eventos del mes" },
   "categories": { "title": "Categorías en tendencia" },
@@ -60,6 +61,17 @@
     "title": "Generador de Redes Sociales",
     "prompt": "Introduce una idea de caption",
     "button": "Generar"
-
+  },
+  "search": {
+    "title": "Buscar",
+    "keywordPlaceholder": "Palabra clave",
+    "allCategories": "Todas las categorías",
+    "tagPlaceholder": "Etiqueta",
+    "rating": "Calificación",
+    "button": "Buscar",
+    "loading": "Cargando...",
+    "results": "{{count}} resultados",
+    "ratingLabel": "Calificación: {{rating}}",
+    "noResults": "Sin resultados"
   }
 }

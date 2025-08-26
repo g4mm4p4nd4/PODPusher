@@ -1,11 +1,30 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 from .service import search_products
+
+
+class SearchItem(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    image_url: str
+    rating: int | None = None
+    tags: list[str] = []
+    category: str
+
+
+class SearchResponse(BaseModel):
+    items: list[SearchItem]
+    total: int
+    page: int
+    page_size: int
+
 
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/", response_model=SearchResponse)
 async def search(
     q: str | None = None,
     category: str | None = None,

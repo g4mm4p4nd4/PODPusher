@@ -10,7 +10,8 @@
     "listings": "Listings",
     "abTests": "A/B Tests",
     "notifications": "Notifications",
-    "socialGenerator": "Social Generator"
+    "socialGenerator": "Social Generator",
+    "searchPlaceholder": "Search..."
   },
   "index": { "trending": "Trending Keywords", "events": "This Month's Events" },
   "categories": { "title": "Trending Categories" },
@@ -60,6 +61,17 @@
     "title": "Social Media Generator",
     "prompt": "Enter caption idea",
     "button": "Generate"
-
+  },
+  "search": {
+    "title": "Search",
+    "keywordPlaceholder": "Keyword",
+    "allCategories": "All Categories",
+    "tagPlaceholder": "Tag",
+    "rating": "Rating",
+    "button": "Search",
+    "loading": "Loading...",
+    "results": "{{count}} results",
+    "ratingLabel": "Rating: {{rating}}",
+    "noResults": "No results found"
   }
 }

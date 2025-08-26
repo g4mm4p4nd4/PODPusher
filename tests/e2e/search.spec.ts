@@ -13,17 +13,20 @@ test('search page filters products', async ({ page }) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: 1,
-          name: 'Product 1',
-          description: 'funny dog shirt',
-          image_url: '/test.png',
-          rating: 4,
-          tags: ['funny'],
-          category: 'apparel',
-        },
-      ]),
+      body: JSON.stringify({
+        items: [
+          {
+            id: 1,
+            name: 'Product 1',
+            description: 'funny dog shirt',
+            image_url: '/test.png',
+            rating: 4,
+            tags: ['funny'],
+            category: 'apparel',
+          },
+        ],
+        total: 1,
+      }),
     });
   });
 
