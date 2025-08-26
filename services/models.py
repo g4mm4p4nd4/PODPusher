@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, JSON
 from datetime import datetime
+from enum import Enum
 
 
 class Trend(SQLModel, table=True):
@@ -52,11 +53,22 @@ class Notification(SQLModel, table=True):
     read_status: bool = False
 
 
+class ExperimentType(str, Enum):
+    """Supported experiment dimensions."""
+
+    IMAGE = "image"
+    DESCRIPTION = "description"
+    PRICING = "pricing"
+
+
 class ABTest(SQLModel, table=True):
     """Top level A/B test container."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+    experiment_type: ExperimentType
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -66,6 +78,7 @@ class ABVariant(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     test_id: int
     name: str
+    traffic_weight: float = 1.0
     impressions: int = 0
     clicks: int = 0
 

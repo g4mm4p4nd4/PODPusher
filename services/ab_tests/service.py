@@ -3,7 +3,8 @@ from typing import List, Optional
 from sqlmodel import select
 
 from ..common.database import get_session
-from ..models import ABTest, ABVariant
+from ..models import ABTest, ABVariant, ExperimentType
+from datetime import datetime
 
 
 def _variant_dict(variant: ABVariant) -> dict:
@@ -12,28 +13,51 @@ def _variant_dict(variant: ABVariant) -> dict:
         "id": variant.id,
         "test_id": variant.test_id,
         "name": variant.name,
+        "traffic_weight": variant.traffic_weight,
         "impressions": variant.impressions,
         "clicks": variant.clicks,
         "conversion_rate": rate,
     }
 
 
-async def create_test(name: str, variants: List[str]) -> dict:
+async def create_test(
+    name: str,
+    variants: List[str],
+    experiment_type: str,
+    traffic_split: List[float] | None = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+) -> dict:
     """Create a new A/B test with variants."""
     async with get_session() as session:
-        test = ABTest(name=name)
+        test = ABTest(
+            name=name,
+            experiment_type=ExperimentType(experiment_type),
+            start_time=start_time,
+            end_time=end_time,
+        )
         session.add(test)
         await session.commit()
         await session.refresh(test)
         test_id = test.id
+        weights = traffic_split or [1 / len(variants)] * len(variants)
+        if len(weights) != len(variants):
+            weights = [1 / len(variants)] * len(variants)
         variant_dicts = []
-        for v in variants:
-            variant = ABVariant(test_id=test_id, name=v)
+        for v, w in zip(variants, weights):
+            variant = ABVariant(test_id=test_id, name=v, traffic_weight=w)
             session.add(variant)
             await session.commit()
             await session.refresh(variant)
             variant_dicts.append(_variant_dict(variant))
-        return {"id": test_id, "name": test.name, "variants": variant_dicts}
+        return {
+            "id": test_id,
+            "name": test.name,
+            "experiment_type": test.experiment_type,
+            "start_time": test.start_time,
+            "end_time": test.end_time,
+            "variants": variant_dicts,
+        }
 
 
 async def get_metrics(test_id: int | None = None) -> List[dict]:

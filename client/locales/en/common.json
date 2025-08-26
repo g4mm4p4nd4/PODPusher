@@ -54,7 +54,12 @@
     "variant": "Variant",
     "impressions": "Impressions",
     "clicks": "Clicks",
-    "rate": "Conversion Rate"
+    "rate": "Conversion Rate",
+    "type": "Experiment Type",
+    "weights": "Traffic Split (comma separated)",
+    "start": "Start Time",
+    "end": "End Time",
+    "weight": "Weight"
   },
   "social": {
     "title": "Social Media Generator",

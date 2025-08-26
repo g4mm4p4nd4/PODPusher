@@ -103,3 +103,18 @@ The `QuotaDisplay` component in the dashboard navigation calls the GET endpoint
 via a typed client and shows the remaining credits. When fewer than 10 % of
 credits remain, the counter turns red to warn the user.
 
+## A/B Testing Engine
+
+The `ab_tests` service enables experiments on listing attributes such as images,
+descriptions and pricing. Each experiment defines variant traffic weights and
+optional start/end times for scheduling. Metrics for impressions and clicks are
+recorded per variant and surfaced via API and dashboard.
+
+```mermaid
+flowchart LR
+    A[Configure Experiment] --> B[AB Test Service]
+    B --> C[Listing Publisher]
+    C --> D[(Metrics)]
+    D --> B
+```
+

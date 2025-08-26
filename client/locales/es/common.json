@@ -54,7 +54,12 @@
     "variant": "Variante",
     "impressions": "Impresiones",
     "clicks": "Clics",
-    "rate": "Tasa de conversión"
+    "rate": "Tasa de conversión",
+    "type": "Tipo de experimento",
+    "weights": "División de tráfico (separada por comas)",
+    "start": "Inicio",
+    "end": "Fin",
+    "weight": "Peso"
   },
   "social": {
     "title": "Generador de Redes Sociales",
