@@ -1,28 +1,16 @@
-from typing import List
-import os
+from __future__ import annotations
 
-PRINTIFY_API_KEY = os.getenv("PRINTIFY_API_KEY")
-ETSY_API_KEY = os.getenv("ETSY_API_KEY")
+from typing import List
+
+from packages.integrations.printify import get_printify_client
+from packages.integrations.etsy import get_etsy_client
 
 
 def create_sku(products: List[dict]) -> List[dict]:
-    if PRINTIFY_API_KEY:
-        # placeholder for real API call
-        skus = ["sku123" for _ in products]
-    else:
-        skus = ["stub-sku" for _ in products]
-
-    for product, sku in zip(products, skus):
-        product["sku"] = sku
-    return products
+    client = get_printify_client()
+    return client(products)
 
 
 def publish_listing(product: dict) -> dict:
-    if ETSY_API_KEY:
-        # placeholder for real API call
-        url = "http://etsy.com/listing"  # stub
-    else:
-        url = "http://etsy.example/listing"
-    product["etsy_url"] = url
-    product["listing_url"] = url
-    return product
+    client = get_etsy_client()
+    return client(product)
