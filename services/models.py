@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+from enum import Enum
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, JSON
 from datetime import datetime
@@ -62,11 +63,20 @@ class Notification(SQLModel, table=True):
     read_status: bool = False
 
 
+class ExperimentType(str, Enum):
+    IMAGE = "image"
+    DESCRIPTION = "description"
+    PRICE = "price"
+
+
 class ABTest(SQLModel, table=True):
     """Top level A/B test container."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+    experiment_type: "ExperimentType"
+    start_time: datetime | None = None
+    end_time: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -76,6 +86,7 @@ class ABVariant(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     test_id: int
     name: str
+    weight: float = 1.0
     impressions: int = 0
     clicks: int = 0
 
@@ -87,5 +98,7 @@ class AnalyticsEvent(SQLModel, table=True):
     event_type: str
     path: str
     user_id: Optional[int] = None
-    meta: Dict[str, Any] | None = Field(default=None, sa_column=Column("metadata", JSON))
+    meta: Dict[str, Any] | None = Field(
+        default=None, sa_column=Column("metadata", JSON)
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)

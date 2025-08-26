@@ -13,9 +13,16 @@
     "socialGenerator": "Generador Social",
     "searchPlaceholder": "Buscar..."
   },
-  "index": { "trending": "Palabras clave en tendencia", "events": "Eventos del mes" },
-  "categories": { "title": "Categorías en tendencia" },
-  "design": { "title": "Ideas de diseño" },
+  "index": {
+    "trending": "Palabras clave en tendencia",
+    "events": "Eventos del mes"
+  },
+  "categories": {
+    "title": "Categorías en tendencia"
+  },
+  "design": {
+    "title": "Ideas de diseño"
+  },
   "generate": {
     "title": "Generar idea de producto",
     "placeholder": "Introduce un término",
@@ -47,8 +54,14 @@
     "save": "Guardar borrador",
     "language": "Idioma"
   },
-  "analytics": { "title": "Analítica de palabras clave", "revenue": "Ingresos" },
-  "notifications": { "title": "Notificaciones", "markRead": "Marcar como leído" },
+  "analytics": {
+    "title": "Analítica de palabras clave",
+    "revenue": "Ingresos"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markRead": "Marcar como leído"
+  },
   "ab": {
     "title": "Pruebas A/B",
     "name": "Nombre de prueba",
@@ -57,7 +70,17 @@
     "variant": "Variante",
     "impressions": "Impresiones",
     "clicks": "Clics",
-    "rate": "Tasa de conversión"
+    "rate": "Tasa de conversión",
+    "type": "Tipo de experimento",
+    "weights": "Pesos de tráfico separados por coma",
+    "start": "Inicio",
+    "end": "Fin",
+    "weight": "Peso",
+    "types": {
+      "image": "Imagen",
+      "description": "Descripción",
+      "price": "Precio"
+    }
   },
   "social": {
     "title": "Generador de Redes Sociales",
