@@ -9,6 +9,17 @@ jest.mock('next-i18next', () => ({
 
 jest.mock('../services/listings', () => ({
   fetchTagSuggestions: jest.fn(() => Promise.resolve(['one', 'two'])),
+  saveDraft: jest.fn(() => Promise.resolve(1)),
+  loadDraft: jest.fn(() =>
+    Promise.resolve({
+      id: 1,
+      title: '',
+      description: '',
+      tags: [],
+      language: 'en',
+      field_order: [],
+    })
+  ),
 }));
 
 const onPublish = jest.fn();
@@ -23,4 +34,11 @@ test('shows character counts and adds tags', async () => {
   const tagButton = await screen.findByRole('button', { name: 'one' });
   fireEvent.click(tagButton);
   expect(screen.getAllByText('one').length).toBeGreaterThan(0);
+});
+
+test('saves draft', async () => {
+  render(<ListingComposer onPublish={onPublish} />);
+  fireEvent.click(screen.getByText('save'));
+  const services = require('../services/listings');
+  expect(services.saveDraft).toHaveBeenCalled();
 });
