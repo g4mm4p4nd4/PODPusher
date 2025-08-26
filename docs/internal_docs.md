@@ -103,3 +103,15 @@ The `QuotaDisplay` component in the dashboard navigation calls the GET endpoint
 via a typed client and shows the remaining credits. When fewer than 10 % of
 credits remain, the counter turns red to warn the user.
 
+## Advanced Search Service
+
+The `search` service exposes a `/api/search` endpoint supporting keyword,
+category, tag and rating filters. Queries are translated into SQL so filtering
+and pagination occur at the database layer. The endpoint returns `{ items,
+total, page, page_size }` allowing the UI to display result counts and paginate
+efficiently.
+
+On the frontend, the `/search` page provides controls for each filter and
+consumes the endpoint. The navbar now includes a quick search box which routes
+to the page and pre-fills the query parameter.
+

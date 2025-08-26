@@ -31,9 +31,14 @@ async def test_search_api_endpoint():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(
             "/api/search/",
-            params={"q": "cat", "category": "accessories", "tag": "cute", "rating_min": 4},
+            params={
+                "q": "cat",
+                "category": "accessories",
+                "tag": "cute",
+                "rating_min": 4,
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["image_url"] == "img.png"
+        assert data["total"] == 1
+        assert data["items"][0]["image_url"] == "img.png"

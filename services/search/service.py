@@ -1,8 +1,12 @@
-from typing import List, Optional
+"""Search service with database level filtering."""
+
+from typing import Dict, List, Optional
+
+from sqlalchemy import func, or_
 from sqlmodel import select
 
-from ..models import Product, Idea, Trend
 from ..common.database import get_session
+from ..models import Idea, Product, Trend
 
 
 async def search_products(
@@ -12,33 +16,35 @@ async def search_products(
     rating_min: Optional[int] = None,
     page: int = 1,
     page_size: int = 10,
-) -> List[dict]:
-    """Filter products by keyword, category, tag and rating."""
+) -> Dict[str, object]:
+    """Filter products by keyword, category, tag and rating using SQL."""
+
     async with get_session() as session:
         stmt = (
             select(Product, Idea, Trend)
             .join(Idea, Product.idea_id == Idea.id)
             .join(Trend, Idea.trend_id == Trend.id)
         )
+
+        if q:
+            like = f"%{q}%"
+            stmt = stmt.where(or_(Idea.description.ilike(like), Trend.term.ilike(like)))
+        if category:
+            stmt = stmt.where(Trend.category == category.lower())
         if rating_min is not None:
             stmt = stmt.where(Product.rating >= rating_min)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await session.exec(count_stmt)).one()
+
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
         result = await session.exec(stmt)
         rows = result.all()
 
     items: List[dict] = []
     for product, idea, trend in rows:
-        if q:
-            q_lower = q.lower()
-            if q_lower not in (idea.description or "").lower() and q_lower not in (
-                trend.term or ""
-            ).lower():
-                continue
-        if category and trend.category != category.lower():
+        if tag and tag not in (product.tags or []):
             continue
-        if tag:
-            tags = [t.lower() for t in (product.tags or [])]
-            if tag.lower() not in tags:
-                continue
         items.append(
             {
                 "id": product.id,
@@ -51,6 +57,9 @@ async def search_products(
             }
         )
 
-    start = (page - 1) * page_size
-    end = start + page_size
-    return items[start:end]
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }

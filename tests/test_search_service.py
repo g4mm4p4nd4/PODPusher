@@ -27,6 +27,8 @@ async def test_search_service_filters():
         await session.commit()
         await session.refresh(product)
 
-    results = await search_products(q="dog", category="apparel", tag="funny", rating_min=3)
-    assert len(results) == 1
-    assert results[0]["id"] == product.id
+    results = await search_products(
+        q="dog", category="apparel", tag="funny", rating_min=3
+    )
+    assert results["total"] == 1
+    assert results["items"][0]["id"] == product.id
