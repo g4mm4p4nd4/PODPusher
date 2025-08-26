@@ -1,9 +1,19 @@
 
 # Internal Documentation
 
-## Integration Service Stubs
+## Integration Service
 
-Temporary stub implementations live in `services/integration/service.py`. Unit tests in `tests/test_integration_service.py` verify these stubs and should be removed once the real Printify and Etsy clients are integrated.
+Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.
+
+### Integration Flow
+
+```mermaid
+flowchart LR
+    A[Product Data] --> B[Printify API]
+    B --> C[SKU]
+    D[Listing Data] --> E[Etsy API]
+    E --> F[Listing URL]
+```
 
 ## Social Media Generator Service
 
