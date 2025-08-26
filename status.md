@@ -23,6 +23,10 @@ This file tracks the remaining work required to bring PODPusher to production re
 11. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
 12. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
 
+## Completed
+
+- Re-implemented listing composer enhancements (drag-and-drop fields, improved tag suggestions, draft saving, multi-language input).
+
 
 ## Instructions to Agents
 

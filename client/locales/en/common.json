@@ -43,7 +43,9 @@
     "description": "Description",
     "tags": "Tags",
     "suggest": "Suggest Tags",
-    "publish": "Publish"
+    "publish": "Publish",
+    "save": "Save Draft",
+    "language": "Language"
   },
   "analytics": { "title": "Keyword Analytics", "revenue": "Revenue" },
   "notifications": { "title": "Notifications", "markRead": "Mark as read" },

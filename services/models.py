@@ -36,6 +36,16 @@ class Listing(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ListingDraft(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    description: str
+    tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    language: str = "en"
+    field_order: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     plan: str = "free"

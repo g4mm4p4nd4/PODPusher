@@ -43,7 +43,9 @@
     "description": "Descripción",
     "tags": "Etiquetas",
     "suggest": "Sugerir etiquetas",
-    "publish": "Publicar"
+    "publish": "Publicar",
+    "save": "Guardar borrador",
+    "language": "Idioma"
   },
   "analytics": { "title": "Analítica de palabras clave", "revenue": "Ingresos" },
   "notifications": { "title": "Notificaciones", "markRead": "Marcar como leído" },

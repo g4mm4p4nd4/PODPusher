@@ -6,6 +6,21 @@ from ..common.database import get_session
 from ..trend_scraper.events import EVENTS
 from packages.integrations import openai
 
+# Simplified historical sales and search frequency data for tags
+SALES_DATA: Dict[str, int] = {
+    "t-shirt": 100,
+    "mug": 80,
+    "cat": 60,
+    "dog": 50,
+}
+
+SEARCH_DATA: Dict[str, int] = {
+    "cat": 120,
+    "dog": 90,
+    "mug": 40,
+    "t-shirt": 30,
+}
+
 
 TrendInput = Union[str, Dict]
 
@@ -68,33 +83,41 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
 
 
 async def suggest_tags(title: str, description: str) -> List[str]:
-    """Return a list of up to 13 tag suggestions based on title and description."""
+    """Return ranked tag suggestions based on sales and search history."""
     text = f"{title} {description}".strip()
+    raw: List[str] = []
     if openai.API_KEY and not openai.USE_STUB:
         try:
-            return await openai.suggest_tags(text)
+            raw = await openai.suggest_tags(text)
         except Exception:
-            pass
-    words = [w.strip(".,!?:;\"'()[]{}").lower() for w in text.split()]
-    stop = {
-        "the",
-        "a",
-        "an",
-        "and",
-        "or",
-        "of",
-        "in",
-        "with",
-        "to",
-        "for",
-        "on",
-        "at",
-        "by",
-    }
-    tags: List[str] = []
-    for w in words:
-        if w and w not in stop and w not in tags:
-            tags.append(w)
-        if len(tags) >= 13:
-            break
-    return tags
+            raw = []
+    if not raw:
+        words = [w.strip(".,!?:;\"'()[]{}").lower() for w in text.split()]
+        stop = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "of",
+            "in",
+            "with",
+            "to",
+            "for",
+            "on",
+            "at",
+            "by",
+        }
+        for w in words:
+            if w and w not in stop:
+                raw.append(w)
+    seen = []
+    for tag in raw:
+        if tag not in seen:
+            seen.append(tag)
+    scored = sorted(
+        seen,
+        key=lambda t: SALES_DATA.get(t, 0) + SEARCH_DATA.get(t, 0),
+        reverse=True,
+    )
+    return scored[:13]

@@ -56,7 +56,18 @@ inspects the listing title and description and returns up to 13 concise tags.
 
 The `/listings` page renders the `ListingComposer` component. Users type a title
 and description, see character counters update in real time and can request tag
-suggestions which populate clickable chips for easy selection.
+suggestions which populate clickable chips for easy selection. Fields can be
+reordered via drag-and-drop to match user preference. Drafts may be saved and
+resumed, and listings can be composed in multiple languages.
+
+### Draft API
+
+- **POST `/api/listing-composer/drafts`** – save or update a draft. Body
+  includes `title`, `description`, `tags`, `language` and `field_order`.
+- **GET `/api/listing-composer/drafts/{id}`** – fetch a previously saved draft.
+
+The tag suggestion endpoint now ranks suggestions using historical sales and
+search frequency data for improved relevance.
 =======
 # Analytics Service
 
