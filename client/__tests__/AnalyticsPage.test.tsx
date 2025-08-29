@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 import axios from 'axios';
@@ -18,13 +18,16 @@ jest.mock('react-chartjs-2', () => ({
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-const initialData: SummaryRecord[] = [{ path: '/home', count: 1 }];
+const initialData: SummaryRecord[] = [
+  { path: '/home', views: 1, clicks: 0, conversions: 0, conversion_rate: 0 },
+];
 
-it('renders analytics chart and changes filter', async () => {
+it('renders analytics charts and refreshes', async () => {
+  jest.useFakeTimers();
+  mockedAxios.get.mockResolvedValue({ data: initialData });
   render(<Analytics initialData={initialData} />);
-  expect(screen.getByTestId('chart')).toBeInTheDocument();
-  const select = screen.getByLabelText('analytics.filter');
-  mockedAxios.get.mockResolvedValueOnce({ data: [{ path: '/prod', count: 2 }] });
-  fireEvent.change(select, { target: { value: 'click' } });
-  await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(1));
+  expect(screen.getAllByTestId('chart')).toHaveLength(3);
+  jest.advanceTimersByTime(5000);
+  await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
+  jest.useRealTimers();
 });

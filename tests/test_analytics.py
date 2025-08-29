@@ -1,7 +1,8 @@
+import asyncio
 import pytest
 from httpx import AsyncClient, ASGITransport
 from services.analytics.api import app as analytics_app
-from services.analytics.service import list_events
+from services.analytics.service import list_events, log_event
 from services.common.database import init_db
 
 
@@ -18,11 +19,11 @@ async def test_event_logging_and_summary():
         created = resp.json()
         assert created["event_type"] == "click"
 
-        resp = await client.get("/analytics/summary", params={"event_type": "click"})
+        resp = await client.get("/analytics/summary")
         assert resp.status_code == 200
         summary = resp.json()
         assert summary[0]["path"] == "/home"
-        assert summary[0]["count"] == 1
+        assert summary[0]["clicks"] == 1
 
 
 @pytest.mark.asyncio
@@ -30,6 +31,24 @@ async def test_middleware_logs_page_view():
     await init_db()
     transport = ASGITransport(app=analytics_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        await client.get("/analytics/summary")
+        await client.get("/notfound")
     events = await list_events("page_view")
-    assert any(e.path == "/analytics/summary" for e in events)
+    assert any(e.path == "/notfound" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_conversion_triggers_stripe(monkeypatch):
+    await init_db()
+    called = False
+
+    async def fake_report(quantity: int = 1) -> None:
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(
+        "services.analytics.service._report_conversion_to_stripe", fake_report
+    )
+
+    await log_event("conversion", "/checkout")
+    await asyncio.sleep(0)
+    assert called

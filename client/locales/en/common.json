@@ -55,7 +55,9 @@
     "language": "Language"
   },
   "analytics": {
-    "title": "Keyword Analytics",
+    "title": "Analytics Dashboard",
+    "views": "Page Views",
+    "conversionRate": "Conversion Rate",
     "revenue": "Revenue"
   },
   "notifications": {

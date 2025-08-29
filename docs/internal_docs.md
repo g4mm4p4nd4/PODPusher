@@ -89,9 +89,19 @@ The analytics module records user interactions and exposes aggregated metrics fo
 - **API** (`services/analytics/api.py`):
   - `POST /analytics/events` – record an event.
   - `GET /analytics/events` – list events by type.
-  - `GET /analytics/summary` – aggregate counts per path.
+  - `GET /analytics/summary` – aggregate counts and conversion rates per path.
 - **Middleware**: `AnalyticsMiddleware` attaches to FastAPI apps and logs `page_view` events asynchronously to keep p95 latency under 300 ms.
 - **Stripe Usage**: conversion events trigger an async usage report to Stripe for billing (skipped when `STRIPE_API_KEY` is absent).
+
+### Architecture Diagram
+```mermaid
+flowchart LR
+    A[Client Request] --> B[AnalyticsMiddleware]
+    B --> C[Analytics API]
+    C --> D[(AnalyticsEvent DB)]
+    D --> E[Summary Endpoint]
+    E --> F[Dashboard Charts]
+```
 
 ### Data Flow
 1. Requests hit any FastAPI service using `AnalyticsMiddleware`.
