@@ -2,9 +2,9 @@ import asyncio
 import os
 import httpx
 from typing import Dict, Any
-from .repository import create_event, fetch_events, aggregate_events
+from .repository import create_event, fetch_events, aggregate_metrics
 from ..common.database import get_session
-from ..models import AnalyticsEvent
+from ..models import AnalyticsEvent, EventType
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 
@@ -25,7 +25,7 @@ async def _report_conversion_to_stripe(quantity: int = 1) -> None:
 
 
 async def log_event(
-    event_type: str,
+    event_type: EventType,
     path: str,
     user_id: int | None = None,
     meta: Dict[str, Any] | None = None,
@@ -43,14 +43,24 @@ async def log_event(
     return created
 
 
-async def list_events(event_type: str | None = None):
+async def list_events(event_type: EventType | None = None):
     async with get_session() as session:
         return await fetch_events(session, event_type)
 
 
-async def get_summary(event_type: str | None = None):
+async def get_summary():
     async with get_session() as session:
-        rows = await aggregate_events(session, event_type)
-    return [
-        {"path": path, "count": count} for path, count in rows
-    ]
+        rows = await aggregate_metrics(session)
+    summary = []
+    for path, views, clicks, conversions in rows:
+        rate = (conversions / views) if views else 0
+        summary.append(
+            {
+                "path": path,
+                "views": views,
+                "clicks": clicks,
+                "conversions": conversions,
+                "conversion_rate": rate,
+            }
+        )
+    return summary

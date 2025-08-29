@@ -91,11 +91,17 @@ class ABVariant(SQLModel, table=True):
     clicks: int = 0
 
 
+class EventType(str, Enum):
+    page_view = "page_view"
+    click = "click"
+    conversion = "conversion"
+
+
 class AnalyticsEvent(SQLModel, table=True):
     """Stored analytics event for dashboards."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    event_type: str
+    event_type: EventType
     path: str
     user_id: Optional[int] = None
     meta: Dict[str, Any] | None = Field(

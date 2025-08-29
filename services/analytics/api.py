@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Dict, Any
 from .service import log_event, list_events, get_summary
+from ..models import EventType
 from .middleware import AnalyticsMiddleware
 
 app = FastAPI()
@@ -10,7 +11,7 @@ app.add_middleware(AnalyticsMiddleware)
 
 
 class EventIn(BaseModel):
-    event_type: str
+    event_type: EventType
     path: str
     user_id: int | None = None
     meta: Dict[str, Any] | None = None
@@ -23,7 +24,10 @@ class EventOut(EventIn):
 
 class SummaryOut(BaseModel):
     path: str
-    count: int
+    views: int
+    clicks: int
+    conversions: int
+    conversion_rate: float
 
 
 @app.post("/analytics/events", response_model=EventOut, status_code=201)
@@ -38,5 +42,5 @@ async def get_events(event_type: str | None = None):
 
 
 @app.get("/analytics/summary", response_model=list[SummaryOut])
-async def summary(event_type: str | None = None):
-    return await get_summary(event_type)
+async def summary():
+    return await get_summary()

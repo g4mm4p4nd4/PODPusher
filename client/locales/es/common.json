@@ -55,7 +55,9 @@
     "language": "Idioma"
   },
   "analytics": {
-    "title": "Analítica de palabras clave",
+    "title": "Panel de Analítica",
+    "views": "Vistas de página",
+    "conversionRate": "Tasa de conversión",
     "revenue": "Ingresos"
   },
   "notifications": {
