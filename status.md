@@ -16,7 +16,6 @@ This file tracks the remaining work required to bring PODPusher to production re
 6. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
 7. Maintain architecture and schema diagrams.
 8. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
-9. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
 
 ## Completed
 - A/B Testing Support – Flexible engine with experiment types, weighted traffic and scheduling.
@@ -24,6 +23,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 - Re-implemented listing composer enhancements (drag-and-drop fields, improved tag suggestions, draft saving, multi-language input).
 - Analytics Enhancements – Replace mocked analytics with real metrics collected from the database and user interactions.
+- Social Media Generator – Rule-based captions and images with localisation and dashboard UI.
 
 ## Instructions to Agents
 

@@ -1,0 +1,5 @@
+{
+  "default": "Descubre {title}! {description} Ideal para {tags}. #{keyword}",
+  "tshirt": "Luce {title}! {description} #{keyword}",
+  "mug": "Bebe con estilo con {title}. {description} #{keyword}"
+}

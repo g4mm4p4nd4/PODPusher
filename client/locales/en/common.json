@@ -11,6 +11,7 @@
     "abTests": "A/B Tests",
     "notifications": "Notifications",
     "socialGenerator": "Social Generator",
+    "settings": "Settings",
     "searchPlaceholder": "Search..."
   },
   "index": {
@@ -86,8 +87,21 @@
   },
   "social": {
     "title": "Social Media Generator",
-    "prompt": "Enter caption idea",
-    "button": "Generate"
+    "titleField": "Product title",
+    "descriptionField": "Description",
+    "tagsField": "Tags (comma separated)",
+    "typeField": "Product type",
+    "button": "Generate",
+    "copy": "Copy Caption",
+    "download": "Download Image"
+  },
+  "settings": {
+    "title": "Social Settings",
+    "auto": "Auto-generate social posts",
+    "instagram": "Instagram handle",
+    "facebook": "Facebook handle",
+    "twitter": "Twitter handle",
+    "save": "Save"
   },
   "search": {
     "title": "Search",

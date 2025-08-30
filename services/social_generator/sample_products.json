@@ -1,0 +1,16 @@
+{
+  "1": {
+    "title": "Eco T-Shirt",
+    "description": "Organic cotton tee",
+    "tags": ["eco", "green"],
+    "product_type": "tshirt",
+    "language": "en"
+  },
+  "2": {
+    "title": "Taza de Café",
+    "description": "Perfecta para la mañana",
+    "tags": ["cafe", "hogar"],
+    "product_type": "mug",
+    "language": "es"
+  }
+}

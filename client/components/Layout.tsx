@@ -34,6 +34,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
           <Link href="/social-generator" className="hover:underline">{t('nav.socialGenerator')}</Link>
           <Link href="/ab_tests" className="hover:underline">{t('nav.abTests')}</Link>
+          <Link href="/settings" className="hover:underline">{t('nav.settings')}</Link>
           <form
             onSubmit={(e) => {
               e.preventDefault();

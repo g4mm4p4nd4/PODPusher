@@ -15,6 +15,7 @@ from ..notifications.api import app as notifications_app
 from ..search.api import app as search_app
 from ..ab_tests.api import app as ab_app
 from ..listing_composer.api import app as listing_app
+from ..social_generator.api import app as social_app
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
 
@@ -25,6 +26,7 @@ app.mount("/api/search", search_app)
 app.mount("/ab_tests", ab_app)
 app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
+app.mount("/api/social", social_app)
 app.add_middleware(AnalyticsMiddleware)
 
 

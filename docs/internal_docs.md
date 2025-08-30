@@ -17,39 +17,40 @@ flowchart LR
 
 ## Social Media Generator Service
 
-The `social_generator` service provides an endpoint to create social media
-content from a text prompt. It returns a marketing caption and an image URL.
+The `social_generator` service builds captions and optional images for social
+posts without relying on external APIs. It combines product metadata with
+language specific templates and trending keywords loaded from a configuration
+file.
 
 ### API
 
-- **POST `/social/post`**
-  - Body: `{ "prompt": string }`
-  - Response: `{ "caption": string, "image_url": string }`
+- **POST `/api/social/generate`**
+  - Body: `{ product_id?, title?, description?, tags?, product_type?, language?, include_image? }`
+  - Response: `{ "caption": string, "image": base64 | null }`
 
-Behind the scenes the service calls the OpenAI integration client. When the
-`OPENAI_USE_STUB` environment variable is set or `OPENAI_API_KEY` is missing,
-stubbed responses are returned. The integration client implements basic retry
-logic for rate limits.
+If `product_id` is supplied, metadata is looked up from an internal store.
+Templates and trending keywords are localised using the translation files in
+`services/social_generator/templates/` and `client/locales/*`.
 
 ### Flow
 
 ```mermaid
 flowchart LR
-    A[Prompt] --> B[OpenAI Caption]
-    A --> C[OpenAI Image]
-    B --> D[Social Post]
+    A[Product Metadata] --> B[Rule Template]
+    A --> C[Trending Keywords]
+    B --> D[Caption]
     C --> D
+    A --> E[Placeholder Image]
+    D --> F[Social Post]
+    E --> F
 ```
-
-The task can also be executed asynchronously via the Celery task
-`generate_social_post_task`.
 
 ## Frontend Page
 
-The `/social-generator` page renders the `SocialMediaGenerator` component. Users
-enter a prompt and the page displays the generated caption and image. The
-component uses the shared translation files and the design system classes for a
-responsive layout.
+The `/social-generator` page lets sellers enter product details and preview the
+generated caption and image. The caption can be edited, copied to the clipboard
+and the image downloaded. The feature honours the user's auto-generation and
+social handle preferences.
 
 ## Listing Composer
 
