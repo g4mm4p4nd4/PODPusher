@@ -23,7 +23,9 @@ def _to_dict(notification: Notification) -> dict:
     }
 
 
-async def create_notification(user_id: int, message: str, notif_type: str = "info") -> dict:
+async def create_notification(
+    user_id: int, message: str, notif_type: str = "info"
+) -> dict:  # noqa: E501
     async with get_session() as session:
         n = Notification(user_id=user_id, message=message, type=notif_type)
         session.add(n)
@@ -80,7 +82,9 @@ async def weekly_trending_summary() -> None:
         result = await session.exec(select(User.id))
         user_ids = result.all()
     for uid in user_ids:
-        await create_notification(uid, f"Weekly trending keywords: {summary}", "summary")
+        await create_notification(
+            uid, f"Weekly trending keywords: {summary}", "summary"
+        )  # noqa: E501
 
 
 scheduler = AsyncIOScheduler()

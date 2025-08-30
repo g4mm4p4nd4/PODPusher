@@ -34,7 +34,9 @@ class QuotaUpdate(BaseModel):
 
 
 @app.post("/api/user/plan")
-async def increment_quota(data: QuotaUpdate, x_user_id: str = Header(..., alias="X-User-Id")):
+async def increment_quota(
+    data: QuotaUpdate, x_user_id: str = Header(..., alias="X-User-Id")
+):  # noqa: E501
     async with get_session() as session:
         user = await session.get(User, int(x_user_id))
         if not user:

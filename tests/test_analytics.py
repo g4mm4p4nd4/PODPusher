@@ -52,3 +52,14 @@ async def test_conversion_triggers_stripe(monkeypatch):
     await log_event("conversion", "/checkout")
     await asyncio.sleep(0)
     assert called
+
+
+@pytest.mark.asyncio
+async def test_invalid_event_type_returns_422():
+    await init_db()
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/analytics/events", json={"event_type": "invalid", "path": "/bad"}
+        )
+        assert resp.status_code == 422

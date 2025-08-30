@@ -36,3 +36,16 @@ async def test_increment_quota():
         assert resp.status_code == 200
         data = resp.json()
         assert data["quota_used"] == 5
+
+
+@pytest.mark.asyncio
+async def test_increment_quota_exceeds_limit():
+    await init_db()
+    transport = ASGITransport(app=user_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/user/plan",
+            json={"count": 999},
+            headers={"X-User-Id": "3"},
+        )
+        assert resp.status_code == 403

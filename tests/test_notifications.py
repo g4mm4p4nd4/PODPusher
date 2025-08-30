@@ -12,7 +12,9 @@ async def test_notification_crud():
     await init_db()
     transport = ASGITransport(app=notif_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/", json={"message": "hello", "type": "info"}, headers={"X-User-Id": "1"})
+        resp = await client.post(
+            "/", json={"message": "hello", "type": "info"}, headers={"X-User-Id": "1"}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["message"] == "hello"
@@ -40,7 +42,9 @@ async def test_scheduler_jobs(monkeypatch):
     async def fake_fetch_trends(category=None):
         return [{"term": "foo", "category": "general"}]
 
-    monkeypatch.setattr("services.notifications.service.fetch_trends", fake_fetch_trends)
+    monkeypatch.setattr(
+        "services.notifications.service.fetch_trends", fake_fetch_trends
+    )
 
     await reset_monthly_quotas()
     async with get_session() as session:
@@ -54,3 +58,12 @@ async def test_scheduler_jobs(monkeypatch):
         messages = [n["message"] for n in resp.json()]
         assert any("Weekly trending" in m for m in messages)
         assert any("quota" in m for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_mark_read_not_found():
+    await init_db()
+    transport = ASGITransport(app=notif_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.put("/999/read")
+        assert resp.status_code == 404

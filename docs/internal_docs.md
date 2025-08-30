@@ -1,6 +1,23 @@
 
 # Internal Documentation
 
+## Testing & QA
+
+PODPusher uses three layers of tests:
+
+- **Unit tests** cover individual services, models, and utilities with `pytest`.
+- **Integration tests** spin up an in-memory SQLite database and exercise FastAPI endpoints via `httpx.AsyncClient`.
+- **End-to-end tests** use Playwright to drive the UI in headless browsers and verify critical user journeys.
+
+### Running tests locally
+1. Install Python deps: `pip install -r requirements.txt`.
+2. Run linters and backend tests: `flake8 && pytest`.
+3. Install Node deps and Playwright browsers: `npm ci --prefix client && npx --prefix client playwright install`.
+4. Execute UI tests: `npx --prefix client playwright test -c ../playwright.config.ts`.
+
+### Continuous Integration
+GitHub Actions runs `flake8`, `pytest` and the Playwright suite on each pull request using cached Python and npm dependencies for speed.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.

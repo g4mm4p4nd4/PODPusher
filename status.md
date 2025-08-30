@@ -8,17 +8,17 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 ## Outstanding Tasks
 
-1. **Testing & QA** – Increase unit, integration and end-to-end test coverage. Ensure Playwright tests run reliably in CI.
-2. **Monitoring & Observability** – Add structured logging, health checks and metrics for each service.
-3. **Documentation** – Update internal docs and API docs as new features are added.
-4. **Bulk Product Creation** – Add a CSV/bulk upload endpoint (`/api/bulk_create`) and UI for uploading multiple products, including progress indicators and error handling.
-5. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
-6. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
-7. Maintain architecture and schema diagrams.
-8. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
-9. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
+1. **Monitoring & Observability** – Add structured logging, health checks and metrics for each service.
+2. **Documentation** – Update internal docs and API docs as new features are added.
+3. **Bulk Product Creation** – Add a CSV/bulk upload endpoint (`/api/bulk_create`) and UI for uploading multiple products, including progress indicators and error handling.
+4. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
+5. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
+6. Maintain architecture and schema diagrams.
+7. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
+8. **Social Media Generator** – Add a service that produces captions and images for social posts based on product ideas and trends.
 
 ## Completed
+- Testing & QA – Expanded unit, integration and end-to-end test coverage with CI pipeline.
 - A/B Testing Support – Flexible engine with experiment types, weighted traffic and scheduling.
 - Real Integrations – Printify and Etsy clients implemented with stub fallbacks.
 
