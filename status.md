@@ -11,7 +11,6 @@ This file tracks the remaining work required to bring PODPusher to production re
 1. **Testing & QA** – Increase unit, integration and end-to-end test coverage. Ensure Playwright tests run reliably in CI.
 2. **Monitoring & Observability** – Add structured logging, health checks and metrics for each service.
 3. **Documentation** – Update internal docs and API docs as new features are added.
-4. **Bulk Product Creation** – Add a CSV/bulk upload endpoint (`/api/bulk_create`) and UI for uploading multiple products, including progress indicators and error handling.
 5. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
 6. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
 7. Maintain architecture and schema diagrams.
@@ -24,6 +23,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 - Re-implemented listing composer enhancements (drag-and-drop fields, improved tag suggestions, draft saving, multi-language input).
 - Analytics Enhancements – Replace mocked analytics with real metrics collected from the database and user interactions.
+- Bulk Product Creation – CSV/JSON upload endpoint with progress indicators and error summary in the dashboard.
 
 ## Instructions to Agents
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from ..trend_scraper.service import (
     fetch_trends,
     get_trending_categories,
@@ -17,6 +17,11 @@ from ..ab_tests.api import app as ab_app
 from ..listing_composer.api import app as listing_app
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
+from ..listing_composer.bulk_service import (
+    parse_csv,
+    ProductDefinition,
+    create_listings,
+)
 
 app = FastAPI()
 app.mount("/api/images/review", review_app)
@@ -55,3 +60,21 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+@app.post("/api/bulk_create")
+async def bulk_create(request: Request, file: UploadFile | None = File(None)):
+    if file is not None:
+        try:
+            data = await file.read()
+            products = parse_csv(data)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    else:
+        try:
+            raw = await request.json()
+        except Exception as exc:  # pragma: no cover - invalid JSON
+            raise HTTPException(status_code=400, detail="no data provided") from exc
+        products = [ProductDefinition(**item) for item in raw]
+    result = await create_listings(products)
+    return result.dict()

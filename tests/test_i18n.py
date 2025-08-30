@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 EN_FILE = Path('client/locales/en/common.json')

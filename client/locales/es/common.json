@@ -8,6 +8,7 @@
     "search": "Buscar",
     "analytics": "Analíticas",
     "listings": "Publicaciones",
+    "bulkCreate": "Carga masiva",
     "abTests": "Pruebas A/B",
     "notifications": "Notificaciones",
     "socialGenerator": "Generador Social",
@@ -53,6 +54,14 @@
     "publish": "Publicar",
     "save": "Guardar borrador",
     "language": "Idioma"
+  },
+  "bulk": {
+    "title": "Carga masiva de productos",
+    "upload": "Arrastra y suelta o elige un archivo CSV",
+    "progress": "Progreso de carga",
+    "created": "creados",
+    "errors": "Errores",
+    "download": "Descargar errores"
   },
   "analytics": {
     "title": "Panel de Analítica",

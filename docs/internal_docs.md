@@ -78,6 +78,26 @@ resumed, and listings can be composed in multiple languages.
 
 The tag suggestion endpoint now ranks suggestions using historical sales and
 search frequency data for improved relevance.
+
+## Bulk Product Creation
+
+The `POST /api/bulk_create` endpoint accepts either a JSON array or a CSV file
+with headers `title`, `description`, `base_product_type`, `variants`, `tags`,
+`categories` and `images`. List fields in CSV are semicolon separated. Records
+are processed asynchronously through the listing composer and integration
+services, and the response summarises created listing IDs and validation
+errors.
+
+### Frontend
+
+The dashboard features a Bulk Create page where admins can drag‑and‑drop or
+select a CSV file. A progress bar indicates processing status and the returned
+summary lists successes and failures with a download link for error rows.
+
+### Known Limitations
+
+- Currently supports only Printify products.
+- Large uploads may take several seconds; consider batching.
 =======
 # Analytics Service
 

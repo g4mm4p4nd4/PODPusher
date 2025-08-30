@@ -8,6 +8,7 @@
     "search": "Search",
     "analytics": "Analytics",
     "listings": "Listings",
+    "bulkCreate": "Bulk Create",
     "abTests": "A/B Tests",
     "notifications": "Notifications",
     "socialGenerator": "Social Generator",
@@ -53,6 +54,14 @@
     "publish": "Publish",
     "save": "Save Draft",
     "language": "Language"
+  },
+  "bulk": {
+    "title": "Bulk Product Upload",
+    "upload": "Drag & drop or choose a CSV file",
+    "progress": "Upload Progress",
+    "created": "created",
+    "errors": "Errors",
+    "download": "Download Errors"
   },
   "analytics": {
     "title": "Analytics Dashboard",
