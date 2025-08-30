@@ -160,3 +160,19 @@ flowchart TD
 ```
 
 During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the current time against the experiment schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
+
+## Monitoring & Observability
+
+All backend services use a shared JSON logging utility defined in
+`services/logging.py`. Logs include `timestamp`, `level`, `module`, `message`,
+and, when available, `request_id` and `user_id`.
+
+Each FastAPI service exposes three endpoints:
+
+- **`/health`** – returns service status, version and database connectivity.
+- **`/ready`** – returns HTTP 200 only when all dependencies are reachable.
+- **`/metrics`** – Prometheus metrics for request counts, latency and error
+  rates.
+
+Middleware automatically records metrics for every request. See
+`docker-compose.yml` for an example Prometheus scrape configuration.

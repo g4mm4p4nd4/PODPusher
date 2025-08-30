@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import create_sku, publish_listing
 
-
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "integration")
 
 
 class ProductList(BaseModel):

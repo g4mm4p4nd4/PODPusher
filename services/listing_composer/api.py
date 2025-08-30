@@ -1,7 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import DraftPayload, save_draft, get_draft
 
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "listing_composer")
 
 
 @app.post("/drafts", response_model=DraftPayload)

@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 
 from .service import (
     create_test,
@@ -11,6 +13,8 @@ from .service import (
 from ..models import ExperimentType
 
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "ab_tests")
 
 
 class VariantCreate(BaseModel):

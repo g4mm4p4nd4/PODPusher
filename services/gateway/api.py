@@ -1,5 +1,7 @@
 from datetime import datetime
 from fastapi import FastAPI
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from ..trend_scraper.service import (
     fetch_trends,
     get_trending_categories,
@@ -19,6 +21,7 @@ from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
 
 app = FastAPI()
+_logger = get_logger(__name__)
 app.mount("/api/images/review", review_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)
@@ -26,6 +29,7 @@ app.mount("/ab_tests", ab_app)
 app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
 app.add_middleware(AnalyticsMiddleware)
+setup_monitoring(app, "gateway")
 
 
 @app.post("/generate")

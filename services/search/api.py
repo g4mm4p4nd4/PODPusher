@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import search_products
 
 
@@ -22,6 +23,8 @@ class SearchResponse(BaseModel):
 
 
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "search")
 
 
 @app.get("/", response_model=SearchResponse)

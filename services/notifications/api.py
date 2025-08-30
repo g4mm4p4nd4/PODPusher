@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 
 from .service import (
     list_notifications,
@@ -9,6 +11,8 @@ from .service import (
 )
 
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "notifications")
 
 
 @app.on_event("startup")

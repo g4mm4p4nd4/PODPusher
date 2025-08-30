@@ -1,11 +1,15 @@
 from datetime import datetime
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from ..common.database import get_session
 from ..models import User
 from ..common.quotas import PLAN_LIMITS
 
 app = FastAPI()
+_logger = get_logger(__name__)
+setup_monitoring(app, "user")
 
 
 @app.get("/api/user/plan")
@@ -34,7 +38,9 @@ class QuotaUpdate(BaseModel):
 
 
 @app.post("/api/user/plan")
-async def increment_quota(data: QuotaUpdate, x_user_id: str = Header(..., alias="X-User-Id")):
+async def increment_quota(
+    data: QuotaUpdate, x_user_id: str = Header(..., alias="X-User-Id")
+):
     async with get_session() as session:
         user = await session.get(User, int(x_user_id))
         if not user:
