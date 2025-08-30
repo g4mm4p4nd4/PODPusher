@@ -10,15 +10,16 @@ jest.mock('next-i18next', () => ({
 jest.mock('../services/socialGenerator', () => ({
   generateSocialPost: jest.fn(() => Promise.resolve({
     caption: 'mock caption',
-    image_url: 'http://example.com/image.png'
+    image: 'ZmFrZQ=='
   }))
 }));
 
 test('generates caption and shows image', async () => {
   render(<SocialMediaGenerator />);
-  fireEvent.change(screen.getByLabelText('prompt'), { target: { value: 'hi' } });
+  fireEvent.change(screen.getByPlaceholderText('titleField'), { target: { value: 'Shirt' } });
+  fireEvent.change(screen.getByPlaceholderText('typeField'), { target: { value: 'tshirt' } });
   fireEvent.click(screen.getByText('button'));
-  expect(await screen.findByText('mock caption')).toBeInTheDocument();
+  expect(await screen.findByDisplayValue('mock caption')).toBeInTheDocument();
   const img = screen.getByRole('img') as HTMLImageElement;
-  expect(img.getAttribute('src')).toContain('image.png');
+  expect(img.getAttribute('src')).toContain('base64');
 });

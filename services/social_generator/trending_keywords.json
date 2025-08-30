@@ -1,0 +1,12 @@
+{
+  "en": {
+    "default": ["must-have", "trending"],
+    "tshirt": ["style", "fashion"],
+    "mug": ["coffee", "morning"]
+  },
+  "es": {
+    "default": ["imprescindible", "tendencia"],
+    "tshirt": ["estilo", "moda"],
+    "mug": ["cafe", "manana"]
+  }
+}

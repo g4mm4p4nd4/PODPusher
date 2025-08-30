@@ -7,8 +7,9 @@ redis
 sqlmodel
 psycopg[binary]
 pytest
-pytest-asyncio
+pytest - asyncio
 flake8
 black
 aiosqlite
 APScheduler
+Pillow

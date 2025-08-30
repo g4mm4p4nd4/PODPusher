@@ -1,8 +1,9 @@
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from enum import Enum
-from sqlmodel import SQLModel, Field
-from sqlalchemy import Column, JSON
 from datetime import datetime
+
+from sqlalchemy import Column, JSON
+from sqlmodel import Field, SQLModel
 
 
 class Trend(SQLModel, table=True):
@@ -52,6 +53,8 @@ class User(SQLModel, table=True):
     plan: str = "free"
     quota_used: int = 0
     last_reset: datetime = Field(default_factory=datetime.utcnow)
+    auto_social: bool = True
+    social_handles: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 class Notification(SQLModel, table=True):

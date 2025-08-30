@@ -11,6 +11,7 @@
     "abTests": "Pruebas A/B",
     "notifications": "Notificaciones",
     "socialGenerator": "Generador Social",
+    "settings": "Configuración",
     "searchPlaceholder": "Buscar..."
   },
   "index": {
@@ -86,8 +87,21 @@
   },
   "social": {
     "title": "Generador de Redes Sociales",
-    "prompt": "Introduce una idea de caption",
-    "button": "Generar"
+    "titleField": "Título del producto",
+    "descriptionField": "Descripción",
+    "tagsField": "Etiquetas (separadas por comas)",
+    "typeField": "Tipo de producto",
+    "button": "Generar",
+    "copy": "Copiar caption",
+    "download": "Descargar imagen"
+  },
+  "settings": {
+    "title": "Configuración Social",
+    "auto": "Autogenerar publicaciones",
+    "instagram": "Usuario de Instagram",
+    "facebook": "Usuario de Facebook",
+    "twitter": "Usuario de Twitter",
+    "save": "Guardar"
   },
   "search": {
     "title": "Buscar",
