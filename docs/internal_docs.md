@@ -15,6 +15,40 @@ flowchart LR
     E --> F[Listing URL]
 ```
 
+## Bulk Product Creation
+
+`POST /api/bulk_create` accepts a CSV or JSON list of product definitions. Each
+item is validated and persisted via the existing Printify integration. The
+response summarises created products and per-item errors.
+
+Sample CSV:
+
+```
+title,description,price,category,variants,image_urls
+"Shirt","Cool shirt",19.99,apparel,"[{""sku"":""s1"",""price"":19.99}]","[""http://example.com/img.png""]"
+```
+
+Sample JSON:
+
+```json
+[
+  {
+    "title": "Shirt",
+    "description": "Cool shirt",
+    "price": 19.99,
+    "category": "apparel",
+    "variants": [{"sku": "s1", "price": 19.99}],
+    "image_urls": ["http://example.com/img.png"]
+  }
+]
+```
+
+Response:
+
+```
+{ "created": [...], "errors": [{ "index": 1, "error": "detail" }] }
+```
+
 ## Social Media Generator Service
 
 The `social_generator` service builds captions and optional images for social
