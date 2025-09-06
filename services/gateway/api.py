@@ -16,6 +16,8 @@ from ..search.api import app as search_app
 from ..ab_tests.api import app as ab_app
 from ..listing_composer.api import app as listing_app
 from ..social_generator.api import app as social_app
+from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
+from fastapi import Request
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
 
@@ -42,6 +44,11 @@ async def generate():
     listing["listing_url"] = listing.get("etsy_url")
     listing["events"] = events
     return listing
+
+
+@app.post("/api/bulk_create", response_model=BulkCreateResponse)
+async def bulk_create(request: Request):
+    return await bulk_create_handler(request)
 
 
 @app.get("/product-categories")
