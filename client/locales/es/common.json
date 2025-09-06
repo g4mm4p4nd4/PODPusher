@@ -114,5 +114,12 @@
     "results": "{{count}} resultados",
     "ratingLabel": "Calificación: {{rating}}",
     "noResults": "Sin resultados"
+  },
+  "bulk": {
+    "title": "Carga Masiva",
+    "upload": "Subir",
+    "progress": "Subiendo...",
+    "success": "{{count}} productos creados",
+    "error": "Error al subir"
   }
 }

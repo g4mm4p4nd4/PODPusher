@@ -13,3 +13,5 @@ black
 aiosqlite
 APScheduler
 Pillow
+prometheus_client
+python-multipart

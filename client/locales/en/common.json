@@ -114,5 +114,12 @@
     "results": "{{count}} results",
     "ratingLabel": "Rating: {{rating}}",
     "noResults": "No results found"
+  },
+  "bulk": {
+    "title": "Bulk Uploader",
+    "upload": "Upload",
+    "progress": "Uploading...",
+    "success": "Created {{count}} products",
+    "error": "Upload failed"
   }
 }

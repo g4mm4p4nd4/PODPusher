@@ -1,12 +1,17 @@
 from fastapi import FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Dict, Any
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import log_event, list_events, get_summary
 from ..models import EventType
 from .middleware import AnalyticsMiddleware
 
 app = FastAPI()
+logger = get_logger(__name__)
+setup_monitoring(app)
 app.add_middleware(AnalyticsMiddleware)
 
 

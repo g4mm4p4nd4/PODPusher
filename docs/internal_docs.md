@@ -161,3 +161,40 @@ flowchart TD
 ```
 
 During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the current time against the experiment schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
+
+## Monitoring and Observability
+
+All FastAPI services share a common monitoring setup provided by `services.monitoring.setup_monitoring`. It registers middleware that records request counts, latencies and errors using `prometheus_client` counters and histograms. Each request receives a correlation ID exposed via the `X-Request-ID` header and propagated to JSON logs via `services.logging.get_logger`.
+
+Three endpoints are available on every service:
+
+- `GET /health` – basic liveness check.
+- `GET /ready` – readiness probe.
+- `GET /metrics` – Prometheus metrics scrape endpoint.
+
+## Bulk Product Creation
+
+The gateway exposes `POST /api/bulk_create` to ingest multiple products in one request. Payloads may be JSON or CSV files. Each item is validated against the `ProductDefinition` schema (title, description, price, category, variants and image URLs). Valid products are persisted via existing SKU creation logic and the response summarises creations and validation errors.
+
+### Sample JSON
+
+```json
+{
+  "products": [
+    {
+      "title": "Mug",
+      "description": "Ceramic mug",
+      "price": 9.99,
+      "category": "drinkware",
+      "image_urls": ["https://example.com/mug.png"]
+    }
+  ]
+}
+```
+
+### Sample CSV
+
+```
+title,description,price,category,image_urls
+Mug,Ceramic mug,9.99,drinkware,https://example.com/mug.png
+```

@@ -13,25 +13,35 @@ services:
     command: uvicorn services.trend_scraper.api:app --port 8001 --host 0.0.0.0
     environment:
       - DATABASE_URL=${DATABASE_URL}
+    ports:
+      - "8001:8001"
   ideation:
     build: .
     command: uvicorn services.ideation.api:app --port 8002 --host 0.0.0.0
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8002:8002"
   image_gen:
     build: .
     command: uvicorn services.image_gen.api:app --port 8003 --host 0.0.0.0
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8003:8003"
   integration:
     build: .
     command: uvicorn services.integration.api:app --port 8004 --host 0.0.0.0
     environment:
       - PRINTIFY_API_KEY=${PRINTIFY_API_KEY}
       - ETSY_API_KEY=${ETSY_API_KEY}
+    ports:
+      - "8004:8004"
   gateway:
     build: .
     command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
+    ports:
+      - "8000:8000"
   frontend:
     image: node:18
     working_dir: /app

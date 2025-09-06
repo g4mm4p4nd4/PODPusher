@@ -2,9 +2,13 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import generate_post
 
 app = FastAPI()
+logger = get_logger(__name__)
+setup_monitoring(app)
 
 
 class SocialRequest(BaseModel):

@@ -1,11 +1,16 @@
 from datetime import datetime
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from ..common.database import get_session
 from ..models import User
 from ..common.quotas import PLAN_LIMITS
 
 app = FastAPI()
+logger = get_logger(__name__)
+setup_monitoring(app)
 
 
 @app.get("/api/user/plan")

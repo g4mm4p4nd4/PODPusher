@@ -1,8 +1,14 @@
 from fastapi import FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel
+
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import generate_ideas, suggest_tags
 
 app = FastAPI()
+logger = get_logger(__name__)
+setup_monitoring(app)
 
 
 class TrendList(BaseModel):

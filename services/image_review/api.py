@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
+from ..logging import get_logger
+from ..monitoring import setup_monitoring
 from .service import list_products, update_product
 from ..common.localization import get_message
 
 app = FastAPI()
+logger = get_logger(__name__)
+setup_monitoring(app)
 
 
 class UpdatePayload(BaseModel):
