@@ -1,6 +1,37 @@
 
 # Internal Documentation
 
+## Testing & QA Strategy
+
+Quality assurance combines unit, integration and browser tests.
+
+- **Unit tests** live in `tests/` and cover services such as search,
+  A/B testing, listing composer, bulk upload and analytics. Use
+  `pytest` for backend code and `jest` for frontend modules. Keep
+  tests deterministic by seeding the in-memory SQLite database and
+  mocking any external requests.
+- **End-to-end tests** reside in `tests/e2e/` and are written with
+  Playwright. They simulate creating listings, uploading bulk products
+  and running experiments. Playwright browsers are installed via
+  `npx playwright install --with-deps`; if browsers are unavailable the
+  suite is skipped.
+- **Running locally**:
+
+```bash
+pip install -r requirements.txt
+pytest
+npm ci --prefix client
+npm test --prefix client
+npx playwright install --with-deps
+npx playwright test
+```
+
+Roles from `agents.md`:
+
+- **QA‑Automator** – maintains end-to-end scenarios and CI reliability.
+- **Unit‑Tester** – expands service level coverage and mocks
+  integrations.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.

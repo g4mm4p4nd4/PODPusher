@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+      - name: Lint
+        run: flake8
+      - name: Pytest
+        run: pytest
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install Node deps
+        run: npm ci --prefix client
+      - name: Node tests
+        run: npm test --prefix client
+      - name: Playwright tests
+        run: |
+          if npx playwright --version > /dev/null 2>&1; then
+            npx playwright install --with-deps
+            npx playwright test
+          else
+            echo 'Playwright not available, skipping'
+          fi
