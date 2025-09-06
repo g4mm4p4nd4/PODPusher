@@ -9,8 +9,13 @@ from .service import (
 )
 from .events import EVENTS
 from ..tasks import celery_app
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 @app.on_event("startup")

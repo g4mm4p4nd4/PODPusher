@@ -9,8 +9,13 @@ from .service import (
     record_impression,
 )
 from ..models import ExperimentType
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 class VariantCreate(BaseModel):

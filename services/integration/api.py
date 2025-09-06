@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from .service import create_sku, publish_listing
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 class ProductList(BaseModel):

@@ -3,8 +3,13 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from .service import generate_post
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 class SocialRequest(BaseModel):

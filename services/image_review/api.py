@@ -3,8 +3,13 @@ from pydantic import BaseModel
 
 from .service import list_products, update_product
 from ..common.localization import get_message
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 class UpdatePayload(BaseModel):

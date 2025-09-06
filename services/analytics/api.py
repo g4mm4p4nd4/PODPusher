@@ -5,9 +5,14 @@ from typing import Dict, Any
 from .service import log_event, list_events, get_summary
 from ..models import EventType
 from .middleware import AnalyticsMiddleware
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
 app.add_middleware(AnalyticsMiddleware)
+init_monitoring(app)
 
 
 class EventIn(BaseModel):

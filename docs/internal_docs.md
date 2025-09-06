@@ -1,6 +1,42 @@
 
 # Internal Documentation
 
+## Monitoring & Observability
+
+All FastAPI services use a shared logger and monitoring stack following the
+[agents.md](../agents.md) SRE guidance. The `services/common/logger.py`
+module configures Loguru to emit structured JSON with a `correlation_id` for
+each request. Middleware injects the ID from the `X-Correlation-ID` header or
+generates one and echoes it back in responses so logs can be correlated across
+services.
+
+Prometheus metrics are initialised via `services/common/monitoring.py`. Each
+app exposes:
+
+- `/health` – 200 when the service is running.
+- `/ready` – checks database connectivity and returns 503 when dependencies are
+  unavailable.
+- `/metrics` – Prometheus exposition with request counters and latency
+  histograms.
+
+Metrics port is configurable with the `METRICS_PORT` environment variable
+(default `8000`).
+
+### Architecture
+
+```mermaid
+flowchart LR
+    A[FastAPI App] --> B[Logging & Metrics Middleware]
+    B --> C[Prometheus Exporter]
+```
+
+Tracked metrics:
+
+- `http_requests_total{method,endpoint,http_status}`
+- `http_request_duration_seconds{method,endpoint}`
+
+Refer to agents.md section 15 for SRE responsibilities and runbooks.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.

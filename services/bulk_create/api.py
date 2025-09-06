@@ -12,6 +12,8 @@ from .service import (
     parse_products_from_json,
     persist_products,
 )
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
 
 class BulkCreateResponse(BaseModel):
@@ -19,7 +21,10 @@ class BulkCreateResponse(BaseModel):
     errors: List[dict]
 
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 @app.post("", response_model=BulkCreateResponse)

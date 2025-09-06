@@ -13,3 +13,5 @@ black
 aiosqlite
 APScheduler
 Pillow
+loguru
+prometheus-client

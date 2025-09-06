@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-
 from .service import search_products
+from ..common.logger import init_logger, logging_middleware
+from ..common.monitoring import init_monitoring
 
 
 class SearchItem(BaseModel):
@@ -21,7 +22,10 @@ class SearchResponse(BaseModel):
     page_size: int
 
 
+init_logger()
 app = FastAPI()
+app.middleware("http")(logging_middleware)
+init_monitoring(app)
 
 
 @app.get("/", response_model=SearchResponse)
