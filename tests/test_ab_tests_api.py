@@ -53,3 +53,13 @@ async def test_api_weight_validation_and_schedule():
         vid = data["variants"][0]["id"]
         resp = await client.post(f"/{vid}/impression")
         assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_metrics_list_endpoint():
+    await init_db()
+    transport = ASGITransport(app=ab_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/metrics")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)

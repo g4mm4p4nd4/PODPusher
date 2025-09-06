@@ -22,7 +22,7 @@
     "typescript": "5.4.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.41.2",
+    "@playwright/test": "1.35.0",
     "@testing-library/jest-dom": "6.1.5",
     "@testing-library/react": "14.2.2",
     "@types/jest": "^30.0.0",

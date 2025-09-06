@@ -9,8 +9,14 @@ test('social generator creates caption', async ({ page }) => {
     });
   });
   await page.goto('/social-generator');
-  await page.getByPlaceholder('titleField').fill('idea');
-  await page.getByPlaceholder('typeField').fill('tshirt');
+  await page.getByPlaceholder('Product title').fill('idea');
+  await page.getByPlaceholder('Product type').fill('tshirt');
   await page.getByRole('button', { name: 'Generate' }).click();
   await expect(page.getByDisplayValue('hello')).toBeVisible();
+});
+
+test('social generator form fields visible', async ({ page }) => {
+  await page.goto('/social-generator');
+  await expect(page.getByPlaceholder('Product title')).toBeVisible();
+  await expect(page.getByPlaceholder('Product type')).toBeVisible();
 });

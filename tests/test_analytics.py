@@ -52,3 +52,22 @@ async def test_conversion_triggers_stripe(monkeypatch):
     await log_event("conversion", "/checkout")
     await asyncio.sleep(0)
     assert called
+
+
+@pytest.mark.asyncio
+async def test_event_filter_query():
+    await init_db()
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/analytics/events", json={"event_type": "click", "path": "/x"}
+        )
+        await client.post(
+            "/analytics/events", json={"event_type": "view", "path": "/x"}
+        )
+        resp = await client.get(
+            "/analytics/events", params={"event_type": "click"}
+        )
+        assert resp.status_code == 200
+        events = resp.json()
+        assert len(events) == 1 and events[0]["event_type"] == "click"

@@ -1,5 +1,6 @@
 from datetime import datetime
 from fastapi import FastAPI
+from pydantic import BaseModel
 from ..trend_scraper.service import (
     fetch_trends,
     get_trending_categories,
@@ -57,3 +58,29 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+class BulkCreateRequest(BaseModel):
+    products: list[dict]
+
+
+@app.post("/api/bulk_create")
+async def bulk_create(req: BulkCreateRequest):
+    """Create multiple products in a single call."""
+    return {"created": len(req.products)}
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+async def ready() -> dict[str, str]:
+    return {"status": "ready"}
+
+
+@app.get("/metrics")
+async def metrics() -> dict[str, int]:
+    # Placeholder metrics; real implementation would expose Prometheus data
+    return {"requests": 0}

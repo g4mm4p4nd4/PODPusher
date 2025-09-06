@@ -1,6 +1,45 @@
 
 # Internal Documentation
 
+## Testing & QA Strategy
+
+PODPusher uses a mixture of unit, integration and end‑to‑end tests to verify
+core workflows. Python services are tested with `pytest` and adhere to a fresh
+SQLite database created via `services.common.database.init_db()` for each
+test. Node components use `jest` while UI flows are exercised with Playwright
+(`@playwright/test` v1.35.0).
+
+### Running Locally
+
+```bash
+python -m venv venv && . venv/bin/activate
+pip install -r requirements.txt
+pytest
+
+cd client
+npm install
+npm test
+npx playwright install --with-deps
+npx playwright test
+```
+
+### Continuous Integration
+
+`github/workflows/ci.yml` installs cached dependencies and runs flake8, pytest,
+`npm test` and Playwright tests. Playwright starts the Next.js server defined in
+`playwright.config.ts` before executing specs under `tests/e2e`.
+
+### Environment Variables
+
+- `DATABASE_URL` – optional override for the test database location.
+- `STRIPE_API_KEY` – when unset, analytics tests stub Stripe reporting.
+
+### Stubs
+
+External integrations (Etsy, Printify, Stripe) fall back to local stubs when
+their API keys are missing. Tests rely on this behaviour to run without
+network access.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.
