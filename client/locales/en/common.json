@@ -10,6 +10,7 @@
     "listings": "Listings",
     "abTests": "A/B Tests",
     "notifications": "Notifications",
+    "schedule": "Schedule",
     "socialGenerator": "Social Generator",
     "settings": "Settings",
     "searchPlaceholder": "Search..."
@@ -64,6 +65,24 @@
   "notifications": {
     "title": "Notifications",
     "markRead": "Mark as read"
+  },
+  "schedule": {
+    "title": "Schedule Notification",
+    "message": "Message",
+    "type": "Type",
+    "delivery": "Delivery Method",
+    "when": "When",
+    "submit": "Schedule",
+    "types": {
+      "scheduled_post": "Scheduled Post",
+      "quota_reset": "Quota Reset",
+      "trending_product": "Trending Product"
+    },
+    "deliveryMethods": {
+      "in_app": "In App",
+      "email": "Email",
+      "push": "Push"
+    }
   },
   "ab": {
     "title": "A/B Tests",

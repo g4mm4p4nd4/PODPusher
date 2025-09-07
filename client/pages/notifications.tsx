@@ -7,7 +7,7 @@ export type Notification = {
   message: string;
   type: string;
   created_at: string;
-  read_status: boolean;
+  read: boolean;
 };
 
 export default function Notifications() {
@@ -25,8 +25,8 @@ export default function Notifications() {
   }, [api]);
 
   const markRead = async (id: number) => {
-    await axios.put(`${api}/api/notifications/${id}/read`);
-    setItems(items.map(n => (n.id === id ? { ...n, read_status: true } : n)));
+    await axios.post(`${api}/api/notifications/mark_read`, { id });
+    setItems(items.map(n => (n.id === id ? { ...n, read: true } : n)));
   };
 
   return (
@@ -36,11 +36,16 @@ export default function Notifications() {
         {items.map(n => (
           <li
             key={n.id}
-            className={`p-2 border rounded ${n.read_status ? 'opacity-50' : ''}`}
+            className={`p-2 border rounded ${n.read ? 'opacity-50' : ''}`}
           >
             <div className="flex justify-between items-center">
-              <span>[{n.type}] {n.message}</span>
-              {!n.read_status && (
+              <span>
+                [{n.type}] {n.message}
+                <span className="ml-2 text-xs text-gray-500">
+                  {new Date(n.created_at).toLocaleString()}
+                </span>
+              </span>
+              {!n.read && (
                 <button
                   data-testid={`read-${n.id}`}
                   onClick={() => markRead(n.id)}

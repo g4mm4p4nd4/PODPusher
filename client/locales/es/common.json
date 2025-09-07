@@ -10,6 +10,7 @@
     "listings": "Publicaciones",
     "abTests": "Pruebas A/B",
     "notifications": "Notificaciones",
+    "schedule": "Programar",
     "socialGenerator": "Generador Social",
     "settings": "Configuración",
     "searchPlaceholder": "Buscar..."
@@ -64,6 +65,24 @@
   "notifications": {
     "title": "Notificaciones",
     "markRead": "Marcar como leído"
+  },
+  "schedule": {
+    "title": "Programar notificación",
+    "message": "Mensaje",
+    "type": "Tipo",
+    "delivery": "Método de entrega",
+    "when": "Cuándo",
+    "submit": "Programar",
+    "types": {
+      "scheduled_post": "Publicación programada",
+      "quota_reset": "Reinicio de cuota",
+      "trending_product": "Producto en tendencia"
+    },
+    "deliveryMethods": {
+      "in_app": "En la app",
+      "email": "Correo",
+      "push": "Push"
+    }
   },
   "ab": {
     "title": "Pruebas A/B",

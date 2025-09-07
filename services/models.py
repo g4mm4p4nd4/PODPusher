@@ -57,13 +57,40 @@ class User(SQLModel, table=True):
     social_handles: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
 
 
+class NotificationType(str, Enum):
+    quota_reset = "quota_reset"
+    trending_product = "trending_product"
+    scheduled_post = "scheduled_post"
+
+
+class DeliveryMethod(str, Enum):
+    email = "email"
+    in_app = "in_app"
+    push = "push"
+
+
+class NotificationStatus(str, Enum):
+    pending = "pending"
+    sent = "sent"
+
+
 class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int
+    type: NotificationType
     message: str
-    type: str = "info"
+    delivery_method: DeliveryMethod = DeliveryMethod.in_app
+    status: NotificationStatus = NotificationStatus.pending
+    scheduled_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    read_status: bool = False
+    read: bool = False
+
+
+class NotificationPreference(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    type: NotificationType
+    delivery_method: DeliveryMethod = DeliveryMethod.in_app
 
 
 class ExperimentType(str, Enum):

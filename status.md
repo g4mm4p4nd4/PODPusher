@@ -10,10 +10,9 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 1. **Monitoring & Observability** – Add structured logging, health checks and metrics for each service.
 2. **Documentation** – Update internal docs and API docs as new features are added.
-3. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
-4. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
-5. Maintain architecture and schema diagrams.
-6. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
+3. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
+4. Maintain architecture and schema diagrams.
+5. **Stub Removal** – Once integrations and features are fully implemented and tested, remove any placeholder or stubbed logic from the codebase.
 
 ## Completed
 - A/B Testing Support – Flexible engine with experiment types, weighted traffic and scheduling.
@@ -24,6 +23,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 - Social Media Generator – Rule-based captions and images with localisation and dashboard UI.
 - Bulk Product Creation – CSV/JSON bulk upload endpoint and UI implemented.
 - Testing & QA – Expanded unit, integration and Playwright end-to-end test coverage with CI integration.
+- Notification & Scheduling System – Backend scheduler, delivery stubs, API endpoints, UI bell, scheduling form and tests.
 
 ## Instructions to Agents
 

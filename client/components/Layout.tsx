@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     axios
       .get(`${api}/api/notifications`, { headers: { 'X-User-Id': '1' } })
-      .then((res) => setUnread(res.data.filter((n: any) => !n.read_status).length))
+      .then((res) => setUnread(res.data.filter((n: any) => !n.read).length))
       .catch((err) => console.error(err));
   }, [api]);
 
@@ -51,6 +51,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             />
           </form>
           <LanguageSwitcher />
+          <Link href="/schedule" className="hover:underline">
+            {t('nav.schedule')}
+          </Link>
           <Link
             href="/notifications"
             aria-label={t('nav.notifications')}

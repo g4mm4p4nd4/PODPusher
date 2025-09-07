@@ -1,32 +1,53 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from services.notifications.api import app as notif_app
-from services.notifications.service import reset_monthly_quotas, weekly_trending_summary
-from services.common.database import init_db, get_session
+from services.notifications.service import get_service
+from services.common.database import get_session, init_db
 from services.models import User
 
 
 @pytest.mark.asyncio
-async def test_notification_crud():
+async def test_schedule_and_mark_read():
     await init_db()
+    service = get_service()
     transport = ASGITransport(app=notif_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/", json={"message": "hello", "type": "info"}, headers={"X-User-Id": "1"})
+        resp = await client.post(
+            "/api/notifications/schedule",
+            json={
+                "type": "scheduled_post",
+                "message": "hello",
+                "delivery_method": "in_app",
+            },
+            headers={"X-User-Id": "1"},
+        )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["message"] == "hello"
-        assert data["type"] == "info"
+        assert data["status"] == "pending"
 
-        resp = await client.get("/", headers={"X-User-Id": "1"})
-        assert resp.status_code == 200
-        notifs = resp.json()
-        assert len(notifs) == 1
-        assert notifs[0]["read_status"] is False
+        # send scheduled notifications
+        await service.send_due_notifications()
 
-        resp = await client.put(f"/{data['id']}/read")
-        assert resp.status_code == 200
-        assert resp.json()["read_status"] is True
+        resp = await client.get(
+            "/api/notifications", headers={"X-User-Id": "1"}
+        )
+        items = resp.json()
+        assert items[0]["status"] == "sent"
+
+        resp = await client.post(
+            "/api/notifications/mark_read",
+            json={"id": data["id"]},
+            headers={"X-User-Id": "1"},
+        )
+        assert resp.json()["read"] is True
+
+        pref_resp = await client.post(
+            "/api/notifications/preferences",
+            json={"type": "trending_product", "delivery_method": "email"},
+            headers={"X-User-Id": "1"},
+        )
+        assert pref_resp.json()["delivery_method"] == "email"
 
 
 @pytest.mark.asyncio
@@ -37,20 +58,26 @@ async def test_scheduler_jobs(monkeypatch):
         session.add(user)
         await session.commit()
 
-    async def fake_fetch_trends(category=None):
+    service = get_service()
+
+    async def fake_fetch_trends():
         return [{"term": "foo", "category": "general"}]
 
-    monkeypatch.setattr("services.notifications.service.fetch_trends", fake_fetch_trends)
+    monkeypatch.setattr(
+        "services.notifications.service.fetch_trends", fake_fetch_trends
+    )
 
-    await reset_monthly_quotas()
+    await service.reset_monthly_quotas()
     async with get_session() as session:
         user = await session.get(User, 1)
         assert user.quota_used == 0
 
-    await weekly_trending_summary()
+    await service.check_trending_products()
     transport = ASGITransport(app=notif_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/", headers={"X-User-Id": "1"})
-        messages = [n["message"] for n in resp.json()]
-        assert any("Weekly trending" in m for m in messages)
-        assert any("quota" in m for m in messages)
+        resp = await client.get(
+            "/api/notifications", headers={"X-User-Id": "1"}
+        )
+        messages = [n["type"] for n in resp.json()]
+        assert "quota_reset" in messages
+        assert "trending_product" in messages

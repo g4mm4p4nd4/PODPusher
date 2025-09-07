@@ -80,6 +80,41 @@ Response:
 { "created": [...], "errors": [{ "index": 1, "error": "detail" }] }
 ```
 
+## Notification & Scheduling System
+
+The notification service alerts users about quota resets, trending products and
+user-scheduled reminders. It defines two SQLModel tables:
+
+- `Notification` – stores `user_id`, `type` (`quota_reset`, `trending_product`,
+  `scheduled_post`), message, `delivery_method` (`email`, `in_app`, `push`),
+  `status` (`pending`, `sent`), optional `scheduled_at`, `created_at` and
+  `read` flag.
+- `NotificationPreference` – per-user delivery preferences for each
+  notification type.
+
+An `AsyncIOScheduler` dispatches due notifications every minute and triggers
+monthly quota resets plus periodic trend checks. Delivery currently uses stub
+functions (`send_email`, `send_push`) that log output; real integrations can
+replace them later.
+
+### API
+
+- **POST `/api/notifications/schedule`** – schedule a notification.
+- **GET `/api/notifications`** – list notifications with `unread` and
+  `status` filters.
+- **POST `/api/notifications/mark_read`** – mark a notification as read.
+- **POST `/api/notifications/preferences`** – set delivery preferences.
+
+### Frontend
+
+The dashboard navbar shows a bell icon with unread count. The notifications
+page lists messages with timestamps and allows marking as read. A `/schedule`
+page lets users schedule future posts or reminders. All labels are localised in
+English and Spanish.
+
+Backend_Coder owns the service logic and scheduler while Frontend_Coder wires
+up React components and translations.
+
 ## Social Media Generator Service
 
 The `social_generator` service builds captions and optional images for social
