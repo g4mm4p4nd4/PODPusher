@@ -1,6 +1,6 @@
 # POD Automator AI
 
-This repository contains stub microservices for the POD Automator AI system. Each service is a small FastAPI application and Celery task worker.
+This repository contains microservices for the POD Automator AI system. Each service is a small FastAPI application and Celery task worker.
 
 ## Requirements
 - Python 3.11+
