@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from ..common.database import get_session
 from ..models import User
 from ..common.quotas import PLAN_LIMITS
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 @app.get("/api/user/plan")

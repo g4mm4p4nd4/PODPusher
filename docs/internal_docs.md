@@ -32,6 +32,38 @@ Roles from `agents.md`:
 - **Unit‑Tester** – expands service level coverage and mocks
   integrations.
 
+## Monitoring & Observability
+
+Each FastAPI service uses a shared Loguru logger configured for structured JSON
+output. A middleware propagates the `X-Correlation-ID` header, generating a UUID
+when absent, and records the method, path, status and latency for every request.
+
+Prometheus counters (`http_requests_total`) and histograms
+(`http_request_duration_seconds`) capture per-endpoint traffic and timing. The
+middleware updates these metrics asynchronously so application handlers remain
+non-blocking.
+
+Every service exposes three standard endpoints:
+
+- **GET `/health`** – returns 200 when the service is running.
+- **GET `/ready`** – verifies database and dependency readiness, returning 503
+  if unavailable.
+- **GET `/metrics`** – publishes Prometheus metrics; a separate listener is
+  started when `METRICS_PORT` is set.
+
+### Diagram
+
+```mermaid
+flowchart LR
+    A[Request] --> B[ObservabilityMiddleware]
+    B --> C[Application]
+    B --> D[Loguru JSON Logs]
+    B --> E[Prometheus Metrics]
+```
+
+SREs monitor these signals against the playbooks in `agents.md` section 15 and
+maintain runbooks under `docs/SRE/` for common incidents.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.

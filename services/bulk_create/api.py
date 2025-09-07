@@ -12,6 +12,7 @@ from .service import (
     parse_products_from_json,
     persist_products,
 )
+from ..common.monitoring import setup_observability
 
 
 class BulkCreateResponse(BaseModel):
@@ -20,6 +21,7 @@ class BulkCreateResponse(BaseModel):
 
 
 app = FastAPI()
+setup_observability(app)
 
 
 @app.post("", response_model=BulkCreateResponse)

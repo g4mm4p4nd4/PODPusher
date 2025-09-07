@@ -9,8 +9,10 @@ from .service import (
 )
 from .events import EVENTS
 from ..tasks import celery_app
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 @app.on_event("startup")

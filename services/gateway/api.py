@@ -20,8 +20,10 @@ from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_han
 from fastapi import Request
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 app.mount("/api/images/review", review_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)

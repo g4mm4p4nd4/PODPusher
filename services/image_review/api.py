@@ -3,8 +3,10 @@ from pydantic import BaseModel
 
 from .service import list_products, update_product
 from ..common.localization import get_message
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 class UpdatePayload(BaseModel):

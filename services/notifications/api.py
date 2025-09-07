@@ -7,8 +7,10 @@ from .service import (
     mark_read,
     start_scheduler,
 )
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 @app.on_event("startup")

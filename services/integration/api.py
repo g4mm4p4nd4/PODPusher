@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from .service import create_sku, publish_listing
+from ..common.monitoring import setup_observability
 
 
 app = FastAPI()
+setup_observability(app)
 
 
 class ProductList(BaseModel):

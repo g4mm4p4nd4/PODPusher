@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from .service import DraftPayload, save_draft, get_draft
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 @app.post("/drafts", response_model=DraftPayload)

@@ -23,3 +23,12 @@ async def init_db() -> None:
 async def get_session() -> AsyncSession:
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
+
+
+async def check_db_connection() -> bool:
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(lambda conn: None)
+        return True
+    except Exception:
+        return False

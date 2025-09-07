@@ -23,7 +23,7 @@ async def test_ab_tests_api():
         assert resp.status_code == 200
         resp = await client.post(f"/{vid}/click")
         assert resp.status_code == 200
-        resp = await client.get(f"/{data['id']}/metrics")
+        resp = await client.get(f"/{data['id']}/ab_metrics")
         assert resp.status_code == 200
         metrics = resp.json()
         assert metrics[0]["weight"] == 1.0

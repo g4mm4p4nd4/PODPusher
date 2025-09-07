@@ -41,9 +41,10 @@ async def test_bulk_create_csv_api():
     await init_db()
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        variants = json.dumps([{ "sku": "s1", "price": 9.99 }])
+        variants = json.dumps([{"sku": "s1", "price": 9.99}])
         images = json.dumps(["http://example.com/img.png"])
-        import io, csv as csvmod
+        import io
+        import csv as csvmod
         out = io.StringIO()
         writer = csvmod.writer(out)
         writer.writerow(["title", "description", "price", "category", "variants", "image_urls"])

@@ -5,8 +5,10 @@ from typing import Dict, Any
 from .service import log_event, list_events, get_summary
 from ..models import EventType
 from .middleware import AnalyticsMiddleware
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 app.add_middleware(AnalyticsMiddleware)
 
 

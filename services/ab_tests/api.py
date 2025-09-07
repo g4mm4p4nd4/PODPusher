@@ -9,8 +9,10 @@ from .service import (
     record_impression,
 )
 from ..models import ExperimentType
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 class VariantCreate(BaseModel):
@@ -40,12 +42,12 @@ async def create(payload: TestCreate):
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@app.get("/metrics")
+@app.get("/ab_metrics")
 async def metrics_all():
     return await get_metrics()
 
 
-@app.get("/{test_id}/metrics")
+@app.get("/{test_id}/ab_metrics")
 async def metrics(test_id: int):
     return await get_metrics(test_id)
 

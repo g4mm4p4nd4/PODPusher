@@ -19,7 +19,7 @@ async def test_metrics_all_endpoint():
         vid = resp.json()["variants"][0]["id"]
         await client.post(f"/{vid}/impression")
         await client.post(f"/{vid}/click")
-        resp = await client.get("/metrics")
+        resp = await client.get("/ab_metrics")
         assert resp.status_code == 200
         metrics = resp.json()
         assert metrics[0]["id"] == vid

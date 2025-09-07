@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from .service import generate_post
+from ..common.monitoring import setup_observability
 
 app = FastAPI()
+setup_observability(app)
 
 
 class SocialRequest(BaseModel):

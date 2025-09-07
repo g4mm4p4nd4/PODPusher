@@ -6,9 +6,10 @@ from services.bulk_create.service import (
 
 
 def test_parse_products_from_csv():
-    variants = json.dumps([{ "sku": "s1", "price": 9.99 }])
+    variants = json.dumps([{"sku": "s1", "price": 9.99}])
     images = json.dumps(["http://example.com/img.png"])
-    import io, csv as csvmod
+    import io
+    import csv as csvmod
 
     output = io.StringIO()
     writer = csvmod.writer(output)
