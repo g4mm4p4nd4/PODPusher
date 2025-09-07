@@ -184,8 +184,8 @@ export default function ListingComposer({ onPublish }: Props) {
           onChange={e => setLanguage(e.target.value)}
           className="border p-2"
         >
-          <option value="en">English</option>
-          <option value="es">Español</option>
+          <option value="en">{t('languages.en')}</option>
+          <option value="es">{t('languages.es')}</option>
         </select>
       </div>
       {fieldOrder.map((field, idx) => (

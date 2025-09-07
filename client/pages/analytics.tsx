@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
 import { useTranslation } from 'next-i18next';
 import { fetchSummary } from '../services/analytics';
+import { formatCurrency } from '../utils/format';
 
 const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
 
@@ -12,6 +13,7 @@ export type SummaryRecord = {
   clicks: number;
   conversions: number;
   conversion_rate: number;
+  revenue?: number;
 };
 
 interface AnalyticsProps {
@@ -19,7 +21,7 @@ interface AnalyticsProps {
 }
 
 export default function Analytics({ initialData }: AnalyticsProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [data, setData] = useState<SummaryRecord[]>(initialData);
 
   useEffect(() => {
@@ -65,12 +67,18 @@ export default function Analytics({ initialData }: AnalyticsProps) {
     ],
   };
 
+  const totalRevenue = data.reduce((sum, d) => sum + (d.revenue || 0), 0);
+  const currency = 'USD';
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold mb-4">{t('analytics.title')}</h1>
       <Bar data={listingChart} aria-label="listing views chart" role="img" />
       <Bar data={conversionChart} aria-label="conversion rate chart" role="img" />
       <Bar data={trafficChart} aria-label="traffic chart" role="img" />
+      <p>
+        {t('analytics.revenue')}: {formatCurrency(totalRevenue, currency, i18n.language)}
+      </p>
     </div>
   );
 }

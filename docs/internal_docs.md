@@ -32,6 +32,21 @@ Roles from `agents.md`:
 - **Unit‑Tester** – expands service level coverage and mocks
   integrations.
 
+## Localization & Internationalization
+
+The dashboard uses **next-i18next** for all interface strings. Text is
+stored in locale files under `client/locales/<lang>/common.json` and
+referenced via the `t()` helper. The **LanguageSwitcher** component in the
+navbar persists the selected locale to `localStorage` and reloads the app
+through Next.js routing. Number and currency values are formatted through
+utility helpers in `client/utils/format.ts`, which wrap `Intl.NumberFormat`
+and `Intl.DateTimeFormat`.
+
+Frontend_Coder ensures all user-facing strings remain externalised and
+coordinates with translators to keep keys consistent. Translators should
+avoid modifying interpolation tokens (e.g., `{{count}}`) and verify changes
+against the English source.
+
 ## Integration Service
 
 Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.

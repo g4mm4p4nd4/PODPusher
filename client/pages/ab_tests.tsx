@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next';
 import axios from 'axios';
 import { useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { formatNumber, formatPercent } from '../utils/format';
 
 export type ABMetric = {
   id: number;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export default function ABTests({ metrics: initial }: Props) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [metrics, setMetrics] = useState<ABMetric[]>(initial);
   const [name, setName] = useState('');
   const [variants, setVariants] = useState('');
@@ -122,10 +123,10 @@ export default function ABTests({ metrics: initial }: Props) {
           {metrics.map(m => (
             <tr key={m.id}>
               <td className="border px-2">{m.name}</td>
-              <td className="border px-2">{(m.weight * 100).toFixed(0)}%</td>
-              <td className="border px-2" data-testid={`imp-${m.id}`}>{m.impressions}</td>
-              <td className="border px-2">{m.clicks}</td>
-              <td className="border px-2">{(m.conversion_rate * 100).toFixed(1)}%</td>
+              <td className="border px-2">{formatPercent(m.weight, i18n.language)}</td>
+              <td className="border px-2" data-testid={`imp-${m.id}`}>{formatNumber(m.impressions, i18n.language)}</td>
+              <td className="border px-2">{formatNumber(m.clicks, i18n.language)}</td>
+              <td className="border px-2">{formatPercent(m.conversion_rate, i18n.language)}</td>
             </tr>
           ))}
         </tbody>

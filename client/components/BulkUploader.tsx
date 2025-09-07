@@ -25,7 +25,7 @@ export default function BulkUploader() {
       }));
       const errs = (data.errors || []).map((e: any) => ({
         status: 'error',
-        message: e.error || 'error',
+        message: e.error || t('bulk.error'),
       }));
       setResults([...successes, ...errs]);
     } catch (err: any) {

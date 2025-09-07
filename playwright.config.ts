@@ -9,8 +9,14 @@ export default defineConfig({
     env: { NEXT_DISABLE_VERSION_CHECK: '1' },
   },
   testDir: './tests/e2e',
-  use: {
-    baseURL: 'http://localhost:3000',
-    headless: true,
-  },
+  projects: [
+    {
+      name: 'en',
+      use: { baseURL: 'http://localhost:3000', headless: true, locale: 'en-US' },
+    },
+    {
+      name: 'es',
+      use: { baseURL: 'http://localhost:3000', headless: true, locale: 'es-ES' },
+    },
+  ],
 });

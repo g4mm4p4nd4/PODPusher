@@ -65,6 +65,9 @@
     "title": "Notificaciones",
     "markRead": "Marcar como leído"
   },
+  "quota": {
+    "display": "{{remaining}}/{{limit}} créditos"
+  },
   "ab": {
     "title": "Pruebas A/B",
     "name": "Nombre de prueba",
@@ -121,5 +124,11 @@
     "uploading": "Subiendo...",
     "success": "Creado",
     "error": "Error"
+  },
+  "languages": {
+    "en": "Inglés",
+    "es": "Español",
+    "fr": "Francés",
+    "de": "Alemán"
   }
 }

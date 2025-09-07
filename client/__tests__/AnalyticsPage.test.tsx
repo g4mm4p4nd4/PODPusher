@@ -5,7 +5,7 @@ import axios from 'axios';
 import Analytics, { SummaryRecord } from '../pages/analytics';
 
 jest.mock('next-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }));
 
 jest.mock('axios');
@@ -19,7 +19,7 @@ jest.mock('react-chartjs-2', () => ({
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 const initialData: SummaryRecord[] = [
-  { path: '/home', views: 1, clicks: 0, conversions: 0, conversion_rate: 0 },
+  { path: '/home', views: 1, clicks: 0, conversions: 0, conversion_rate: 0, revenue: 12.5 },
 ];
 
 it('renders analytics charts and refreshes', async () => {
@@ -27,6 +27,7 @@ it('renders analytics charts and refreshes', async () => {
   mockedAxios.get.mockResolvedValue({ data: initialData });
   render(<Analytics initialData={initialData} />);
   expect(screen.getAllByTestId('chart')).toHaveLength(3);
+  expect(screen.getByText(/analytics.revenue/)).toHaveTextContent('$12.50');
   jest.advanceTimersByTime(5000);
   await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
   jest.useRealTimers();

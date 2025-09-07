@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import { fetchPlan, PlanUsage } from '../services/user';
+import { formatNumber } from '../utils/format';
 
 export default function QuotaDisplay() {
+  const { t, i18n } = useTranslation('common');
   const [usage, setUsage] = useState<PlanUsage | null>(null);
 
   useEffect(() => {
@@ -20,7 +23,10 @@ export default function QuotaDisplay() {
       data-testid="quota"
       className={`ml-auto text-sm ${warn ? 'text-red-500' : ''}`}
     >
-      {`${remaining}/${usage.limit} credits`}
+      {t('quota.display', {
+        remaining: formatNumber(remaining, i18n.language),
+        limit: formatNumber(usage.limit, i18n.language),
+      })}
     </span>
   );
 }
