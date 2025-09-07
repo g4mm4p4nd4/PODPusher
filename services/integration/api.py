@@ -22,13 +22,13 @@ async def listing(product: dict):
 
 @app.post("/create-sku")
 async def create_sku_legacy(data: ProductList):
-    """Backward compatible endpoint from early stubs."""
+    """Legacy endpoint for backward compatibility."""
     products = create_sku(data.products)
     return {"product": products}
 
 
 @app.post("/publish-listing")
 async def publish_listing_legacy(product: dict):
-    """Backward compatible endpoint from early stubs."""
+    """Legacy endpoint for backward compatibility."""
     listing = publish_listing(product)
     return {"listing": listing.get("etsy_url"), "product": listing}

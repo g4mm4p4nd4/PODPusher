@@ -34,7 +34,7 @@ Roles from `agents.md`:
 
 ## Integration Service
 
-Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.
+Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. Each client reads its API key from the environment and automatically handles missing keys with an internal fallback; no separate stub toggles are required.
 
 ### Integration Flow
 
