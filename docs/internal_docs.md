@@ -1,20 +1,52 @@
-
 # Internal Documentation
+
+## Feature Overview
+
+| Feature | Completed |
+| --- | --- |
+| Advanced search and filtering | 2025-07-21 |
+| A/B testing engine v3 | 2025-07-21 |
+| Analytics enhancements | 2025-07-21 |
+| Listing composer enhancements | 2025-07-21 |
+| Social media generator | 2025-07-21 |
+| Bulk product creation | 2025-07-21 |
+| Real integrations | 2025-07-21 |
+| Monitoring and notifications | 2025-07-21 |
+| Localization | 2025-07-21 |
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    Client --> GW[Gateway]
+    GW --> Scraper[Trend Scraper]
+    GW --> Ideation
+    Ideation --> ImageGen[Image Gen]
+    GW --> ImageGen
+    GW --> Listing[Listing Composer]
+    GW --> Social[Social Generator]
+    GW --> Bulk[Bulk Uploader]
+    Bulk --> Integration[Integration Service]
+    GW --> Notifications[Notifications Service]
+    Notifications --> Scheduler[Scheduler]
+    GW --> Analytics[Analytics Collector]
+    Scraper --> Analytics
+    Social --> Analytics
+    Integration --> Analytics
+    GW --> Monitor[Monitoring]
+    Monitor --> SRE[(SRE Stack)]
+```
+
+The gateway routes requests to individual microservices. Each service emits analytics events and exposes health, readiness and metrics endpoints consumed by the monitoring stack.
+
+The full OpenAPI specification is auto-generated from the gateway and stored in [`openapi.yaml`](../openapi.yaml). FastAPI also serves an interactive Swagger UI at `/docs` and the JSON spec at `/openapi.json`.
 
 ## Testing & QA Strategy
 
 Quality assurance combines unit, integration and browser tests.
 
-- **Unit tests** live in `tests/` and cover services such as search,
-  A/B testing, listing composer, bulk upload and analytics. Use
-  `pytest` for backend code and `jest` for frontend modules. Keep
-  tests deterministic by seeding the in-memory SQLite database and
-  mocking any external requests.
-- **End-to-end tests** reside in `tests/e2e/` and are written with
-  Playwright. They simulate creating listings, uploading bulk products
-  and running experiments. Playwright browsers are installed via
-  `npx playwright install --with-deps`; if browsers are unavailable the
-  suite is skipped.
+- **Unit tests** live in `tests/` and cover services such as search, A/B testing, listing composer, bulk upload and analytics. Use `pytest` for backend code and `jest` for frontend modules. Keep tests deterministic by seeding the in-memory SQLite database and mocking any external requests.
+- **End-to-end tests** reside in `tests/e2e/` and are written with Playwright. They simulate creating listings, uploading bulk products and running experiments. Playwright browsers are installed via `npx playwright install --with-deps`; if browsers are unavailable the suite is skipped.
 - **Running locally**:
 
 ```bash
@@ -29,32 +61,19 @@ npx playwright test
 Roles from `agents.md`:
 
 - **QA‑Automator** – maintains end-to-end scenarios and CI reliability.
-- **Unit‑Tester** – expands service level coverage and mocks
-  integrations.
+- **Unit‑Tester** – expands service level coverage and mocks integrations.
 
-## Integration Service
+## Real Integrations
 
-Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback.
-
-### Integration Flow
-
-```mermaid
-flowchart LR
-    A[Product Data] --> B[Printify API]
-    B --> C[SKU]
-    D[Listing Data] --> E[Etsy API]
-    E --> F[Listing URL]
-```
+Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. They load API keys from environment variables and fall back to stubbed responses when keys are missing, logging the fallback. The integration service interacts with the bulk uploader and listing composer to persist SKUs and publish listings.
 
 ## Bulk Product Creation
 
-`POST /api/bulk_create` accepts a CSV or JSON list of product definitions. Each
-item is validated and persisted via the existing Printify integration. The
-response summarises created products and per-item errors.
+`POST /api/bulk_create` accepts a CSV or JSON list of product definitions. Each item is validated and persisted via the integration service. The response summarises created products and per-item errors.
 
 Sample CSV:
 
-```
+```csv
 title,description,price,category,variants,image_urls
 "Shirt","Cool shirt",19.99,apparel,"[{""sku"":""s1"",""price"":19.99}]","[""http://example.com/img.png""]"
 ```
@@ -76,16 +95,13 @@ Sample JSON:
 
 Response:
 
-```
+```json
 { "created": [...], "errors": [{ "index": 1, "error": "detail" }] }
 ```
 
 ## Social Media Generator Service
 
-The `social_generator` service builds captions and optional images for social
-posts without relying on external APIs. It combines product metadata with
-language specific templates and trending keywords loaded from a configuration
-file.
+The `social_generator` service builds captions and optional images for social posts without external APIs. It combines product metadata with language-specific templates and trending keywords loaded from configuration files.
 
 ### API
 
@@ -93,127 +109,45 @@ file.
   - Body: `{ product_id?, title?, description?, tags?, product_type?, language?, include_image? }`
   - Response: `{ "caption": string, "image": base64 | null }`
 
-If `product_id` is supplied, metadata is looked up from an internal store.
-Templates and trending keywords are localised using the translation files in
-`services/social_generator/templates/` and `client/locales/*`.
+If `product_id` is supplied, metadata is looked up from an internal store. Templates and keywords are localised using files in `services/social_generator/templates/` and `client/locales/*`.
 
-### Flow
+## Listing Composer Enhancements
 
-```mermaid
-flowchart LR
-    A[Product Metadata] --> B[Rule Template]
-    A --> C[Trending Keywords]
-    B --> D[Caption]
-    C --> D
-    A --> E[Placeholder Image]
-    D --> F[Social Post]
-    E --> F
-```
+The `ideation` service exposes a tag suggestion helper for Etsy listings. It inspects the listing title and description and returns up to 13 concise tags.
 
-## Frontend Page
-
-The `/social-generator` page lets sellers enter product details and preview the
-generated caption and image. The caption can be edited, copied to the clipboard
-and the image downloaded. The feature honours the user's auto-generation and
-social handle preferences.
-
-## Listing Composer
-
-The `ideation` service exposes a tag suggestion helper for Etsy listings. It
-inspects the listing title and description and returns up to 13 concise tags.
-
-### API
+### Tag Suggestion API
 
 - **POST `/api/ideation/suggest-tags`**
   - Body: `{ "title": string, "description": string }`
-  - Response: `string[]` of tag suggestions
-
-### Frontend Page
-
-The `/listings` page renders the `ListingComposer` component. Users type a title
-and description, see character counters update in real time and can request tag
-suggestions which populate clickable chips for easy selection. Fields can be
-reordered via drag-and-drop to match user preference. Drafts may be saved and
-resumed, and listings can be composed in multiple languages.
+  - Response: `string[]` of tag suggestions ranked by historical sales and search frequency.
 
 ### Draft API
 
-- **POST `/api/listing-composer/drafts`** – save or update a draft. Body
-  includes `title`, `description`, `tags`, `language` and `field_order`.
+- **POST `/api/listing-composer/drafts`** – save or update a draft. Body includes `title`, `description`, `tags`, `language` and `field_order`.
 - **GET `/api/listing-composer/drafts/{id}`** – fetch a previously saved draft.
 
-The tag suggestion endpoint now ranks suggestions using historical sales and
-search frequency data for improved relevance.
-=======
-# Analytics Service
+The `/listings` page renders the `ListingComposer` component. Users type a title and description, see character counters in real time, reorder fields via drag-and-drop, save drafts and compose listings in multiple languages.
 
-## Architecture
+## Analytics Enhancements
+
 The analytics module records user interactions and exposes aggregated metrics for the dashboard.
 
 ### Components
+
 - **Model**: `AnalyticsEvent` in `services/models.py` stores `event_type`, `path`, optional `user_id` and `metadata`.
 - **API** (`services/analytics/api.py`):
   - `POST /analytics/events` – record an event.
   - `GET /analytics/events` – list events by type.
   - `GET /analytics/summary` – aggregate counts and conversion rates per path.
 - **Middleware**: `AnalyticsMiddleware` attaches to FastAPI apps and logs `page_view` events asynchronously to keep p95 latency under 300 ms.
-- **Stripe Usage**: conversion events trigger an async usage report to Stripe for billing (skipped when `STRIPE_API_KEY` is absent).
 
-### Architecture Diagram
-```mermaid
-flowchart LR
-    A[Client Request] --> B[AnalyticsMiddleware]
-    B --> C[Analytics API]
-    C --> D[(AnalyticsEvent DB)]
-    D --> E[Summary Endpoint]
-    E --> F[Dashboard Charts]
-```
+Stored events are aggregated via `/analytics/summary` and rendered in dashboard charts. Conversion events trigger an async usage report to Stripe for billing (skipped when `STRIPE_API_KEY` is absent).
 
-### Data Flow
-1. Requests hit any FastAPI service using `AnalyticsMiddleware`.
-2. Middleware schedules a background task to persist the event.
-3. Stored events are aggregated via `/analytics/summary` and rendered in the dashboard charts.
+## Advanced Search & Filtering
 
-## Usage
-Mount the middleware on additional services as needed:
-```python
-from services.analytics.middleware import AnalyticsMiddleware
-app.add_middleware(AnalyticsMiddleware)
+The `search` service exposes a `/api/search` endpoint supporting keyword, category, tag and rating filters. Queries are translated into SQL so filtering and pagination occur at the database layer. The endpoint returns `{ items, total, page, page_size }` allowing the UI to display result counts and paginate efficiently. The `/search` page consumes this endpoint and the navbar includes a quick search box that routes to the page.
 
-```
-
-## User Plans and Quotas
-
-The platform tracks usage limits per subscription plan and exposes endpoints
-for the dashboard to display remaining credits.
-
-### API
-
-- **GET `/api/user/plan`** – returns `{ plan, quota_used, limit }` and resets
-  monthly usage when needed.
-- **POST `/api/user/plan`** – increment usage by `count`; returns updated
-  `{ plan, quota_used, limit }` or 403 when the quota would be exceeded.
-
-### Frontend
-
-The `QuotaDisplay` component in the dashboard navigation calls the GET endpoint
-via a typed client and shows the remaining credits. When fewer than 10 % of
-credits remain, the counter turns red to warn the user.
-
-## Advanced Search Service
-
-The `search` service exposes a `/api/search` endpoint supporting keyword,
-category, tag and rating filters. Queries are translated into SQL so filtering
-and pagination occur at the database layer. The endpoint returns `{ items,
-total, page, page_size }` allowing the UI to display result counts and paginate
-efficiently.
-
-On the frontend, the `/search` page provides controls for each filter and
-consumes the endpoint. The navbar now includes a quick search box which routes
-to the page and pre-fills the query parameter.
-
-
-## A/B Testing Engine
+## A/B Testing Engine v3
 
 The `ab_tests` service manages experiments defined by an `ABTest` record and one or more `ABVariant` rows. Each test stores the experiment type (`image`, `description` or `price`), optional start and end times for scheduling, and variants with explicit traffic weights.
 
@@ -225,4 +159,98 @@ flowchart TD
     D --> E[Metrics]
 ```
 
-During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the current time against the experiment schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
+During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
+
+## Notifications Service
+
+The notifications module stores user-facing alerts and schedules recurring messages.
+
+- **GET `/api/notifications`** – list notifications for the user (requires `X-User-Id` header).
+- **POST `/api/notifications`** – create a notification. Body: `{ message: string, type?: string, user_id?: int }`.
+- **PUT `/api/notifications/{id}/read`** – mark a notification as read.
+
+A background scheduler triggers monthly quota reset and weekly trend summary jobs. Delivery stubs exist for email and push channels.
+
+## Monitoring & Health
+
+Every service exposes:
+
+- **GET `/health`** – liveness probe.
+- **GET `/ready`** – readiness probe verifying downstream dependencies.
+- **GET `/metrics`** – Prometheus-formatted metrics.
+
+These endpoints feed the observability stack and support alerting defined in the SRE playbook. Refer to [AGENTS.md §15](../agents.md#15-observability--sre-playbook) for operational guidelines.
+
+## Localization
+
+The frontend uses **next-i18next** for translations. Language files reside under `client/locales/<lang>/common.json`. To add a new language, duplicate the `en` folder, translate keys, add the code to `locales` in `client/next-i18next.config.js` and restart the frontend. See [localization docs](./localization.md) for details.
+
+## API Reference
+
+### Search Filtering
+
+**GET `/api/search`**
+
+- Query: `q`, `category?`, `tag?`, `rating?`, `page?`, `page_size?`
+- Response:
+
+```json
+{ "items": [], "total": 0, "page": 1, "page_size": 25 }
+```
+
+Example:
+
+```bash
+curl '/api/search?q=cat&category=apparel'
+```
+
+### A/B Testing
+
+**POST `/ab_tests`** – create experiment.
+
+```json
+{ "name": "Image test", "type": "image", "variants": [{"name": "A", "weight": 0.5}, {"name": "B", "weight": 0.5}] }
+```
+
+**GET `/ab_tests/{id}`** – fetch experiment.
+
+**POST `/ab_tests/{id}/events`** – record `click` or `impression`.
+
+### Analytics Events
+
+**POST `/analytics/events`**
+
+```json
+{ "event_type": "page_view", "path": "/dashboard" }
+```
+
+**GET `/analytics/summary`** – aggregated metrics.
+
+### Bulk Product Creation Endpoint
+
+**POST `/api/bulk_create`** – see sample above. Returns list of created products and per-item errors.
+
+### Social Generator
+
+**POST `/api/social/generate`** – generate caption and optional image.
+
+### Notifications
+
+**GET `/api/notifications`** – list notifications.
+
+**POST `/api/notifications`** – create notification.
+
+**PUT `/api/notifications/{id}/read`** – mark read.
+
+### Monitoring
+
+**GET `/health`**, **GET `/ready`**, **GET `/metrics`** – health and metrics endpoints for each service.
+
+## Agent Responsibilities
+
+Implementation and maintenance follow the roles in [agents.md](../agents.md):
+
+- **Backend_Coder** implements and tests the REST endpoints defined above.
+- **Frontend_Coder** consumes these APIs in the dashboard and keeps the UI synchronised.
+- **SRE Playbook** (AGENTS.md §15) governs monitoring, metrics collection and alerting for the exposed health endpoints.
+
