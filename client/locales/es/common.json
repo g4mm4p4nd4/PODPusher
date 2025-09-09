@@ -5,6 +5,7 @@
     "categories": "Categorías",
     "designIdeas": "Ideas de diseño",
     "suggestions": "Sugerencias",
+    "images": "Imágenes",
     "search": "Buscar",
     "analytics": "Analíticas",
     "listings": "Publicaciones",
@@ -121,5 +122,15 @@
     "uploading": "Subiendo...",
     "success": "Creado",
     "error": "Error"
+  },
+  "images": {
+    "title": "Imágenes",
+    "ideaId": "ID de Idea",
+    "style": "Estilo",
+    "provider": "Proveedor",
+    "default": "Predeterminado",
+    "generate": "Generar",
+    "delete": "Eliminar",
+    "regenerate": "Regenerar"
   }
 }

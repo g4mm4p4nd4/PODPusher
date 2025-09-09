@@ -11,6 +11,9 @@ from ..ideation.api import app as ideation_app
 from ..image_gen.service import generate_images
 from ..integration.service import create_sku, publish_listing
 from ..image_review.api import app as review_app
+from ..image_gen.api import app as images_app
+from ..models import Idea
+from ..common.database import get_session
 from ..notifications.api import app as notifications_app
 from ..search.api import app as search_app
 from ..ab_tests.api import app as ab_app
@@ -23,6 +26,7 @@ from ..analytics.middleware import AnalyticsMiddleware
 
 app = FastAPI()
 app.mount("/api/images/review", review_app)
+app.mount("/api/images", images_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)
 app.mount("/ab_tests", ab_app)
@@ -36,8 +40,17 @@ app.add_middleware(AnalyticsMiddleware)
 async def generate():
     trends = await fetch_trends()
     ideas = await generate_ideas(trends)
-    images = await generate_images([i["description"] for i in ideas])
-    products = create_sku(images)
+    image_dicts = []
+    async with get_session() as session:
+        for idea in ideas:
+            idea_obj = Idea(trend_id=0, description=idea["description"])
+            session.add(idea_obj)
+            await session.commit()
+            await session.refresh(idea_obj)
+            urls = await generate_images(idea_obj.id, "default")
+            for url in urls:
+                image_dicts.append({"image_url": url})
+    products = create_sku(image_dicts)
     listing = publish_listing(products[0])
     month = datetime.utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])

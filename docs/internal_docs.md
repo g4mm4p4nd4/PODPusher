@@ -117,6 +117,26 @@ generated caption and image. The caption can be edited, copied to the clipboard
 and the image downloaded. The feature honours the user's auto-generation and
 social handle preferences.
 
+## High-Resolution Image Generation Service
+
+Images can be generated via **OpenAI** or **Google Gemini**. The default provider
+is configured with the `PROVIDER` environment variable (`openai` or `gemini`) and
+may be overridden per request. OpenAI uses `OPENAI_API_KEY` to request 1024x1024
+images. Gemini calls require `GEMINI_API_KEY` and `GEMINI_MODEL` and return at
+least 512x512 images. Generated files are saved to S3 when `S3_BUCKET` is set or
+to `/data/images` locally. If generation fails, a placeholder image URL is
+returned.
+
+### API
+
+- **POST `/api/images/generate`** – body `{ idea_id, style, provider_override? }`
+  returns `{ urls: string[] }`.
+
+### Dashboard
+
+The dashboard now features an **Images** tab for viewing, deleting and
+regenerating generated images.
+
 ## Listing Composer
 
 The `ideation` service exposes a tag suggestion helper for Etsy listings. It
