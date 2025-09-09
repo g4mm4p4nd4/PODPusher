@@ -13,6 +13,15 @@ class Trend(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class TrendSignal(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    source: str
+    keyword: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    engagement_score: int = 0
+    category: str = "other"
+
+
 class Idea(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     trend_id: int

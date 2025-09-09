@@ -13,3 +13,4 @@ black
 aiosqlite
 APScheduler
 Pillow
+playwright

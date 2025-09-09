@@ -13,6 +13,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 3. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
 4. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
 5. Maintain architecture and schema diagrams.
+6. **Live Trend Signals Ingestion** – Build Playwright scrapers and storage per Data‑Seeder responsibilities in `agents.md`.
 
 ## Completed
 - A/B Testing Support – Flexible engine with experiment types, weighted traffic and scheduling.

@@ -110,6 +110,23 @@ flowchart LR
     E --> F
 ```
 
+## Trend Ingestion Service
+
+The `trend_ingestion` service scrapes public trending pages, normalises text and
+stores the highest scoring signals for the API.
+
+```mermaid
+flowchart LR
+    A[Playwright Scrapers] --> B[Normalisation]
+    B --> C[(PostgreSQL)]
+    C --> D[Gateway /api/trends/live]
+```
+
+Environment variables:
+
+- `PLAYWRIGHT_PROXY` – optional proxy passed to Playwright.
+- `SCRAPE_INTERVAL_HOURS` – schedule interval for automatic scraping.
+
 ## Frontend Page
 
 The `/social-generator` page lets sellers enter product details and preview the

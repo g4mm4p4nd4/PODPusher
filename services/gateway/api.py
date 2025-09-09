@@ -20,6 +20,11 @@ from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_han
 from fastapi import Request
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
+from ..trend_ingestion.service import (
+    get_live_trends,
+    refresh_trends,
+    start_scheduler,
+)
 
 app = FastAPI()
 app.mount("/api/images/review", review_app)
@@ -30,6 +35,11 @@ app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
 app.mount("/api/social", social_app)
 app.add_middleware(AnalyticsMiddleware)
+
+
+@app.on_event("startup")
+async def trend_scheduler_startup():
+    start_scheduler()
 
 
 @app.post("/generate")
@@ -64,3 +74,14 @@ async def design_ideas(category: str | None = None):
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
+
+
+@app.get("/api/trends/live")
+async def live_trends(category: str | None = None):
+    return await get_live_trends(category)
+
+
+@app.post("/api/trends/refresh")
+async def refresh_trends_endpoint():
+    await refresh_trends()
+    return {"status": "ok"}
