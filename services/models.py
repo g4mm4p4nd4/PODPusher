@@ -20,6 +20,14 @@ class Idea(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class Image(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    idea_id: int
+    provider: str
+    url: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Product(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     idea_id: int

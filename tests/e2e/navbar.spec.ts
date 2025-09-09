@@ -6,6 +6,7 @@ test('home page navbar shows links and quota', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Generate' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Categories' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Design Ideas' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Images' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Suggestions' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Analytics' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Notifications' })).toBeVisible();

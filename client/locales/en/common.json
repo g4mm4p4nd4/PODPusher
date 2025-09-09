@@ -4,6 +4,7 @@
     "generate": "Generate",
     "categories": "Categories",
     "designIdeas": "Design Ideas",
+    "images": "Images",
     "suggestions": "Suggestions",
     "search": "Search",
     "analytics": "Analytics",
@@ -44,6 +45,15 @@
     "stars_other": "{{count}} Stars",
     "tags": "Tags",
     "flag": "Flag as inappropriate"
+  },
+  "images": {
+    "title": "Images",
+    "ideaId": "Idea ID",
+    "style": "Style",
+    "generate": "Generate",
+    "delete": "Delete",
+    "regenerate": "Regenerate",
+    "select": "Select"
   },
   "listings": {
     "pageTitle": "Listing Composer",

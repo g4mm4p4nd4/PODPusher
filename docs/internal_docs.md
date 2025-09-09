@@ -117,6 +117,31 @@ generated caption and image. The caption can be edited, copied to the clipboard
 and the image downloaded. The feature honours the user's auto-generation and
 social handle preferences.
 
+## High-Resolution Image Generation Service
+
+The image generation microservice can render product mock-ups using either
+OpenAI's `gpt-image-1` model or Google's Gemini API. The default provider is
+selected with the `PROVIDER` environment variable and may be overridden per
+request via a `provider_override` field.
+
+### Environment Variables
+
+- `PROVIDER` – default provider (`openai` or `gemini`)
+- `OPENAI_API_KEY` – credential for OpenAI
+- `GEMINI_API_KEY` – credential for Gemini
+
+### API
+
+- **POST `/api/images/generate`** – body `{ idea_id, style, provider_override? }`
+  returns a list of `{ id, url }` objects. Images are saved to S3 when
+  configured or to `/data/images` otherwise.
+- **GET `/api/images/{idea_id}`** – list stored images for an idea.
+- **DELETE `/api/images/{image_id}`** – remove an image.
+
+If generation fails, the service responds with a placeholder image URL. The
+dashboard exposes an **Images** tab to view, select, delete or regenerate
+images, with full localisation support.
+
 ## Listing Composer
 
 The `ideation` service exposes a tag suggestion helper for Etsy listings. It

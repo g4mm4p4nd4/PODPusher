@@ -4,6 +4,7 @@
     "generate": "Generar",
     "categories": "Categorías",
     "designIdeas": "Ideas de diseño",
+    "images": "Imágenes",
     "suggestions": "Sugerencias",
     "search": "Buscar",
     "analytics": "Analíticas",
@@ -44,6 +45,15 @@
     "stars_other": "{{count}} estrellas",
     "tags": "Etiquetas",
     "flag": "Marcar como inapropiado"
+  },
+  "images": {
+    "title": "Imágenes",
+    "ideaId": "ID de Idea",
+    "style": "Estilo",
+    "generate": "Generar",
+    "delete": "Eliminar",
+    "regenerate": "Regenerar",
+    "select": "Seleccionar"
   },
   "listings": {
     "pageTitle": "Compositor de publicaciones",
