@@ -40,11 +40,16 @@ Real Printify and Etsy clients live in `packages/integrations/printify.py` and `
 
 ```mermaid
 flowchart LR
-    A[Product Data] --> B[Printify API]
-    B --> C[SKU]
-    D[Listing Data] --> E[Etsy API]
-    E --> F[Listing URL]
+    I[Idea] --> IM[Generated Images]
+    IM --> P[Printify Product]
+    P --> M[Gemini Mock-up]
+    M --> L[Etsy Listing]
 ```
+
+Images produced by the `image_gen` service are uploaded to Printify, which
+returns variant identifiers. For each variant, a lifestyle mock-up is created
+via the Gemini image API and set as the primary image before the final Etsy
+listing is published.
 
 ## Bulk Product Creation
 

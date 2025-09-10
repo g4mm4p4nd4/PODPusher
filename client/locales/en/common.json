@@ -55,6 +55,12 @@
     "save": "Save Draft",
     "language": "Language"
   },
+  "publish": {
+    "price": "Price",
+    "tags": "Tags",
+    "publishNow": "Publish Now",
+    "schedule": "Schedule"
+  },
   "analytics": {
     "title": "Analytics Dashboard",
     "views": "Page Views",
