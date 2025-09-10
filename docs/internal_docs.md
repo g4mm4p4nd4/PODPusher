@@ -1,6 +1,30 @@
 
 # Internal Documentation
 
+## Event-Driven Orchestration & Scheduling
+
+```mermaid
+sequenceDiagram
+    participant TrendScraper as Trend Scraper
+    participant Broker
+    participant Ideation
+    participant ImageGen as Image Gen
+    participant Product
+    participant Listing
+    TrendScraper->>Broker: trend_signals
+    Broker->>Ideation: trend_signals
+    Ideation->>Broker: ideas_ready
+    Broker->>ImageGen: ideas_ready
+    ImageGen->>Broker: images_ready
+    Broker->>Product: images_ready
+    Product->>Broker: products_ready
+    Broker->>Listing: products_ready
+    Listing->>Broker: listings_ready
+```
+
+APScheduler schedules periodic restock checks, expired listing cleanup and publishes
+`trend_signals` messages when new trending data is absent.
+
 ## Testing & QA Strategy
 
 Quality assurance combines unit, integration and browser tests.

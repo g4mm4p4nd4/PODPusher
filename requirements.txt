@@ -7,7 +7,9 @@ redis
 sqlmodel
 psycopg[binary]
 pytest
-pytest - asyncio
+pytest-asyncio
+httpx
+fakeredis
 flake8
 black
 aiosqlite
