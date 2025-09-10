@@ -8,7 +8,7 @@ from ..trend_scraper.service import (
 )
 from ..ideation.service import generate_ideas
 from ..ideation.api import app as ideation_app
-from ..image_gen.service import generate_images
+from ..image_gen.service import generate_images, list_images, delete_image
 from ..integration.service import create_sku, publish_listing
 from ..image_review.api import app as review_app
 from ..notifications.api import app as notifications_app
@@ -20,6 +20,10 @@ from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_han
 from fastapi import Request
 from ..trend_scraper.events import EVENTS
 from ..analytics.middleware import AnalyticsMiddleware
+from ..common.database import get_session
+from ..models import Idea
+from sqlmodel import select
+from pydantic import BaseModel
 
 app = FastAPI()
 app.mount("/api/images/review", review_app)
@@ -32,12 +36,37 @@ app.mount("/api/social", social_app)
 app.add_middleware(AnalyticsMiddleware)
 
 
+class ImageRequest(BaseModel):
+    idea_id: int
+    style: str
+    provider_override: str | None = None
+
+
+@app.post("/api/images/generate")
+async def generate_image_endpoint(data: ImageRequest):
+    return await generate_images(data.idea_id, data.style, data.provider_override)
+
+
+@app.get("/api/images")
+async def list_images_endpoint(idea_id: int):
+    return await list_images(idea_id)
+
+
+@app.delete("/api/images/{image_id}")
+async def delete_image_endpoint(image_id: int):
+    return await delete_image(image_id)
+
 @app.post("/generate")
 async def generate():
     trends = await fetch_trends()
-    ideas = await generate_ideas(trends)
-    images = await generate_images([i["description"] for i in ideas])
-    products = create_sku(images)
+    await generate_ideas(trends)
+    async with get_session() as session:
+        result = await session.exec(select(Idea))
+        idea_ids = [i.id for i in result.all()]
+    image_urls = []
+    for iid in idea_ids:
+        image_urls.extend(await generate_images(iid, "default"))
+    products = create_sku([{"image_url": u} for u in image_urls])
     listing = publish_listing(products[0])
     month = datetime.utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])

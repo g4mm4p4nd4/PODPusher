@@ -10,6 +10,9 @@ import pytest  # noqa: E402
 from services.trend_scraper.service import fetch_trends  # noqa: E402
 from services.ideation.service import generate_ideas  # noqa: E402
 from services.image_gen.service import generate_images  # noqa: E402
+from services.common.database import get_session
+from services.models import Idea
+from sqlmodel import select
 from services.integration.service import create_sku, publish_listing  # noqa: E402
 from services.common.database import init_db  # noqa: E402
 
@@ -20,9 +23,13 @@ async def test_full_pipeline(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     trends = await fetch_trends()
     assert trends
-    ideas = await generate_ideas([t["term"] for t in trends])
-    assert ideas
-    images = await generate_images([i["description"] for i in ideas])
+    await generate_ideas([t["term"] for t in trends])
+    async with get_session() as session:
+        result = await session.exec(select(Idea))
+        idea_ids = [i.id for i in result.all()]
+    images = []
+    for iid in idea_ids:
+        images.extend([{ "image_url": url } for url in await generate_images(iid, "default")])
     assert images
     products = create_sku(images)
     assert all("sku" in p for p in products)

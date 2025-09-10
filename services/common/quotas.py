@@ -9,7 +9,7 @@ PLAN_LIMITS = {"free": 20, "pro": 100}
 
 
 async def quota_middleware(request: Request, call_next):
-    if request.url.path != "/images" or request.method.upper() != "POST":
+    if request.url.path not in {"/images", "/generate"} or request.method.upper() != "POST":
         return await call_next(request)
 
     user_id = request.headers.get("X-User-Id")
@@ -19,7 +19,8 @@ async def quota_middleware(request: Request, call_next):
     body_bytes = await request.body()
     try:
         payload = json.loads(body_bytes)
-        count = len(payload.get("ideas", []))
+        ideas = payload.get("ideas")
+        count = len(ideas) if isinstance(ideas, list) else 1
     except Exception:
         count = 1
     request._body = body_bytes  # allow downstream handlers to read body again

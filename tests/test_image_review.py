@@ -2,15 +2,23 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 from services.gateway.api import app as gateway_app
-from services.image_gen.service import generate_images
-from services.common.database import init_db
+from services.common.database import init_db, get_session
+from services.models import Idea, Product
 
 
 @pytest.mark.asyncio
 async def test_image_review_endpoints():
     await init_db()
-    # seed one product
-    await generate_images(["test idea"])
+    async with get_session() as session:
+        idea = Idea(trend_id=0, description="test idea")
+        session.add(idea)
+        await session.commit()
+        await session.refresh(idea)
+        idea_id = idea.id
+    product = Product(idea_id=idea_id, image_url="/test.png")
+    async with get_session() as session:
+        session.add(product)
+        await session.commit()
 
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -110,6 +110,20 @@ flowchart LR
     E --> F
 ```
 
+## Image Generation Service
+
+Images are generated via either **OpenAI gpt-image-1** or **Google Gemini**.
+The default provider is controlled by the `PROVIDER` environment variable
+(`openai` or `gemini`) and may be overridden per request using the
+`provider_override` field. OpenAI requests call `openai.Image.create` with a
+`1024x1024` size while Gemini requests invoke the Generative Language API with
+at least `512x512` dimensions. Generated images are persisted to S3 when
+`S3_BUCKET` is set, otherwise they are written to `/data/images`.
+
+If generation fails a placeholder image URL is returned. Records are stored in
+the `Image` table linked to `Idea` via `idea_id` and include the provider and
+storage URL.
+
 ## Frontend Page
 
 The `/social-generator` page lets sellers enter product details and preview the
