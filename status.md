@@ -13,7 +13,6 @@ This file tracks the remaining work required to bring PODPusher to production re
 3. **Notification & Scheduling System** – Implement backend scheduling and a notification service to alert users about quota resets, trending products, and scheduled posts or product launches.
 4. **Localization & Internationalization (i18n)** – Extend translation support beyond current pages and adapt currency formats for different locales.
 5. Maintain architecture and schema diagrams.
-6. **Event-driven orchestration & scheduling** – Data-Seeder and DevOps agents to wire Redis Streams pipeline and APScheduler jobs for restocking and notifications (see agents.md).
 
 ## Completed
 - A/B Testing Support – Flexible engine with experiment types, weighted traffic and scheduling.
@@ -27,6 +26,9 @@ This file tracks the remaining work required to bring PODPusher to production re
 - Bulk Product Creation – CSV/JSON bulk upload endpoint and UI implemented.
 - Testing & QA – Expanded unit, integration and Playwright end-to-end test coverage with CI integration.
 
+
 ## Instructions to Agents
 
 Please refer to the appended section in `agents.md` for specific instructions on how each agent should tackle these tasks.
+
+- Event-driven orchestration & scheduling — Redis Streams broker and APScheduler orchestration, docker-compose wiring, docs updated.    
