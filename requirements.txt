@@ -1,17 +1,22 @@
 fastapi
 uvicorn[standard]
-pytrends
-openai
+pydantic
 celery
 redis
 sqlmodel
 psycopg[binary]
+aiosqlite
+
+# testing & linting
 pytest
 pytest-asyncio
-httpx
-fakeredis
 flake8
 black
-aiosqlite
+
+# task & scheduling
 APScheduler
-Pillow
+
+# providers used elsewhere (image gen & integrations)
+httpx
+boto3
+playwright
