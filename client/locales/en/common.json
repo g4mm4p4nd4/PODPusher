@@ -57,9 +57,13 @@
   },
   "analytics": {
     "title": "Analytics Dashboard",
-    "views": "Page Views",
-    "conversionRate": "Conversion Rate",
-    "revenue": "Revenue"
+    "trendingKeywords": "Trending Keywords",
+    "term": "Term",
+    "clicks": "Clicks",
+    "tableLabel": "Trending keyword clicks",
+    "loading": "Loading analytics...",
+    "empty": "We couldn't find any trending keyword data right now.",
+    "error": "Something went wrong while loading analytics. Please try again."
   },
   "notifications": {
     "title": "Notifications",

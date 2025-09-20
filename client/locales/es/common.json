@@ -57,9 +57,13 @@
   },
   "analytics": {
     "title": "Panel de Analítica",
-    "views": "Vistas de página",
-    "conversionRate": "Tasa de conversión",
-    "revenue": "Ingresos"
+    "trendingKeywords": "Palabras clave en tendencia",
+    "term": "Término",
+    "clicks": "Clics",
+    "tableLabel": "Clics por palabra clave en tendencia",
+    "loading": "Cargando analíticas...",
+    "empty": "No encontramos datos de palabras clave en tendencia en este momento.",
+    "error": "Hubo un problema al cargar las analíticas. Intenta de nuevo."
   },
   "notifications": {
     "title": "Notificaciones",
