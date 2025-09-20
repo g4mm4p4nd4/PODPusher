@@ -1,86 +1,76 @@
 import React, { useEffect, useState } from 'react';
-import { GetServerSideProps } from 'next';
-import dynamic from 'next/dynamic';
+import Head from 'next/head';
 import { useTranslation } from 'next-i18next';
-import { fetchSummary } from '../services/analytics';
+import AnalyticsChart from '../components/AnalyticsChart';
+import { fetchTrendingKeywords, TrendingKeyword } from '../services/analytics';
 
-const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
-
-export type SummaryRecord = {
-  path: string;
-  views: number;
-  clicks: number;
-  conversions: number;
-  conversion_rate: number;
-};
-
-interface AnalyticsProps {
-  initialData: SummaryRecord[];
-}
-
-export default function Analytics({ initialData }: AnalyticsProps) {
-  const { t } = useTranslation('common');
-  const [data, setData] = useState<SummaryRecord[]>(initialData);
+export default function Analytics() {
+  const { t, i18n } = useTranslation('common');
+  const [keywords, setKeywords] = useState<TrendingKeyword[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const emptyMessage = t('analytics.empty');
+  const errorMessage = t('analytics.error');
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const res = await fetchSummary();
-      setData(res);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    let isActive = true;
 
-  const listingData = data.filter((d) => d.path.startsWith('/listing'));
+    const loadAnalytics = async () => {
+      try {
+        const data = await fetchTrendingKeywords();
+        if (!isActive) {
+          return;
+        }
+        if (!Array.isArray(data) || data.length === 0) {
+          setError(emptyMessage);
+          setKeywords([]);
+          return;
+        }
+        const sorted = [...data].sort((a, b) => b.clicks - a.clicks);
+        setKeywords(sorted);
+        setError(null);
+      } catch (err) {
+        if (isActive) {
+          setError(errorMessage);
+          setKeywords([]);
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
 
-  const listingChart = {
-    labels: listingData.map((d) => d.path),
-    datasets: [
-      {
-        label: t('analytics.views'),
-        data: listingData.map((d) => d.views),
-        backgroundColor: 'rgba(99,102,241,0.5)',
-      },
-    ],
-  };
+    loadAnalytics();
 
-  const conversionChart = {
-    labels: data.map((d) => d.path),
-    datasets: [
-      {
-        label: t('analytics.conversionRate'),
-        data: data.map((d) => d.conversion_rate),
-        backgroundColor: 'rgba(16,185,129,0.5)',
-      },
-    ],
-  };
-
-  const trafficChart = {
-    labels: data.map((d) => d.path),
-    datasets: [
-      {
-        label: t('analytics.views'),
-        data: data.map((d) => d.views),
-        backgroundColor: 'rgba(239,68,68,0.5)',
-      },
-    ],
-  };
+    return () => {
+      isActive = false;
+    };
+  }, [emptyMessage, errorMessage, i18n?.language]);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-4">{t('analytics.title')}</h1>
-      <Bar data={listingChart} aria-label="listing views chart" role="img" />
-      <Bar data={conversionChart} aria-label="conversion rate chart" role="img" />
-      <Bar data={trafficChart} aria-label="traffic chart" role="img" />
+      <Head>
+        <title>{t('analytics.title')}</title>
+      </Head>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('analytics.title')}</h1>
+      {loading && <p className="text-gray-600 dark:text-gray-300">{t('analytics.loading')}</p>}
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+        >
+          {error}
+        </div>
+      ) : (
+        <AnalyticsChart
+          keywords={keywords}
+          title={t('analytics.trendingKeywords')}
+          termLabel={t('analytics.term')}
+          clicksLabel={t('analytics.clicks')}
+          tableLabel={t('analytics.tableLabel')}
+        />
+      )}
     </div>
   );
 }
-
-export const getServerSideProps: GetServerSideProps<AnalyticsProps> = async () => {
-  try {
-    const data = await fetchSummary();
-    return { props: { initialData: data } };
-  } catch (err) {
-    console.error(err);
-    return { props: { initialData: [] } };
-  }
-};
