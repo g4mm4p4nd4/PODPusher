@@ -9,6 +9,6 @@ class AnalyticsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
         # Avoid logging analytics endpoints to prevent recursion
-        if not request.url.path.startswith("/analytics"):
+        if not request.url.path.startswith(("/analytics", "/api/analytics")):
             asyncio.create_task(log_event("page_view", request.url.path))
         return response
