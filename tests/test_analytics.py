@@ -1,9 +1,25 @@
 import asyncio
+
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from services.analytics.api import app as analytics_app
 from services.analytics.service import list_events, log_event
 from services.common.database import init_db
+
+
+@pytest.mark.asyncio
+async def test_mock_keywords_endpoint_returns_sorted_top_10():
+    await init_db()
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/analytics")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert 1 <= len(payload) <= 10
+    clicks = [item["clicks"] for item in payload]
+    assert clicks == sorted(clicks, reverse=True)
+    assert all("term" in item and "clicks" in item for item in payload)
 
 
 @pytest.mark.asyncio
@@ -12,14 +28,14 @@ async def test_event_logging_and_summary():
     transport = ASGITransport(app=analytics_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post(
-            "/analytics/events",
+            "/api/analytics/events",
             json={"event_type": "click", "path": "/home"},
         )
         assert resp.status_code == 201
         created = resp.json()
         assert created["event_type"] == "click"
 
-        resp = await client.get("/analytics/summary")
+        resp = await client.get("/api/analytics/summary")
         assert resp.status_code == 200
         summary = resp.json()
         assert summary[0]["path"] == "/home"
