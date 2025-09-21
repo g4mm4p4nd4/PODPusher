@@ -1,9 +1,12 @@
+import csv
+import io
 import json
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from services.gateway.api import app as gateway_app
 from services.common.database import init_db
+from services.gateway.api import app as gateway_app
 
 
 @pytest.mark.asyncio
@@ -41,11 +44,10 @@ async def test_bulk_create_csv_api():
     await init_db()
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        variants = json.dumps([{ "sku": "s1", "price": 9.99 }])
+        variants = json.dumps([{"sku": "s1", "price": 9.99}])
         images = json.dumps(["http://example.com/img.png"])
-        import io, csv as csvmod
         out = io.StringIO()
-        writer = csvmod.writer(out)
+        writer = csv.writer(out)
         writer.writerow(["title", "description", "price", "category", "variants", "image_urls"])
         writer.writerow(["Shirt", "Desc", 9.99, "apparel", variants, images])
         writer.writerow(["", "Bad", 9.99, "apparel", variants, images])

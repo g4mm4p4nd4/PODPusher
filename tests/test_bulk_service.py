@@ -1,4 +1,7 @@
+import csv
+import io
 import json
+
 from services.bulk_create.service import (
     parse_products_from_csv,
     parse_products_from_json,
@@ -6,12 +9,11 @@ from services.bulk_create.service import (
 
 
 def test_parse_products_from_csv():
-    variants = json.dumps([{ "sku": "s1", "price": 9.99 }])
+    variants = json.dumps([{"sku": "s1", "price": 9.99}])
     images = json.dumps(["http://example.com/img.png"])
-    import io, csv as csvmod
 
     output = io.StringIO()
-    writer = csvmod.writer(output)
+    writer = csv.writer(output)
     writer.writerow(["title", "description", "price", "category", "variants", "image_urls"])
     writer.writerow(["Shirt", "Desc", 9.99, "apparel", variants, images])
     writer.writerow(["", "Bad", 9.99, "apparel", variants, images])
