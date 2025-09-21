@@ -19,7 +19,7 @@ export default function ImageReview() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get<Product[]>(`${api}/api/images/review`);
+        const res = await axios.get<Product[]>(`${api}/api/products/review`);
         setProducts(res.data);
       } catch (err) {
         console.error(err);
@@ -30,7 +30,7 @@ export default function ImageReview() {
 
   const update = async (id: number, changes: Partial<Product>) => {
     try {
-      const res = await axios.post<Product>(`${api}/api/images/review/${id}`, changes);
+      const res = await axios.put<Product>(`${api}/api/products/${id}`, changes);
       setProducts(p => p.map(prod => (prod.id === id ? res.data : prod)));
     } catch (err) {
       console.error(err);
@@ -51,7 +51,10 @@ export default function ImageReview() {
                 data-testid={`rating-${p.id}`}
                 className="border p-2 w-full"
                 value={p.rating ?? ''}
-                onChange={e => update(p.id, { rating: Number(e.target.value) })}
+                onChange={e => {
+                  const value = e.target.value;
+                  update(p.id, { rating: value ? Number(value) : null });
+                }}
               >
                 <option value="">{t('review.unrated')}</option>
                 {[1, 2, 3, 4, 5].map(n => (

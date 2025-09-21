@@ -10,20 +10,20 @@ const product = {
 };
 
 test('review page loads and allows rating', async ({ page }) => {
-  await page.route('**/api/images/review', route => {
-    if (route.request().method() === 'GET') {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([product]),
-      });
-    } else {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ...product, rating: 5, tags: ['foo'] }),
-      });
-    }
+  await page.route('**/api/products/review', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([product]),
+    });
+  });
+
+  await page.route('**/api/products/*', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...product, rating: 5, tags: ['foo'] }),
+    });
   });
 
   await page.goto('/images/review');
