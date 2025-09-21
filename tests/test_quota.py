@@ -1,8 +1,8 @@
-import os
 import pytest
 from httpx import AsyncClient, ASGITransport
+
+from services.common.database import get_session, init_db
 from services.image_gen.api import app as image_app
-from services.common.database import init_db, get_session
 from services.models import User
 
 
