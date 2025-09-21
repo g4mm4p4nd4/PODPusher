@@ -9,8 +9,8 @@ async def test_product_not_found_spanish_message():
     await init_db()
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/images/review/999",
+        resp = await client.put(
+            "/api/products/999",
             json={},
             headers={"Accept-Language": "es"},
         )
