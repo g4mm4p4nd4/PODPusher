@@ -7,6 +7,37 @@ interface ResultItem {
   message: string;
 }
 
+const toMessage = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+
+  if (value instanceof Error && value.message) {
+    return value.message;
+  }
+
+  if (value && typeof value === 'object') {
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized && serialized !== '{}' && serialized !== '[]') {
+        return serialized;
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  if (value != null) {
+    const str = String(value).trim();
+    if (str.length > 0 && str !== '[object Object]') {
+      return str;
+    }
+  }
+
+  return fallback;
+};
+
 export default function BulkUploader() {
   const { t } = useTranslation('common');
   const [uploading, setUploading] = useState(false);
@@ -19,17 +50,25 @@ export default function BulkUploader() {
     setResults([]);
     try {
       const data = await uploadBulk(file);
-      const successes = (data.created || []).map((c: any) => ({
+      const successes: ResultItem[] = (data.created || []).map((c: any) => ({
         status: 'ok',
-        message: c.product?.title || c.product?.name || t('bulk.success'),
+        message: toMessage(
+          c?.product?.title ?? c?.product?.name,
+          t('bulk.success')
+        ),
       }));
-      const errs = (data.errors || []).map((e: any) => ({
+      const errs: ResultItem[] = (data.errors || []).map((e: any) => ({
         status: 'error',
-        message: e.error || 'error',
+        message: toMessage(e?.error, t('bulk.error')),
       }));
       setResults([...successes, ...errs]);
     } catch (err: any) {
-      setResults([{ status: 'error', message: err.message }]);
+      setResults([
+        {
+          status: 'error',
+          message: toMessage(err?.message ?? err, t('bulk.error')),
+        },
+      ]);
     } finally {
       setUploading(false);
     }
