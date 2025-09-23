@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'next-i18next';
 import {
   fetchTagSuggestions,
@@ -24,6 +24,11 @@ export default function ListingComposer({ onPublish }: Props) {
     'tags',
   ]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const lastLengthsRef = useRef({ title: 0, description: 0 });
+
+  const isTitleInvalid = title.length > 140;
+  const isDescriptionInvalid = description.length > 1000;
+  const isFormInvalid = isTitleInvalid || isDescriptionInvalid;
 
   useEffect(() => {
     const id = localStorage.getItem('draftId');
@@ -42,12 +47,40 @@ export default function ListingComposer({ onPublish }: Props) {
 
   const getSuggestions = async () => {
     try {
+      lastLengthsRef.current = {
+        title: title.length,
+        description: description.length,
+      };
       const res = await fetchTagSuggestions(title, description);
       setSuggested(res);
     } catch (err) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const titleLength = title.length;
+      const descriptionLength = description.length;
+      const { title: lastTitle, description: lastDescription } =
+        lastLengthsRef.current;
+
+      if (
+        Math.abs(titleLength - lastTitle) >= 10 ||
+        Math.abs(descriptionLength - lastDescription) >= 10
+      ) {
+        lastLengthsRef.current = {
+          title: titleLength,
+          description: descriptionLength,
+        };
+        fetchTagSuggestions(title, description)
+          .then(res => setSuggested(res))
+          .catch(err => console.error(err));
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [title, description]);
 
   const toggleTag = (tag: string) => {
     if (tags.includes(tag)) {
@@ -75,6 +108,9 @@ export default function ListingComposer({ onPublish }: Props) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isFormInvalid) {
+      return;
+    }
     onPublish?.({ title, description, tags, language, field_order: fieldOrder });
   };
 
@@ -93,14 +129,22 @@ export default function ListingComposer({ onPublish }: Props) {
       case 'title':
         return (
           <div>
-            <label htmlFor="title" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="title"
+              className={`block text-sm font-medium mb-1 ${
+                isTitleInvalid ? 'text-red-600' : ''
+              }`}
+            >
               {t('listings.title')} ({title.length}/140)
             </label>
             <input
               id="title"
-              className="border p-2 w-full"
+              className={`border p-2 w-full ${
+                isTitleInvalid ? 'border-red-600' : ''
+              }`}
               maxLength={140}
               value={title}
+              aria-invalid={isTitleInvalid}
               onChange={e => setTitle(e.target.value)}
             />
           </div>
@@ -110,16 +154,21 @@ export default function ListingComposer({ onPublish }: Props) {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium mb-1"
+              className={`block text-sm font-medium mb-1 ${
+                isDescriptionInvalid ? 'text-red-600' : ''
+              }`}
             >
               {t('listings.description')} ({description.length}/1000)
             </label>
             <textarea
               id="description"
-              className="border p-2 w-full"
+              className={`border p-2 w-full ${
+                isDescriptionInvalid ? 'border-red-600' : ''
+              }`}
               maxLength={1000}
               rows={4}
               value={description}
+              aria-invalid={isDescriptionInvalid}
               onChange={e => setDescription(e.target.value)}
             />
           </div>
@@ -201,7 +250,15 @@ export default function ListingComposer({ onPublish }: Props) {
         </div>
       ))}
       <div className="flex gap-2">
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2">
+        <button
+          type="submit"
+          className={`px-4 py-2 text-white ${
+            isFormInvalid
+              ? 'bg-red-400 cursor-not-allowed'
+              : 'bg-blue-600'
+          }`}
+          disabled={isFormInvalid}
+        >
           {t('listings.publish')}
         </button>
         <button

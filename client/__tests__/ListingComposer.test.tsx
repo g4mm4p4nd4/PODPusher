@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 import ListingComposer from '../components/ListingComposer';
@@ -22,7 +22,15 @@ jest.mock('../services/listings', () => ({
   ),
 }));
 
+const services = require('../services/listings');
+
 const onPublish = jest.fn();
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  onPublish.mockClear();
+  localStorage.clear();
+});
 
 test('shows character counts and adds tags', async () => {
   render(<ListingComposer onPublish={onPublish} />);
@@ -39,6 +47,45 @@ test('shows character counts and adds tags', async () => {
 test('saves draft', async () => {
   render(<ListingComposer onPublish={onPublish} />);
   fireEvent.click(screen.getByText('save'));
-  const services = require('../services/listings');
   expect(services.saveDraft).toHaveBeenCalled();
+});
+
+test('automatically fetches suggestions when length threshold is reached', async () => {
+  jest.useFakeTimers();
+  try {
+    render(<ListingComposer onPublish={onPublish} />);
+
+    const titleInput = screen.getAllByRole('textbox')[0];
+    fireEvent.change(titleInput, { target: { value: 'a'.repeat(12) } });
+
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(services.fetchTagSuggestions).toHaveBeenCalledWith(
+      'a'.repeat(12),
+      ''
+    );
+
+    const suggestionButton = await screen.findByRole('button', { name: 'one' });
+    expect(suggestionButton).toBeInTheDocument();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('blocks publishing when limits are exceeded', () => {
+  render(<ListingComposer onPublish={onPublish} />);
+
+  const titleInput = screen.getAllByRole('textbox')[0];
+  fireEvent.change(titleInput, { target: { value: 'a'.repeat(150) } });
+
+  const titleLabel = screen.getByText('title (150/140)');
+  expect(titleLabel).toHaveClass('text-red-600');
+
+  const publishButton = screen.getByRole('button', { name: 'publish' });
+  expect(publishButton).toBeDisabled();
+
+  fireEvent.click(publishButton);
+  expect(onPublish).not.toHaveBeenCalled();
 });
