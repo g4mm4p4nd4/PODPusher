@@ -34,16 +34,31 @@ class _DummyTrendReq:  # pragma: no cover - only needed for import side effects
 
 
 def _load_tasks_module():
+    restore_actions = []
+
+    def _set_module(name: str, module: types.ModuleType) -> None:
+        previous = sys.modules.get(name)
+        sys.modules[name] = module
+
+        def restore_module(prev=previous, target=name, replacement=module):
+            current = sys.modules.get(target)
+            if prev is not None:
+                sys.modules[target] = prev
+            elif current is replacement:
+                sys.modules.pop(target, None)
+
+        restore_actions.append(restore_module)
+
     celery_module = types.ModuleType("celery")
     celery_module.Celery = _DummyCelery
-    sys.modules.setdefault("celery", celery_module)
+    _set_module("celery", celery_module)
 
     pytrends_module = types.ModuleType("pytrends")
     pytrends_request_module = types.ModuleType("pytrends.request")
     pytrends_request_module.TrendReq = _DummyTrendReq
     pytrends_module.request = pytrends_request_module
-    sys.modules.setdefault("pytrends", pytrends_module)
-    sys.modules.setdefault("pytrends.request", pytrends_request_module)
+    _set_module("pytrends", pytrends_module)
+    _set_module("pytrends.request", pytrends_request_module)
 
     sqlalchemy_module = types.ModuleType("sqlalchemy")
 
@@ -106,10 +121,10 @@ def _load_tasks_module():
     sqlalchemy_module.or_ = _or_
     sqlalchemy_module.ext = types.SimpleNamespace(asyncio=sqlalchemy_asyncio_module)
 
-    sys.modules.setdefault("sqlalchemy", sqlalchemy_module)
-    sys.modules.setdefault("sqlalchemy.ext", sqlalchemy_ext_module)
-    sys.modules.setdefault("sqlalchemy.ext.asyncio", sqlalchemy_asyncio_module)
-    sys.modules.setdefault("sqlalchemy.sql", sqlalchemy_sql_module)
+    _set_module("sqlalchemy", sqlalchemy_module)
+    _set_module("sqlalchemy.ext", sqlalchemy_ext_module)
+    _set_module("sqlalchemy.ext.asyncio", sqlalchemy_asyncio_module)
+    _set_module("sqlalchemy.sql", sqlalchemy_sql_module)
 
     sqlmodel_module = types.ModuleType("sqlmodel")
 
@@ -155,31 +170,66 @@ def _load_tasks_module():
     sqlmodel_asyncio_module.session = sqlmodel_asyncio_session_module
     sqlmodel_ext_module.asyncio = sqlmodel_asyncio_module
 
-    sys.modules.setdefault("sqlmodel", sqlmodel_module)
-    sys.modules.setdefault("sqlmodel.ext", sqlmodel_ext_module)
-    sys.modules.setdefault("sqlmodel.ext.asyncio", sqlmodel_asyncio_module)
-    sys.modules.setdefault("sqlmodel.ext.asyncio.session", sqlmodel_asyncio_session_module)
+    _set_module("sqlmodel", sqlmodel_module)
+    _set_module("sqlmodel.ext", sqlmodel_ext_module)
+    _set_module("sqlmodel.ext.asyncio", sqlmodel_asyncio_module)
+    _set_module("sqlmodel.ext.asyncio.session", sqlmodel_asyncio_session_module)
 
     def _ensure_package(name: str) -> types.ModuleType:
         module = sys.modules.get(name)
-        if module is None:
-            if name == "services":
-                module = importlib.import_module(name)
-            else:
-                module = types.ModuleType(name)
-                module.__path__ = []  # type: ignore[attr-defined]
-                sys.modules[name] = module
-        return module
+        if module is not None:
+            return module
+        if name == "services":
+            return importlib.import_module(name)
 
-    def _install_stub(fullname: str, attrs: dict) -> None:
-        module = types.ModuleType(fullname)
-        for key, value in attrs.items():
-            setattr(module, key, value)
-        sys.modules[fullname] = module
-        parent_name, _, child_name = fullname.rpartition(".")
+        module = types.ModuleType(name)
+        module.__path__ = []  # type: ignore[attr-defined]
+        _set_module(name, module)
+
+        parent_name, _, child_name = name.rpartition(".")
         if parent_name:
             parent_module = _ensure_package(parent_name)
             setattr(parent_module, child_name, module)
+
+            def restore_parent(parent=parent_module, child=child_name, placeholder=module):
+                if getattr(parent, child, None) is placeholder:
+                    delattr(parent, child)
+
+            restore_actions.append(restore_parent)
+        return module
+
+    def _install_stub(fullname: str, attrs: dict) -> None:
+        parent_name, _, child_name = fullname.rpartition(".")
+        parent_module = _ensure_package(parent_name) if parent_name else None
+
+        previous = sys.modules.get(fullname)
+        module = types.ModuleType(fullname)
+        for key, value in attrs.items():
+            setattr(module, key, value)
+
+        sys.modules[fullname] = module
+        if parent_module:
+            setattr(parent_module, child_name, module)
+
+        def restore_stub(
+            target=fullname,
+            prev=previous,
+            parent=parent_module,
+            child=child_name,
+            replacement=module,
+        ):
+            current = sys.modules.get(target)
+            if prev is not None:
+                sys.modules[target] = prev
+                if parent:
+                    setattr(parent, child, prev)
+            else:
+                if current is replacement:
+                    sys.modules.pop(target, None)
+                if parent and getattr(parent, child, None) is replacement:
+                    delattr(parent, child)
+
+        restore_actions.append(restore_stub)
 
     _ensure_package("services")
     _install_stub("services.trend_scraper.service", {"fetch_trends": lambda *_a, **_k: []})
@@ -203,7 +253,11 @@ def _load_tasks_module():
         {"generate_post": lambda *_a, **_k: {}},
     )
 
-    return importlib.import_module("services.tasks")
+    try:
+        return importlib.import_module("services.tasks")
+    finally:
+        for restore in reversed(restore_actions):
+            restore()
 
 
 tasks = _load_tasks_module()

@@ -1,5 +1,5 @@
-import os
 import asyncio
+import os
 from typing import Any, Callable
 
 from celery import Celery
