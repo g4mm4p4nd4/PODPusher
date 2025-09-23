@@ -1,6 +1,9 @@
 import os
 import asyncio
+from typing import Any, Callable
+
 from celery import Celery
+
 from .trend_scraper.service import fetch_trends
 from .ideation.service import generate_ideas
 from .image_gen.service import generate_images
@@ -15,32 +18,42 @@ celery_app.conf.beat_schedule = {
 }
 
 
+def _execute_service(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    """Execute a possibly-async service and return its concrete result."""
+
+    result = func(*args, **kwargs)
+    if asyncio.iscoroutine(result):
+        return asyncio.run(result)
+    return result
+
+
 @celery_app.task
 def fetch_trends_task():
-    return fetch_trends()
+    return _execute_service(fetch_trends)
 
 
 @celery_app.task
 def generate_ideas_task(trends):
-    return generate_ideas(trends)
+    return _execute_service(generate_ideas, trends)
 
 
 @celery_app.task
 def generate_images_task(ideas):
-    return generate_images(ideas)
+    return _execute_service(generate_images, ideas)
 
 
 @celery_app.task
 def create_sku_task(images):
-    return create_sku(images)
+    return _execute_service(create_sku, images)
 
 
 @celery_app.task
 def publish_listing_task(product):
-    return publish_listing(product)
+    return _execute_service(publish_listing, product)
 
 
 @celery_app.task
-def generate_social_post_task(prompt: str):
+def generate_social_post_task(payload: dict):
     """Celery task to create social media content."""
-    return asyncio.run(generate_post(prompt))
+
+    return _execute_service(generate_post, payload)
