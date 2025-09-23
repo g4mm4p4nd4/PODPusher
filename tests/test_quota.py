@@ -26,3 +26,22 @@ async def test_quota_enforcement():
                 assert resp.status_code == 200
             else:
                 assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_quota_allows_pro_users():
+    await init_db()
+    async with get_session() as session:
+        user = User(id=2, plan="pro", quota_used=95, quota_limit=100)
+        session.add(user)
+        await session.commit()
+
+    transport = ASGITransport(app=image_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for _ in range(25):
+            resp = await client.post(
+                "/images",
+                json={"ideas": ["idea"]},
+                headers={"X-User-Id": "2"},
+            )
+            assert resp.status_code == 200

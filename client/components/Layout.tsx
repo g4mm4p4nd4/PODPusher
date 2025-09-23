@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { useTranslation } from 'next-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
-import QuotaDisplay from './QuotaDisplay';
+import UserQuota from './UserQuota';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
@@ -63,7 +63,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               </span>
             )}
           </Link>
-          <QuotaDisplay />
+          <UserQuota />
         </div>
       </nav>
       <main className="flex-1 container mx-auto p-4">{children}</main>

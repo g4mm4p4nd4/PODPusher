@@ -61,6 +61,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     plan: str = "free"
     quota_used: int = 0
+    quota_limit: Optional[int] = Field(default=None, nullable=True)
     last_reset: datetime = Field(default_factory=datetime.utcnow)
     auto_social: bool = True
     social_handles: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))

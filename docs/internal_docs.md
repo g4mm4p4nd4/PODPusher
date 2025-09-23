@@ -206,16 +206,17 @@ for the dashboard to display remaining credits.
 
 ### API
 
-- **GET `/api/user/plan`** – returns `{ plan, quota_used, limit }` and resets
-  monthly usage when needed.
-- **POST `/api/user/plan`** – increment usage by `count`; returns updated
-  `{ plan, quota_used, limit }` or 403 when the quota would be exceeded.
+- **GET `/api/user/me`** – returns `{ plan, quota_used, quota_limit }` and resets
+  monthly usage when needed. `quota_limit` is `null` for unlimited plans.
+- **POST `/api/user/me`** – increment usage by `count`; returns updated
+  `{ plan, quota_used, quota_limit }` or 403 when the quota would be exceeded.
 
 ### Frontend
 
-The `QuotaDisplay` component in the dashboard navigation calls the GET endpoint
-via a typed client and shows the remaining credits. When fewer than 10 % of
-credits remain, the counter turns red to warn the user.
+The `UserQuota` component in the dashboard navigation calls the GET endpoint
+via a typed client and renders a progress bar that refreshes when image
+generation completes. Unlimited plans show a simple “Unlimited” badge instead
+of the meter.
 
 ## Advanced Search Service
 
