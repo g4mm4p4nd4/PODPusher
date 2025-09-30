@@ -8,8 +8,10 @@ from ..models import EventType
 from .middleware import AnalyticsMiddleware
 from .mock import MOCK_KEYWORDS
 from .service import get_summary, list_events, log_event
+from ..common.observability import register_observability
 
 app = FastAPI()
+register_observability(app, service_name="analytics")
 app.add_middleware(AnalyticsMiddleware)
 router = APIRouter(prefix="/api/analytics")
 

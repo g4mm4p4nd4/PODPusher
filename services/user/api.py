@@ -1,35 +1,23 @@
 from datetime import datetime
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from ..common.database import get_session
 from ..models import User
 from ..common.quotas import ensure_quota_state
+from ..common.auth import ensure_user_record, require_user_id
 
 app = FastAPI()
 
 
 @app.get("/api/user/me")
-async def user_me(x_user_id: str = Header(..., alias="X-User-Id")):
-    async with get_session() as session:
-        user = await session.get(User, int(x_user_id))
-        now = datetime.utcnow()
-        if not user:
-            user = User(id=int(x_user_id), last_reset=now)
-            ensure_quota_state(user, now)
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-        else:
-            if ensure_quota_state(user, now):
-                session.add(user)
-                await session.commit()
-                await session.refresh(user)
-        return {
-            "plan": user.plan,
-            "quota_used": user.quota_used,
-            "quota_limit": user.quota_limit,
-        }
+async def user_me(user_id: int = Depends(require_user_id)):
+    user = await ensure_user_record(user_id)
+    return {
+        "plan": user.plan,
+        "quota_used": user.quota_used,
+        "quota_limit": user.quota_limit,
+    }
 
 
 class QuotaUpdate(BaseModel):
@@ -38,13 +26,14 @@ class QuotaUpdate(BaseModel):
 
 @app.post("/api/user/me")
 async def increment_quota(
-    data: QuotaUpdate, x_user_id: str = Header(..., alias="X-User-Id")
+    data: QuotaUpdate,
+    user_id: int = Depends(require_user_id),
 ):
     async with get_session() as session:
-        user = await session.get(User, int(x_user_id))
+        user = await session.get(User, user_id)
         now = datetime.utcnow()
         if not user:
-            user = User(id=int(x_user_id), last_reset=now)
+            user = User(id=user_id, last_reset=now)
         if ensure_quota_state(user, now):
             session.add(user)
         limit = user.quota_limit
@@ -67,11 +56,11 @@ class Preferences(BaseModel):
 
 
 @app.get("/api/user/preferences")
-async def get_preferences(x_user_id: str = Header(..., alias="X-User-Id")):
+async def get_preferences(user_id: int = Depends(require_user_id)):
     async with get_session() as session:
-        user = await session.get(User, int(x_user_id))
+        user = await session.get(User, user_id)
         if not user:
-            user = User(id=int(x_user_id))
+            user = User(id=user_id)
             session.add(user)
             await session.commit()
             await session.refresh(user)
@@ -83,12 +72,13 @@ async def get_preferences(x_user_id: str = Header(..., alias="X-User-Id")):
 
 @app.post("/api/user/preferences")
 async def set_preferences(
-    data: Preferences, x_user_id: str = Header(..., alias="X-User-Id")
+    data: Preferences,
+    user_id: int = Depends(require_user_id),
 ):
     async with get_session() as session:
-        user = await session.get(User, int(x_user_id))
+        user = await session.get(User, user_id)
         if not user:
-            user = User(id=int(x_user_id))
+            user = User(id=user_id)
         user.auto_social = data.auto_social
         user.social_handles = data.social_handles
         session.add(user)

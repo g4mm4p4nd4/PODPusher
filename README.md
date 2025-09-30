@@ -28,6 +28,23 @@ flake8
 pytest
 ```
 
+## Database Migrations
+
+Use Alembic to manage schema changes:
+
+```bash
+alembic upgrade head
+```
+
+If you are migrating an existing environment for the first time, stamp the baseline then upgrade:
+
+```bash
+alembic stamp 0001_baseline
+alembic upgrade head
+```
+
+See [`docs/migrations.md`](docs/migrations.md) for more details.
+
 ## Frontend Dashboard
 
 The dashboard lives in the `client/` directory and uses Next.js with Tailwind CSS.

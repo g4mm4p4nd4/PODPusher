@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { resolveApiUrl } from '../services/apiBase';
 
 export type Notification = {
   id: number;
@@ -13,19 +14,18 @@ export type Notification = {
 export default function Notifications() {
   const { t } = useTranslation('common');
   const [items, setItems] = useState<Notification[]>([]);
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
     axios
-      .get<Notification[]>(`${api}/api/notifications`, {
+      .get<Notification[]>(resolveApiUrl('/api/notifications'), {
         headers: { 'X-User-Id': '1' },
       })
       .then(res => setItems(res.data))
       .catch(err => console.error(err));
-  }, [api]);
+  }, []);
 
   const markRead = async (id: number) => {
-    await axios.put(`${api}/api/notifications/${id}/read`);
+    await axios.put(resolveApiUrl(`/api/notifications/${id}/read`));
     setItems(items.map(n => (n.id === id ? { ...n, read_status: true } : n)));
   };
 

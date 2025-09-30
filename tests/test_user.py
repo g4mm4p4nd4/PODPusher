@@ -1,11 +1,13 @@
-import pytest
 from datetime import datetime, timedelta
-from httpx import AsyncClient, ASGITransport
 
-from services.user.api import app as user_app
-from services.common.database import init_db, get_session
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from services.auth.service import create_session
+from services.common.database import get_session, init_db
 from services.common.quotas import plan_limit
 from services.models import User
+from services.user.api import app as user_app
 
 
 @pytest.mark.asyncio
@@ -26,6 +28,20 @@ async def test_user_me_initializes_defaults():
         assert data["quota_used"] == 0
         assert data["quota_limit"] == plan_limit("free")
         assert set(data.keys()) == {"plan", "quota_used", "quota_limit"}
+
+
+@pytest.mark.asyncio
+async def test_user_me_accepts_bearer_token():
+    await init_db()
+    token, _ = await create_session(5)
+    transport = ASGITransport(app=user_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/api/user/me", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["plan"] == "free"
 
 
 @pytest.mark.asyncio

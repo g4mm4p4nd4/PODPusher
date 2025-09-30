@@ -1,31 +1,23 @@
-import { GetServerSideProps } from 'next';
 import axios from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { resolveApiUrl } from '../services/apiBase';
 
-export type Suggestion = {
+interface Suggestion {
   category: string;
   design_theme: string;
   suggestion: string;
-};
-
-interface SuggestionsProps {
-  suggestions: Suggestion[];
-  categories: string[];
-  designs: string[];
 }
 
-export default function Suggestions({ suggestions: initial, categories, designs }: SuggestionsProps) {
+export default function Suggestions() {
   const { t } = useTranslation('common');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>(initial);
   const [category, setCategory] = useState('');
   const [design, setDesign] = useState('');
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchSuggestions = async () => {
     try {
-      const res = await axios.get<Suggestion[]>(`${api}/product-suggestions`, {
+      const res = await axios.get<Suggestion[]>(resolveApiUrl('/product-suggestions'), {
         params: {
           category: category || undefined,
           design: design || undefined,
@@ -37,74 +29,38 @@ export default function Suggestions({ suggestions: initial, categories, designs 
     }
   };
 
+  useEffect(() => {
+    fetchSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold mb-4">{t('suggestions.title')}</h1>
-      <form onSubmit={submit} className="flex flex-wrap gap-2 items-end">
-        <div>
-          <label className="block text-sm font-medium">{t('suggestions.category')}</label>
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="border p-2 w-48"
-          >
-            <option value="">All</option>
-            {categories.map(c => (
-              <option key={c} value={c}>
-                {c.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium">{t('suggestions.designTheme')}</label>
-          <select
-            value={design}
-            onChange={e => setDesign(e.target.value)}
-            className="border p-2 w-48"
-          >
-            <option value="">All</option>
-            {designs.map(d => (
-              <option key={d} value={d}>
-                {d.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2">
+      <h1 className="text-2xl font-bold">{t('suggestions.title')}</h1>
+      <div className="flex gap-2">
+        <input
+          className="border p-2"
+          placeholder={t('suggestions.category') as string}
+          value={category}
+          onChange={e => setCategory(e.target.value)}
+        />
+        <input
+          className="border p-2"
+          placeholder={t('suggestions.designTheme') as string}
+          value={design}
+          onChange={e => setDesign(e.target.value)}
+        />
+        <button onClick={fetchSuggestions} className="bg-blue-600 text-white px-4 py-2">
           {t('suggestions.fetch')}
         </button>
-      </form>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {suggestions.map((s, idx) => (
-          <div key={idx} className="border p-4 rounded">
-            <h3 className="font-semibold capitalize">{s.category}</h3>
-            <p className="text-sm italic">{s.design_theme.replace(/_/g, ' ')}</p>
-            <p className="mt-2">{s.suggestion}</p>
-          </div>
-        ))}
       </div>
+      <ul className="space-y-2">
+        {suggestions.map((s, idx) => (
+          <li key={idx} className="border p-2 rounded">
+            <strong>{s.category}</strong> ? {s.suggestion} ({s.design_theme})
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
-
-export const getServerSideProps: GetServerSideProps<SuggestionsProps> = async () => {
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-  try {
-    const [sRes, cRes, dRes] = await Promise.all([
-      axios.get<Suggestion[]>(`${api}/product-suggestions`),
-      axios.get<{ name: string }[]>(`${api}/product-categories`),
-      axios.get<{ name: string }[]>(`${api}/design-ideas`),
-    ]);
-    return {
-      props: {
-        suggestions: sRes.data,
-        categories: cRes.data.map(c => c.name),
-        designs: dRes.data.map(d => d.name),
-      },
-    };
-  } catch (err) {
-    console.error(err);
-    return { props: { suggestions: [], categories: [], designs: [] } };
-  }
-};

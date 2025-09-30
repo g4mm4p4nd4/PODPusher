@@ -244,3 +244,26 @@ flowchart TD
 ```
 
 During creation, weights are validated to sum to 1. When a click or impression arrives, the service checks the current time against the experiment schedule before incrementing counters. Metrics endpoints combine test and variant data to report conversion rates and weight distribution.
+
+## Database Migrations
+
+Alembic tracks schema changes under `alembic/`. Use `alembic upgrade head` to apply migrations in development or deployment pipelines. The [`docs/migrations.md`](migrations.md) guide covers setup, baseline stamping, and common commands.
+
+## Observability
+
+All public FastAPI services call `register_observability` from `services/common/observability.py`. The helper exposes `/healthz`, `/metrics`, and structlog configuration. When Prometheus is unavailable it falls back to an in-process counter so smoke tests can still assert metrics presence.
+
+- Gateway, auth, notifications, trend scraper, trend ingestion and analytics are already instrumented.
+- New services should call `register_observability(app, service_name=...)` immediately after instantiation.
+- CI verifies `/metrics` via `tests/test_observability.py`; update it when adding new services.
+
+## Database Operations
+
+Alembic is the source of truth for schema changes. The workflow is:
+
+1. Create migrations with `alembic revision --autogenerate -m "<message>"`.
+2. Apply migrations locally using `alembic upgrade head` (CI enforces this step).
+3. Use `python scripts/stamp_baseline.py` to stamp legacy environments at `0001_baseline` before upgrading.
+4. `tests/test_migrations.py` runs `alembic upgrade head` three times; keep it updated with new critical tables.
+
+`services/common/database.init_db()` remains for tests only and should not be used in production deployments.

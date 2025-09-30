@@ -20,7 +20,7 @@ class ProductDefinition(BaseModel):
     description: str = Field(..., min_length=1)
     price: float = Field(..., gt=0)
     category: str = Field(..., min_length=1)
-    variants: List[Variant] = Field(..., min_items=1)
+    variants: List[Variant] = Field(..., min_length=1)
     image_urls: List[AnyHttpUrl] = Field(default_factory=list)
 
 
@@ -66,7 +66,7 @@ def persist_products(products: List[ProductDefinition]) -> Tuple[List[dict], Lis
     errors: List[dict] = []
     for idx, prod in enumerate(products):
         try:
-            result = create_sku([prod.dict()])[0]
+            result = create_sku([prod.model_dump()])[0]
             created.append({"index": idx, "product": result})
         except Exception as exc:  # pragma: no cover - defensive
             errors.append({"index": idx, "error": str(exc)})
