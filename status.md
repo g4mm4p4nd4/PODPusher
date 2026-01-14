@@ -2,15 +2,27 @@
 
 This file tracks the remaining work required to bring PODPusher to production readiness.
 
+> **See Also:** [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for full development roadmap and [TASKS.md](./TASKS.md) for granular task breakdown.
+
+## Current Sprint: MVP Completion
+
+**Target:** Production-ready MVP in 6-8 weeks
+**Completion:** ~75-80%
+
 ## Pending PRs
 
 - **Image Review & Tagging PR** - from the `feat/image-review-merge` branch via Codex. Review and merge once complete.
 
-## Outstanding Tasks
+## Critical Blockers (P0)
 
-1. **Localization & Internationalization (i18n)** - Extend translation support beyond current pages and adapt currency formats for different locales (translation key check script added, rollout pending).
-2. **Live Trend Signals Ingestion** - Build Playwright scrapers and storage per Data-Seeder responsibilities in `agents.md`.
-3. **OAuth UI & Flows** - Wire frontend connect/disconnect UX to the new auth endpoints and expand e2e coverage.
+1. **OAuth UI Integration** - Frontend connect/disconnect widgets needed in Settings page. Backend complete, frontend wiring required.
+2. **Stripe Billing Integration** - Webhook handling, customer portal, quota enforcement by plan tier.
+
+## Outstanding Tasks (P1)
+
+1. **Localization & Internationalization (i18n)** - Extend translation support beyond current pages (~40% coverage). Add FR/DE locales. Implement ICU currency formatting.
+2. **Live Trend Signals Ingestion** - Complete Playwright scrapers for TikTok, Instagram, Twitter, Pinterest, Etsy per Data-Seeder responsibilities.
+3. **Settings Page Completion** - User preferences, notification channels, quota display with upgrade CTA.
 
 ## Completed
 
