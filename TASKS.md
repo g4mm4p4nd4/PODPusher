@@ -2,6 +2,27 @@
 
 > **Sprint:** MVP Completion Sprint
 > **Target:** Production-ready MVP
+> **Authority:** Tasks assigned per agent specifications in [`agents.md`](./agents.md)
+
+---
+
+## Agent Quick Reference
+
+| Agent | Spec File | Key Responsibilities |
+|-------|-----------|---------------------|
+| **PM** | `agents_project_manager.md` | Orchestration, PR merge, KPI tracking |
+| **SW** | `agents_spec_writer.md` | Gherkin specs, acceptance criteria |
+| **AR** | `agents_architect.md` | Design, OpenAPI, schemas, security |
+| **BC** | `agents_backend_coder.md` | FastAPI, business logic, tests |
+| **FC** | `agents_frontend_coder.md` | Next.js, components, i18n |
+| **AU** | `agents_auth_integrator.md` | OAuth, tokens, RBAC |
+| **AI** | `agents_ai_engineer.md` | Prompts, GPT, content safety |
+| **DS** | `agents_data_seeder.md` | Scraping, ETL, trend data |
+| **IN** | `agents_integrations_engineer.md` | Printify, Etsy, Stripe |
+| **UT** | `agents_unit_tester.md` | PyTest, Jest, coverage |
+| **QA** | `agents_qa_automator.md` | E2E, performance, a11y |
+| **DO** | `agents_dev_ops_engineer.md` | CI/CD, infra, monitoring |
+| **DW** | `agents_docs_writer.md` | User/dev docs, changelog |
 
 ---
 
@@ -9,7 +30,11 @@
 
 ### 0.1 OAuth UI Integration
 
-#### 0.1.1 Create OAuthConnect Component
+**Primary Owner:** Frontend-Coder (FC)
+**Supporting:** Auth-Integrator (AU), Unit-Tester (UT), QA-Automator (QA)
+**Reference:** FC-05, AU-06
+
+#### 0.1.1 Create OAuthConnect Component [FC]
 - [ ] Create `client/components/OAuthConnect.tsx`
 - [ ] Implement provider status fetching from backend
 - [ ] Add connect button with provider branding (logos)
@@ -17,29 +42,40 @@
 - [ ] Show token expiry warnings (< 24h remaining)
 - [ ] Handle loading/error states gracefully
 
-#### 0.1.2 Create Provider Context
+#### 0.1.2 Create Provider Context [FC]
 - [ ] Create `client/contexts/ProviderContext.tsx`
 - [ ] Track connected providers (Etsy, Printify, Stripe)
 - [ ] Expose `isConnected(provider)` helper
 - [ ] Auto-refresh status on mount
 
-#### 0.1.3 Update Settings Page
+#### 0.1.3 Update Settings Page [FC]
 - [ ] Add "Connected Accounts" section to settings.tsx
 - [ ] Render OAuthConnect for each provider
 - [ ] Show connection status badges
 - [ ] Add "Manage Billing" link for Stripe
 
-#### 0.1.4 Extend OAuth Service
+#### 0.1.4 Extend OAuth Service [FC]
 - [ ] Add `getProviderStatus()` to `client/services/oauth.ts`
 - [ ] Add `disconnectProvider()` function
 - [ ] Handle API errors with user-friendly messages
 
-#### 0.1.5 Gate Generation Flows
+#### 0.1.5 Gate Generation Flows [FC]
 - [ ] Update generate.tsx to check provider connections
 - [ ] Show connection requirements before generation
 - [ ] Block publish if required providers disconnected
 
-#### 0.1.6 Add E2E Tests
+#### 0.1.6 Backend Token Refresh [AU]
+- [ ] Verify refresh token rotation in `services/auth/service.py`
+- [ ] Add background token pruning scheduler
+- [ ] Implement webhook ingestion for Stripe account updates
+
+#### 0.1.7 Unit Tests [UT]
+- [ ] Test OAuthConnect component
+- [ ] Test ProviderContext
+- [ ] Test oauth.ts service functions
+- [ ] Ensure ≥90% coverage (per UT-02)
+
+#### 0.1.8 E2E Tests [QA]
 - [ ] Create `tests/e2e/oauth_connect.spec.ts`
 - [ ] Test happy path: connect provider
 - [ ] Test disconnect flow
@@ -50,42 +86,47 @@
 
 ### 0.2 Stripe Billing Integration
 
-#### 0.2.1 Create Billing Service
+**Primary Owner:** Integrations-Engineer (IN)
+**Supporting:** Backend-Coder (BC), Auth-Integrator (AU), Unit-Tester (UT)
+**Reference:** IN-03, IN-07, BC-03
+
+#### 0.2.1 Create Billing Service [IN]
 - [ ] Create `services/billing/__init__.py`
 - [ ] Create `services/billing/api.py` with FastAPI router
 - [ ] Create `services/billing/service.py` with billing logic
 - [ ] Create `services/billing/plans.py` with plan definitions
 
-#### 0.2.2 Implement Webhook Handler
+#### 0.2.2 Implement Webhook Handler [IN]
 - [ ] Create `services/billing/webhooks.py`
 - [ ] Handle `invoice.paid` - activate subscription
 - [ ] Handle `invoice.payment_failed` - notify user
 - [ ] Handle `customer.subscription.created` - set quotas
 - [ ] Handle `customer.subscription.updated` - update quotas
 - [ ] Handle `customer.subscription.deleted` - downgrade
-- [ ] Verify webhook signatures
+- [ ] Verify webhook signatures (per IN-07)
 
-#### 0.2.3 Customer Portal Integration
+#### 0.2.3 Customer Portal Integration [IN]
 - [ ] Add `GET /api/billing/portal` endpoint
 - [ ] Generate Stripe portal session URL
 - [ ] Return redirect URL to frontend
 
-#### 0.2.4 Link Billing to Quotas
+#### 0.2.4 Link Billing to Quotas [BC]
 - [ ] Update `services/common/quotas.py`
 - [ ] Query user's plan tier from billing
 - [ ] Apply tier-specific limits
-- [ ] Handle overage scenarios
+- [ ] Handle overage scenarios (return 402 per AU-05)
 
-#### 0.2.5 Mount in Gateway
+#### 0.2.5 Mount in Gateway [BC]
 - [ ] Import billing router in `services/gateway/api.py`
 - [ ] Mount at `/api/billing`
 - [ ] Add health check for billing service
 
-#### 0.2.6 Add Tests
+#### 0.2.6 Unit Tests [UT]
 - [ ] Create `tests/test_billing.py`
 - [ ] Create `tests/test_billing_webhooks.py`
 - [ ] Test webhook signature verification
 - [ ] Test quota updates on plan change
+- [ ] Ensure ≥90% coverage
 
 ---
 
@@ -93,7 +134,11 @@
 
 ### 1.1 i18n Expansion
 
-#### 1.1.1 Audit Hard-coded Strings
+**Primary Owner:** Frontend-Coder (FC)
+**Supporting:** Docs-Writer (DW), QA-Automator (QA)
+**Reference:** FC §7, `docs/i18n_plan.md`
+
+#### 1.1.1 Audit Hard-coded Strings [FC]
 - [ ] Audit `client/pages/analytics.tsx` - extract strings
 - [ ] Audit `client/pages/bulk-upload.tsx` - extract strings
 - [ ] Audit `client/pages/notifications.tsx` - extract strings
@@ -102,77 +147,88 @@
 - [ ] Audit `client/pages/ab_tests.tsx` - extract strings
 - [ ] Audit all components in `client/components/`
 
-#### 1.1.2 Create Extraction Script
+#### 1.1.2 Create Extraction Script [FC]
 - [ ] Create `scripts/i18n_extract.ts`
 - [ ] Scan for untranslated strings
 - [ ] Output missing keys to JSON
 - [ ] Add to npm scripts
 
-#### 1.1.3 Expand Translations
-- [ ] Add missing keys to `client/locales/en/common.json`
-- [ ] Add translations to `client/locales/es/common.json`
-- [ ] Create `client/locales/fr/common.json`
-- [ ] Create `client/locales/de/common.json`
+#### 1.1.3 Expand Translations [FC + DW]
+- [ ] Add missing keys to `client/locales/en/common.json` [FC]
+- [ ] Add translations to `client/locales/es/common.json` [DW]
+- [ ] Create `client/locales/fr/common.json` [DW]
+- [ ] Create `client/locales/de/common.json` [DW]
 
-#### 1.1.4 Implement ICU Formatting
+#### 1.1.4 Implement ICU Formatting [FC]
 - [ ] Add `Intl.NumberFormat` wrapper utility
 - [ ] Update price displays to use formatter
-- [ ] Add locale metadata to API responses
+- [ ] Add locale metadata to API responses [BC]
 - [ ] Handle currency symbol placement by locale
 
-#### 1.1.5 Update i18n Config
+#### 1.1.5 Update i18n Config [FC]
 - [ ] Add new locales to `next-i18next.config.js`
 - [ ] Update language switcher with new options
 - [ ] Test RTL support (future Arabic/Hebrew)
 
-#### 1.1.6 Expand E2E Tests
+#### 1.1.6 E2E Locale Tests [QA]
 - [ ] Update `tests/e2e/localization.spec.ts`
 - [ ] Test all pages with ES locale
+- [ ] Test all pages with FR locale
+- [ ] Test all pages with DE locale
 - [ ] Test currency formatting
-- [ ] Test language persistence
 
 ---
 
 ### 1.2 Live Trend Scrapers
 
-#### 1.2.1 TikTok Scraper
+**Primary Owner:** Data-Seeder (DS)
+**Supporting:** Backend-Coder (BC), Unit-Tester (UT), DevOps-Engineer (DO)
+**Reference:** DS-01, DS-02, DS-06
+
+#### 1.2.1 TikTok Scraper [DS]
 - [ ] Implement `scrape_tiktok()` in sources.py
 - [ ] Navigate to trending page
 - [ ] Extract hashtags and engagement counts
 - [ ] Handle rate limiting
-- [ ] Add retry logic
+- [ ] Add retry logic with jitter
 
-#### 1.2.2 Instagram Scraper
+#### 1.2.2 Instagram Scraper [DS]
 - [ ] Implement `scrape_instagram()` in sources.py
 - [ ] Extract explore/trending content
 - [ ] Parse hashtag engagement
 - [ ] Handle login walls gracefully
 
-#### 1.2.3 Twitter/X Scraper
+#### 1.2.3 Twitter/X Scraper [DS]
 - [ ] Implement `scrape_twitter()` in sources.py
 - [ ] Extract trending topics
 - [ ] Get engagement metrics
 - [ ] Handle API changes
 
-#### 1.2.4 Pinterest Scraper
+#### 1.2.4 Pinterest Scraper [DS]
 - [ ] Implement `scrape_pinterest()` in sources.py
 - [ ] Extract trending pins
 - [ ] Get category trends
 - [ ] Parse save/repin counts
 
-#### 1.2.5 Etsy Trending Scraper
+#### 1.2.5 Etsy Trending Scraper [DS]
 - [ ] Implement `scrape_etsy_trending()` in sources.py
 - [ ] Extract trending searches
 - [ ] Get bestseller categories
 - [ ] Parse related trends
 
-#### 1.2.6 Scraper Infrastructure
+#### 1.2.6 Scraper Infrastructure [DS]
 - [ ] Add proxy rotation support
 - [ ] Implement circuit breaker pattern
 - [ ] Add scrape failure alerting
-- [ ] Create manual refresh endpoint
+- [ ] Create manual refresh endpoint [BC]
 
-#### 1.2.7 Add Tests
+#### 1.2.7 Monitoring & Alerting [DO]
+- [ ] Add Prometheus metrics for scraping
+- [ ] Create Grafana dashboard for scrape health
+- [ ] Configure alerts for ≥5% failure rate
+- [ ] Document runbook for scraper outages
+
+#### 1.2.8 Unit Tests [UT]
 - [ ] Create `tests/test_trend_scrapers.py`
 - [ ] Mock Playwright responses
 - [ ] Test error handling
@@ -182,25 +238,34 @@
 
 ### 1.3 Settings Page Polish
 
-#### 1.3.1 User Preferences
+**Primary Owner:** Frontend-Coder (FC)
+**Supporting:** Backend-Coder (BC)
+**Reference:** FC-01, FC-03
+
+#### 1.3.1 User Preferences [FC]
 - [ ] Add notification channel toggles (email/push)
 - [ ] Add default language selector
 - [ ] Add currency preference dropdown
 - [ ] Add timezone selector
 
-#### 1.3.2 Social Configuration
+#### 1.3.2 Social Configuration [FC]
 - [ ] Enhance SocialSettings component
 - [ ] Add Instagram handle input
 - [ ] Add TikTok handle input
 - [ ] Add Twitter handle input
 - [ ] Validate handle formats
 
-#### 1.3.3 Quota Display
+#### 1.3.3 Quota Display [FC]
 - [ ] Enhance UserQuota component
 - [ ] Add visual progress bars
 - [ ] Show usage breakdown by resource type
 - [ ] Add "Upgrade" CTA button
 - [ ] Link upgrade to Stripe portal
+
+#### 1.3.4 Backend Preferences API [BC]
+- [ ] Add preferences endpoints if missing
+- [ ] Validate preference values
+- [ ] Persist to database
 
 ---
 
@@ -208,19 +273,35 @@
 
 ### 2.1 Error Handling
 
-#### 2.1.1 Standardize API Errors
+**Primary Owner:** Backend-Coder (BC)
+**Supporting:** Frontend-Coder (FC), Integrations-Engineer (IN)
+**Reference:** BC-04, IN-05, TD-02
+
+#### 2.1.1 Standardize API Errors [BC]
 - [ ] Create `services/common/errors.py`
 - [ ] Define `APIError` Pydantic model
 - [ ] Create error code enum
 - [ ] Add request ID to all responses
 
-#### 2.1.2 Provider Error Mapping
-- [ ] Map Printify error codes
-- [ ] Map Etsy error codes
-- [ ] Map OpenAI content policy errors
+#### 2.1.2 Printify Error Mapping [IN] (TD-02)
+- [ ] Map all Printify API error codes
 - [ ] Create user-friendly message templates
+- [ ] Add retry logic for transient errors
+- [ ] Implement circuit breaker
 
-#### 2.1.3 Frontend Error Boundary
+#### 2.1.3 Etsy Error Mapping [IN]
+- [ ] Map Etsy API error codes
+- [ ] Create user-friendly messages
+- [ ] Handle listing fee errors
+- [ ] Handle quota exceeded errors
+
+#### 2.1.4 OpenAI Error Mapping [AI]
+- [ ] Map content policy errors
+- [ ] Map rate limit errors
+- [ ] Map token limit errors
+- [ ] Create user-friendly feedback
+
+#### 2.1.5 Frontend Error Boundary [FC]
 - [ ] Create `client/components/ErrorBoundary.tsx`
 - [ ] Catch and display errors gracefully
 - [ ] Add "Try Again" action
@@ -230,13 +311,22 @@
 
 ### 2.2 Rate Limiting
 
-#### 2.2.1 Backend Rate Limits
+**Primary Owner:** Backend-Coder (BC)
+**Supporting:** Auth-Integrator (AU), Frontend-Coder (FC)
+**Reference:** BC-08, BC §7
+
+#### 2.2.1 Backend Rate Limits [BC]
 - [ ] Install fastapi-limiter
 - [ ] Configure per-user limits by plan
 - [ ] Configure per-IP limits for public endpoints
 - [ ] Add rate limit headers
 
-#### 2.2.2 Frontend Handling
+#### 2.2.2 External API Rate Limits [BC]
+- [ ] Implement aiolimiter for Etsy (10 req/s per BC §7)
+- [ ] Implement aiolimiter for Printify (5 req/s per BC §7)
+- [ ] Add retry with jitter
+
+#### 2.2.3 Frontend Handling [FC]
 - [ ] Detect 429 responses
 - [ ] Show rate limit message to user
 - [ ] Display retry-after countdown
@@ -245,69 +335,151 @@
 
 ### 2.3 Performance
 
-#### 2.3.1 Backend Optimization
-- [ ] Add Redis caching for trends (5min TTL)
-- [ ] Add database query indexes
-- [ ] Configure connection pooling
-- [ ] Profile slow endpoints
+**Primary Owner:** Backend-Coder (BC)
+**Supporting:** Frontend-Coder (FC), DevOps-Engineer (DO)
+**Reference:** BC KPIs, FC KPIs, TD-01
 
-#### 2.3.2 Frontend Optimization
+#### 2.3.1 Backend Caching [BC]
+- [ ] Add Redis caching for trends (5min TTL)
+- [ ] Cache ideation results
+- [ ] Cache user quotas
+
+#### 2.3.2 Database Optimization [BC] (TD-01)
+- [ ] Add proper indexes
+- [ ] Configure connection pooling
+- [ ] Replace in-memory cache with Timescale continuous aggregates
+- [ ] Profile slow queries
+
+#### 2.3.3 Frontend Optimization [FC]
 - [ ] Add React.memo to heavy components
 - [ ] Implement list virtualization
 - [ ] Add dynamic imports for code splitting
 - [ ] Optimize image loading
+
+#### 2.3.4 Performance Monitoring [DO]
+- [ ] Create Grafana dashboard for latency
+- [ ] Add p50, p95, p99 metrics
+- [ ] Configure alerts for latency regression
 
 ---
 
 ## Phase 3: Launch Preparation
 
 ### 3.1 Security Audit
-- [ ] Validate all user inputs
-- [ ] Verify SQL injection protection
-- [ ] Test XSS prevention
-- [ ] Add CSRF tokens
-- [ ] Audit secret storage
-- [ ] Run Snyk vulnerability scan
+
+**Primary Owner:** Architect (AR)
+**Supporting:** DevOps-Engineer (DO), Backend-Coder (BC)
+**Reference:** AR-05, DO-06, `agents.md` §14
+
+#### 3.1.1 Input Validation [AR + BC]
+- [ ] Audit all endpoint inputs
+- [ ] Verify Pydantic validation
+- [ ] Check for SQL injection
+- [ ] Check for XSS
+
+#### 3.1.2 Authentication Review [AR + AU]
+- [ ] Verify token validation
+- [ ] Check CSRF protection
+- [ ] Audit session management
+- [ ] Review RBAC implementation
+
+#### 3.1.3 Secrets Audit [DO]
+- [ ] Scan codebase for secrets
+- [ ] Verify .env.example completeness
+- [ ] Document rotation schedule
+- [ ] Verify encryption at rest
+
+#### 3.1.4 Vulnerability Scan [DO]
+- [ ] Run Snyk scan
+- [ ] Run Trivy container scan
+- [ ] Generate SBOM
+- [ ] Fix critical vulnerabilities
+
+#### 3.1.5 Threat Model [AR]
+- [ ] Create STRIDE analysis
+- [ ] Document trust boundaries
+- [ ] Update `/docs/SECURITY.md`
+
+---
 
 ### 3.2 Documentation
-- [ ] Write user onboarding guide
-- [ ] Generate OpenAPI documentation
+
+**Primary Owner:** Docs-Writer (DW)
+**Supporting:** All agents
+**Reference:** DW-01, DW-02, DW-03
+
+#### 3.2.1 User Documentation [DW]
+- [ ] Write onboarding guide
+- [ ] Write dashboard walkthrough
+- [ ] Create FAQ document
+- [ ] Write troubleshooting guide
+
+#### 3.2.2 Developer Documentation [DW]
+- [ ] Update OpenAPI documentation [AR]
+- [ ] Write integration guides
+- [ ] Add SDK examples
+- [ ] Document environment setup
+
+#### 3.2.3 Provider Guides [DW]
 - [ ] Write Etsy connection guide
 - [ ] Write Printify connection guide
-- [ ] Create FAQ document
-- [ ] Document environment variables
+- [ ] Write Stripe billing guide
+
+#### 3.2.4 Release Notes [DW]
+- [ ] Update `/docs/changelog.md`
+- [ ] Document breaking changes
+- [ ] Add migration steps
+
+---
 
 ### 3.3 Load Testing
-- [ ] Create k6 or Locust test suite
+
+**Primary Owner:** DevOps-Engineer (DO)
+**Supporting:** QA-Automator (QA), Backend-Coder (BC)
+**Reference:** QA-02, DO-05, `agents.md` §2
+
+#### 3.3.1 Create Test Suite [QA]
+- [ ] Create k6 load test scripts
+- [ ] Test trend scraping endpoint
+- [ ] Test idea generation endpoint
+- [ ] Test image generation endpoint
+- [ ] Test listing publish endpoint
+
+#### 3.3.2 Run Load Tests [QA]
+- [ ] Test 500 concurrent users
+- [ ] Test 1000 concurrent users
 - [ ] Test 2000 concurrent users
-- [ ] Test 10000 daily image generations
-- [ ] Identify bottlenecks
-- [ ] Configure Grafana dashboards
-- [ ] Set up alert rules
+- [ ] Test 10000 daily image jobs
+
+#### 3.3.3 Monitoring Setup [DO]
+- [ ] Create Grafana dashboards
+- [ ] Configure SLO alerts
+- [ ] Set up PagerDuty integration
+- [ ] Document runbooks
 
 ---
 
 ## Technical Debt
 
-### TD-01: Timescale Continuous Aggregates
+### TD-01: Timescale Continuous Aggregates [DS + BC]
 - [ ] Design aggregate schema
 - [ ] Migrate from in-memory cache
 - [ ] Update trend queries
 - [ ] Test performance improvement
 
-### TD-02: Printify Error Handling
+### TD-02: Printify Error Handling [IN]
 - [ ] Map all Printify error codes
 - [ ] Add retry logic for transient errors
 - [ ] Add circuit breaker
 - [ ] Create user-friendly messages
 
-### TD-03: GPT Hallucination Reduction
+### TD-03: GPT Hallucination Reduction [AI]
 - [ ] Add output validation
 - [ ] Implement content filters
 - [ ] Add user feedback mechanism
 - [ ] Tune prompts based on feedback
 
-### TD-04: Trend Signals Pagination
+### TD-04: Trend Signals Pagination [BC]
 - [ ] Add cursor-based pagination
 - [ ] Update API endpoints
 - [ ] Update frontend components
@@ -317,14 +489,52 @@
 
 ## Completion Tracking
 
-| Phase | Tasks | Completed | Progress |
-|-------|-------|-----------|----------|
-| Phase 0 | 12 | 0 | 0% |
-| Phase 1 | 21 | 0 | 0% |
-| Phase 2 | 11 | 0 | 0% |
-| Phase 3 | 14 | 0 | 0% |
-| **Total** | **58** | **0** | **0%** |
+| Phase | Tasks | Agent | Completed | Progress |
+|-------|-------|-------|-----------|----------|
+| Phase 0.1 | 8 | FC, AU, UT, QA | 0 | 0% |
+| Phase 0.2 | 6 | IN, BC, UT | 0 | 0% |
+| Phase 1.1 | 6 | FC, DW, QA | 0 | 0% |
+| Phase 1.2 | 8 | DS, BC, UT, DO | 0 | 0% |
+| Phase 1.3 | 4 | FC, BC | 0 | 0% |
+| Phase 2.1 | 5 | BC, FC, IN, AI | 0 | 0% |
+| Phase 2.2 | 3 | BC, AU, FC | 0 | 0% |
+| Phase 2.3 | 4 | BC, FC, DO | 0 | 0% |
+| Phase 3.1 | 5 | AR, DO, BC, AU | 0 | 0% |
+| Phase 3.2 | 4 | DW, AR | 0 | 0% |
+| Phase 3.3 | 3 | DO, QA | 0 | 0% |
+| Tech Debt | 4 | DS, BC, IN, AI | 0 | 0% |
+| **Total** | **60** | | **0** | **0%** |
+
+---
+
+## Agent Workload Summary
+
+| Agent | Task Count | Priority Tasks |
+|-------|------------|----------------|
+| Frontend-Coder (FC) | 18 | OAuth UI, i18n, Settings |
+| Backend-Coder (BC) | 12 | Billing quotas, Rate limiting, Performance |
+| Integrations-Engineer (IN) | 8 | Stripe billing, Error mapping |
+| Data-Seeder (DS) | 7 | Live scrapers, TD-01 |
+| Unit-Tester (UT) | 6 | All test coverage |
+| QA-Automator (QA) | 5 | E2E tests, Load tests |
+| DevOps-Engineer (DO) | 6 | Monitoring, Security scan, Infra |
+| Auth-Integrator (AU) | 3 | Token refresh, RBAC review |
+| Docs-Writer (DW) | 5 | Translations, User docs |
+| Architect (AR) | 4 | Security audit, OpenAPI |
+| AI-Engineer (AI) | 2 | Error mapping, TD-03 |
+
+---
+
+## Escalation Contacts
+
+Per agent specifications §6:
+
+1. **First escalation:** Architect
+2. **Second escalation:** Project-Manager
+3. **Critical security:** DevOps-Engineer + CTO
+4. **Unresolved >24h:** CTO
 
 ---
 
 *Last Updated: January 2026*
+*Follows [`agents.md`](./agents.md) multi-agent workflow*
