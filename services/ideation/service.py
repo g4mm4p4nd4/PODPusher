@@ -1,7 +1,8 @@
 from typing import List, Dict, Union
+import asyncio
 import os
 from datetime import datetime
-from ..models import Idea
+from ..models import Idea, Trend
 from ..common.database import get_session
 from ..trend_scraper.events import EVENTS
 from packages.integrations import openai
@@ -26,58 +27,63 @@ TrendInput = Union[str, Dict]
 
 
 async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
-    formatted = []
+    """Generate product ideas for the supplied trend signals."""
+
+    normalized: List[Dict] = []
     for t in trends:
         if isinstance(t, dict):
-            term = t.get("term")
-            category = t.get("category", "general")
+            normalized.append(
+                {
+                    "id": t.get("id"),
+                    "term": t.get("term") or t.get("keyword"),
+                    "category": (t.get("category") or "general").lower(),
+                }
+            )
         else:
-            term = t
-            category = "general"
-        formatted.append((term, category))
+            normalized.append({"id": None, "term": t, "category": "general"})
 
-    key = os.getenv("OPENAI_API_KEY")
     month = datetime.utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])
     prompt_events = ", ".join(events)
     prompts = [
         (
-            f"Generate a product idea for the {cat} niche around '{term}'. "
+            f"Generate a product idea for the {item['category']} niche around '{item['term']}'. "
             f"Consider upcoming {prompt_events}"
         )
-        for term, cat in formatted
+        for item in normalized
     ]
 
-    if key:
-        try:
-            import openai
-
-            responses = [
-                openai.ChatCompletion.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": p}],
-                )
-                for p in prompts
-            ]
-            ideas_text = [r.choices[0].message.content for r in responses]
-        except Exception:
-            ideas_text = prompts
-    else:
-        product_types = ["t-shirt", "mug", "sticker", "tote bag"]
+    try:
+        ideas_text = await asyncio.gather(*[openai.generate_brief(prompt) for prompt in prompts])
+    except Exception:
+        fallback_products = ["t-shirt", "mug", "sticker", "tote bag"]
         ideas_text = []
-        for term, _cat in formatted:
-            for ptype in product_types[:2]:
-                ideas_text.append(f"{term} {ptype}")
+        for idx, item in enumerate(normalized):
+            product = fallback_products[idx % len(fallback_products)]
+            ideas_text.append(f"{item['term']} {product}")
 
-    ideas = []
+    ideas: List[Dict] = []
     async with get_session() as session:
-        for (term, cat), text in zip(formatted, ideas_text):
-            idea = Idea(trend_id=0, description=text)  # stub trend_id
+        for item, text in zip(normalized, ideas_text):
+            trend_id = item.get("id")
+            if trend_id is None:
+                trend = Trend(term=item['term'], category=item['category'])
+                session.add(trend)
+                await session.commit()
+                await session.refresh(trend)
+                trend_id = trend.id
+            idea = Idea(trend_id=trend_id, description=text)
             session.add(idea)
             await session.commit()
             await session.refresh(idea)
             ideas.append(
-                {"description": idea.description, "term": term, "category": cat}
+                {
+                    "id": idea.id,
+                    "trend_id": trend_id,
+                    "description": idea.description,
+                    "term": item['term'],
+                    "category": item['category'],
+                }
             )
     return ideas
 

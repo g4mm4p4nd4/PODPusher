@@ -76,6 +76,18 @@ class Notification(SQLModel, table=True):
     read_status: bool = False
 
 
+class ScheduledNotification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    message: str
+    type: str = "info"
+    scheduled_for: datetime = Field(index=True)
+    status: str = Field(default="pending")
+    context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    dispatched_at: datetime | None = Field(default=None, nullable=True)
+
+
 class ExperimentType(str, Enum):
     IMAGE = "image"
     DESCRIPTION = "description"
@@ -120,4 +132,41 @@ class AnalyticsEvent(SQLModel, table=True):
     meta: Dict[str, Any] | None = Field(
         default=None, sa_column=Column("metadata", JSON)
     )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OAuthProvider(str, Enum):
+    ETSY = "etsy"
+    PRINTIFY = "printify"
+    STRIPE = "stripe"
+
+
+class OAuthState(SQLModel, table=True):
+    state: str = Field(primary_key=True, max_length=255)
+    user_id: int
+    provider: OAuthProvider
+    code_verifier: str | None = None
+    redirect_uri: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OAuthCredential(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    provider: OAuthProvider
+    access_token: str
+    refresh_token: Optional[str] = None
+    expires_at: datetime | None = None
+    scope: Optional[str] = None
+    account_id: Optional[str] = None
+    account_name: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserSession(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    token_hash: str = Field(index=True, unique=True, max_length=128)
+    expires_at: datetime
     created_at: datetime = Field(default_factory=datetime.utcnow)

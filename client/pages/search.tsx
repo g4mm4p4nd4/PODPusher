@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'next-i18next';
+import { resolveApiUrl } from '../services/apiBase';
 
 interface SearchResult {
   id: number;
@@ -33,7 +34,6 @@ export default function SearchPage({ categories }: SearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
     if (router.query.q) {
@@ -45,7 +45,7 @@ export default function SearchPage({ categories }: SearchProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.get<SearchResponse>(`${api}/api/search`, {
+      const res = await axios.get<SearchResponse>(resolveApiUrl('/api/search'), {
         params: {
           q: q || undefined,
           category: category || undefined,
@@ -127,9 +127,8 @@ export default function SearchPage({ categories }: SearchProps) {
 }
 
 export const getServerSideProps: GetServerSideProps<SearchProps> = async () => {
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
   try {
-    const res = await axios.get<{ name: string }[]>(`${api}/product-categories`);
+    const res = await axios.get<{ name: string }[]>(resolveApiUrl('/product-categories'));
     return { props: { categories: res.data.map(c => c.name) } };
   } catch (err) {
     console.error(err);

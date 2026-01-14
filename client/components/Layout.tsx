@@ -5,12 +5,13 @@ import axios from 'axios';
 import { useTranslation } from 'next-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 import UserQuota from './UserQuota';
+import { getApiBase } from '../services/apiBase';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
   const [unread, setUnread] = useState(0);
   const [navQuery, setNavQuery] = useState('');
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  const api = getApiBase();
   const router = useRouter();
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             aria-label={t('nav.notifications')}
             className="relative flex items-center"
           >
-            <span>🔔</span>
+            <span>??</span>
             {unread > 0 && (
               <span data-testid="unread-count" className="ml-1 text-xs bg-red-500 rounded-full px-1">
                 {unread}

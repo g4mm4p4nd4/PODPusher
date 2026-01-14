@@ -15,8 +15,14 @@ jobs:
           python-version: '3.11'
       - name: Install Python deps
         run: pip install -r requirements.txt
+      - name: Alembic upgrade check
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci_migration.db
+        run: alembic upgrade head
       - name: Lint
         run: flake8
+      - name: Verify translations
+        run: python scripts/verify_translations.py
       - name: Pytest
         run: pytest
       - uses: actions/setup-node@v3

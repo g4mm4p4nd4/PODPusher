@@ -1,4 +1,5 @@
 from datetime import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
 from .service import (
@@ -9,13 +10,17 @@ from .service import (
 )
 from .events import EVENTS
 from ..tasks import celery_app
+from ..common.observability import register_observability
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def _trend_scraper_lifespan(_: FastAPI):
     celery_app.send_task("services.tasks.fetch_trends_task")
+    yield
+
+
+app = FastAPI(lifespan=_trend_scraper_lifespan)
+register_observability(app, service_name="trend_scraper")
 
 
 @app.get("/trends")

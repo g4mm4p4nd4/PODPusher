@@ -13,9 +13,18 @@ async def init_db() -> None:
     if DATABASE_URL.startswith("sqlite"):
         path = DATABASE_URL.split("///")[-1]
         if os.path.exists(path):
-            os.remove(path)
+            try:
+                await engine.dispose()  # ensure no open connections block removal
+            except Exception:
+                pass
+            try:
+                os.remove(path)
+            except PermissionError:
+                # Windows may keep the SQLite file locked; fall back to drop_all.
+                pass
         engine = create_async_engine(DATABASE_URL, echo=False, future=True)
     async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
 
 

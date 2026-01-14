@@ -105,7 +105,13 @@
     "instagram": "Instagram handle",
     "facebook": "Facebook handle",
     "twitter": "Twitter handle",
-    "save": "Save"
+    "save": "Save",
+    "oauthTitle": "Integrations",
+    "connectedAs": "Connected as",
+    "pendingAccount": "Pending account info",
+    "notConnected": "Not connected",
+    "disconnect": "Disconnect",
+    "connect": "Connect"
   },
   "search": {
     "title": "Search",
@@ -125,5 +131,6 @@
     "uploading": "Uploading...",
     "success": "Created",
     "error": "Error"
-  }
+  },
+  "loading": "Loading..."
 }

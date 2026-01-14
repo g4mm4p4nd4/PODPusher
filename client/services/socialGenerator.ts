@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { resolveApiUrl } from './apiBase';
 
 export interface SocialRequest {
   product_id?: number;
@@ -16,7 +17,6 @@ export interface SocialPost {
 }
 
 export async function generateSocialPost(payload: SocialRequest): Promise<SocialPost> {
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-  const res = await axios.post<SocialPost>(`${api}/api/social/generate`, payload);
+  const res = await axios.post<SocialPost>(resolveApiUrl('/api/social/generate'), payload);
   return res.data;
 }

@@ -2,6 +2,7 @@ import axios, { isAxiosError } from 'axios';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import ImageCard, { ReviewProduct } from '../../components/ImageCard';
+import { getApiBase, resolveApiUrl } from '../../services/apiBase';
 
 interface ReviewResponse {
   items?: ReviewProduct[];
@@ -49,10 +50,7 @@ const parseResponse = (
 
 const ImageReview = () => {
   const { t } = useTranslation('common');
-  const apiBase = useMemo(
-    () => process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
-    []
-  );
+  const apiBase = useMemo(() => getApiBase(), []);
 
   const [products, setProducts] = useState<ReviewProduct[]>([]);
   const [errorMap, setErrorMap] = useState<ProductErrorMap>({});

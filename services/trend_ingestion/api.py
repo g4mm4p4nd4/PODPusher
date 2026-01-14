@@ -1,13 +1,17 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from ..common.observability import register_observability
 
 from .service import get_live_trends, refresh_trends, start_scheduler
 
-app = FastAPI()
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def _trend_ingestion_lifespan(_: FastAPI):
     start_scheduler()
+    yield
+
+
+app = FastAPI(lifespan=_trend_ingestion_lifespan)
+register_observability(app, service_name="trend_ingestion")
 
 
 @app.get("/trends/live")

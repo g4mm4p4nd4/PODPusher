@@ -19,7 +19,7 @@ class SocialRequest(BaseModel):
 
 @app.post("/generate")
 async def generate(data: SocialRequest):
-    payload = {k: v for k, v in data.dict().items() if v is not None}
+    payload = {k: v for k, v in data.model_dump().items() if v is not None}
     result = await generate_post(payload)
     if not result:
         raise HTTPException(status_code=400, detail="Unable to generate post")

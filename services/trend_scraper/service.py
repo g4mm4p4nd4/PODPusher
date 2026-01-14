@@ -251,7 +251,7 @@ async def fetch_trends(category: str | None = None) -> List[dict]:
             session.add(trend)
             await session.commit()
             await session.refresh(trend)
-            trends.append({"term": trend.term, "category": trend.category})
+            trends.append({"id": trend.id, "term": trend.term, "category": trend.category})
     return trends
 
 

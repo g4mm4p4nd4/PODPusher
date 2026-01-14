@@ -1,4 +1,3 @@
-import asyncio
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -10,5 +9,5 @@ class AnalyticsMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
         # Avoid logging analytics endpoints to prevent recursion
         if not request.url.path.startswith(("/analytics", "/api/analytics")):
-            asyncio.create_task(log_event("page_view", request.url.path))
+            await log_event("page_view", request.url.path)
         return response

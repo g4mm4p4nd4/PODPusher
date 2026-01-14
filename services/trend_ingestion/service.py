@@ -4,7 +4,7 @@ import random
 import re
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List, Sequence
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from playwright.async_api import async_playwright
@@ -12,6 +12,7 @@ from sqlmodel import select
 
 from ..common.database import get_session
 from ..models import TrendSignal
+from .sources import PLATFORM_CONFIG, SourceConfig, SelectorSet
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
@@ -20,11 +21,13 @@ USER_AGENTS = [
 ]
 
 STOPWORDS = {"the", "and", "a", "of", "to", "in"}
-EMOJI_RE = re.compile(r"[\U00010000-\U0010ffff]", flags=re.UNICODE)
+EMOJI_RE = re.compile(r"[𐀀-􏿿]", flags=re.UNICODE)
 
 SCRAPE_INTERVAL_HOURS = int(os.getenv("SCRAPE_INTERVAL_HOURS", "6"))
 PLAYWRIGHT_PROXY = os.getenv("PLAYWRIGHT_PROXY")
-TOP_K = 5
+TOP_K = int(os.getenv("TREND_INGESTION_TOP_K", "5"))
+SCRAPER_TIMEOUT_MS = int(os.getenv("TREND_INGESTION_TIMEOUT_MS", "15000"))
+STUB_ONLY = os.getenv("TREND_INGESTION_STUB", "1").lower() in {"1", "true", "yes"}
 
 scheduler = AsyncIOScheduler()
 
@@ -54,104 +57,135 @@ def categorize(keyword: str) -> str:
     return "other"
 
 
-async def _scrape_source(playwright, source: str, url: str, selectors: Dict[str, str]) -> List[Dict[str, Any]]:
+async def _first_text(handle, selectors: Sequence[str]) -> str:
+    for selector in selectors:
+        try:
+            node = await handle.query_selector(selector)
+        except Exception:
+            node = None
+        if node:
+            try:
+                text = (await node.inner_text()).strip()
+            except Exception:
+                text = ""
+            if text:
+                return text
+    return ""
+
+
+async def _collect_texts(handle, selectors: Sequence[str]) -> List[str]:
+    values: List[str] = []
+    for selector in selectors:
+        try:
+            nodes = await handle.query_selector_all(selector)
+        except Exception:
+            nodes = []
+        for node in nodes:
+            try:
+                text = (await node.inner_text()).strip()
+            except Exception:
+                text = ""
+            if text:
+                values.append(text)
+    return values
+
+
+def _parse_metric(value: str) -> int:
+    if not value:
+        return 0
+    cleaned = value.strip().lower().replace(',', '')
+    match = re.findall(r"\d+(?:\.\d+)?", cleaned)
+    if not match:
+        return 0
+    base = float(match[0])
+    if 'm' in cleaned:
+        base *= 1_000_000
+    elif 'k' in cleaned:
+        base *= 1_000
+    return int(base)
+
+
+async def _collect_items(page, selectors: SelectorSet) -> List[Any]:
+    collected = []
+    seen_ids: set[int] = set()
+    for css in selectors.item:
+        try:
+            handles = await page.query_selector_all(css)
+        except Exception:
+            handles = []
+        for handle in handles:
+            ident = id(handle)
+            if ident in seen_ids:
+                continue
+            seen_ids.add(ident)
+            collected.append(handle)
+    return collected
+
+
+async def _scrape_source(playwright, name: str, config: SourceConfig) -> List[Dict[str, Any]]:
     ua = random.choice(USER_AGENTS)
-    proxy = {"server": PLAYWRIGHT_PROXY} if PLAYWRIGHT_PROXY else None
-    browser = await playwright.chromium.launch(headless=True, proxy=proxy)
+    proxy_settings = {"server": PLAYWRIGHT_PROXY} if PLAYWRIGHT_PROXY else None
+    browser = await playwright.chromium.launch(headless=True, proxy=proxy_settings)
     context = await browser.new_context(user_agent=ua)
     page = await context.new_page()
-    await page.goto(url)
-    items = await page.query_selector_all(selectors["item"])
     results: List[Dict[str, Any]] = []
-    for item in items[:TOP_K]:
-        title_el = await item.query_selector(selectors["title"])
-        hashtag_el = await item.query_selector(selectors["hashtags"])
-        likes_el = await item.query_selector(selectors["likes"])
-        shares_el = await item.query_selector(selectors["shares"])
-        comments_el = await item.query_selector(selectors["comments"])
-        if not title_el:
-            continue
-        title = await title_el.inner_text()
-        hashtags = await hashtag_el.inner_text() if hashtag_el else ""
-        likes = int((await likes_el.inner_text()) or 0) if likes_el else 0
-        shares = int((await shares_el.inner_text()) or 0) if shares_el else 0
-        comments = int((await comments_el.inner_text()) or 0) if comments_el else 0
-        keyword = normalize_text(f"{title} {hashtags}")
-        engagement = compute_engagement(likes, shares, comments)
-        results.append(
-            {
-                "source": source,
-                "keyword": keyword,
-                "engagement_score": engagement,
-                "category": categorize(keyword),
-            }
-        )
-    await browser.close()
+    try:
+        await page.goto(config.url, wait_until="networkidle", timeout=SCRAPER_TIMEOUT_MS)
+        try:
+            await page.wait_for_selector(config.wait_for_selector, timeout=SCRAPER_TIMEOUT_MS)
+        except Exception:
+            pass
+        for _ in range(config.scroll_iterations):
+            await page.mouse.wheel(0, 2400)
+            await page.wait_for_timeout(1000)
+        items = await _collect_items(page, config.selectors)
+        for handle in items[: TOP_K * 2]:
+            title = await _first_text(handle, config.selectors.title)
+            hashtags = await _collect_texts(handle, config.selectors.hashtags)
+            likes_text = await _first_text(handle, config.selectors.likes)
+            shares_text = await _first_text(handle, config.selectors.shares)
+            comments_text = await _first_text(handle, config.selectors.comments)
+            keyword = normalize_text(" ".join(filter(None, [title, " ".join(hashtags)])))
+            if not keyword:
+                continue
+            engagement = compute_engagement(
+                _parse_metric(likes_text),
+                _parse_metric(shares_text),
+                _parse_metric(comments_text),
+            )
+            results.append(
+                {
+                    "source": name,
+                    "keyword": keyword,
+                    "engagement_score": engagement,
+                    "category": categorize(keyword),
+                }
+            )
+    finally:
+        await context.close()
+        await browser.close()
     return results
 
 
-PLATFORM_CONFIG = {
-    "tiktok": {
-        "url": "https://www.tiktok.com/foryou",
-        "selectors": {
-            "item": "div.item",
-            "title": ".title",
-            "hashtags": ".hashtags",
-            "likes": ".likes",
-            "shares": ".shares",
-            "comments": ".comments",
-        },
-    },
-    "instagram": {
-        "url": "https://www.instagram.com/explore",
-        "selectors": {
-            "item": "div.item",
-            "title": ".title",
-            "hashtags": ".hashtags",
-            "likes": ".likes",
-            "shares": ".shares",
-            "comments": ".comments",
-        },
-    },
-    "twitter": {
-        "url": "https://twitter.com/explore",
-        "selectors": {
-            "item": "div.item",
-            "title": ".title",
-            "hashtags": ".hashtags",
-            "likes": ".likes",
-            "shares": ".shares",
-            "comments": ".comments",
-        },
-    },
-    "etsy": {
-        "url": "https://www.etsy.com/trending-items",
-        "selectors": {
-            "item": "div.item",
-            "title": ".title",
-            "hashtags": ".hashtags",
-            "likes": ".likes",
-            "shares": ".shares",
-            "comments": ".comments",
-        },
-    },
-}
+async def _gather_trends() -> List[Dict[str, Any]]:
+    if STUB_ONLY:
+        return []
+    async with async_playwright() as pw:
+        tasks = [
+            _scrape_source(pw, name, config)
+            for name, config in PLATFORM_CONFIG.items()
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    aggregated: List[Dict[str, Any]] = []
+    for result in results:
+        if isinstance(result, list):
+            aggregated.extend(result)
+    return aggregated
 
 
 async def refresh_trends() -> None:
     """Scrape all platforms and persist top signals."""
-    async with async_playwright() as pw:
-        tasks = [
-            _scrape_source(pw, name, cfg["url"], cfg["selectors"])
-            for name, cfg in PLATFORM_CONFIG.items()
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    signals: List[Dict[str, Any]] = []
-    for res in results:
-        if isinstance(res, list):
-            signals.extend(res)
-
+    signals = await _gather_trends()
     if not signals:
         return
 
@@ -163,14 +197,15 @@ async def refresh_trends() -> None:
                 reverse=True,
             )[:TOP_K]
             for sig in top:
-                ts = TrendSignal(
-                    source=sig["source"],
-                    keyword=sig["keyword"],
-                    engagement_score=sig["engagement_score"],
-                    category=sig["category"],
-                    timestamp=datetime.utcnow(),
+                session.add(
+                    TrendSignal(
+                        source=sig["source"],
+                        keyword=sig["keyword"],
+                        engagement_score=sig["engagement_score"],
+                        category=sig["category"],
+                        timestamp=datetime.utcnow(),
+                    )
                 )
-                session.add(ts)
         await session.commit()
 
 
@@ -194,8 +229,16 @@ async def get_live_trends(category: str | None = None) -> Dict[str, List[Dict[st
     return grouped
 
 
+async def _periodic_refresh_wrapper() -> None:
+    try:
+        await refresh_trends()
+    except Exception:
+        # Avoid scheduler crash; detailed logging handled elsewhere.
+        pass
+
+
 def start_scheduler() -> None:
     if scheduler.running:
         return
-    scheduler.add_job(refresh_trends, "interval", hours=SCRAPE_INTERVAL_HOURS)
+    scheduler.add_job(_periodic_refresh_wrapper, "interval", hours=SCRAPE_INTERVAL_HOURS)
     scheduler.start()

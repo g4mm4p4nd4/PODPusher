@@ -38,8 +38,15 @@ async def log_event(
             meta=meta,
         )
         created = await create_event(session, event)
-    if event_type == "conversion":
-        asyncio.create_task(_report_conversion_to_stripe())
+    if event_type == EventType.conversion:
+        quantity = 1
+        if meta and isinstance(meta, dict):
+            raw = meta.get("quantity") or meta.get("value")
+            try:
+                quantity = max(1, int(raw))
+            except (TypeError, ValueError):
+                quantity = 1
+        asyncio.create_task(_report_conversion_to_stripe(quantity))
     return created
 
 

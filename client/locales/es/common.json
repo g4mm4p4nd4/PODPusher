@@ -105,7 +105,13 @@
     "instagram": "Usuario de Instagram",
     "facebook": "Usuario de Facebook",
     "twitter": "Usuario de Twitter",
-    "save": "Guardar"
+    "save": "Guardar",
+    "oauthTitle": "Integraciones",
+    "connectedAs": "Conectado como",
+    "pendingAccount": "Información de cuenta pendiente",
+    "notConnected": "No conectado",
+    "disconnect": "Desconectar",
+    "connect": "Conectar"
   },
   "search": {
     "title": "Buscar",
@@ -125,5 +131,6 @@
     "uploading": "Subiendo...",
     "success": "Creado",
     "error": "Error"
-  }
+  },
+  "loading": "Cargando..."
 }

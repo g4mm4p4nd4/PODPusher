@@ -20,10 +20,13 @@ async def test_full_pipeline(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     trends = await fetch_trends()
     assert trends
-    ideas = await generate_ideas([t["term"] for t in trends])
+    assert all("id" in t for t in trends)
+    ideas = await generate_ideas(trends)
     assert ideas
-    images = await generate_images([i["description"] for i in ideas])
+    assert all("id" in idea and "trend_id" in idea for idea in ideas)
+    images = await generate_images(ideas)
     assert images
+    assert all("idea_id" in image for image in images)
     products = create_sku(images)
     assert all("sku" in p for p in products)
     listing = publish_listing(products[0])

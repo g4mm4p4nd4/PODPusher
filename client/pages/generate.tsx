@@ -1,18 +1,18 @@
 import axios from 'axios';
 import { useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { resolveApiUrl } from '../services/apiBase';
 
 export default function Generate() {
   const { t } = useTranslation('common');
   const [term, setTerm] = useState('');
   const [result, setResult] = useState<any>(null);
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResult(null);
     try {
-      const res = await axios.post(`${api}/generate`, { term });
+      const res = await axios.post(resolveApiUrl('/generate'), { term });
       setResult(res.data);
     } catch (err) {
       console.error(err);

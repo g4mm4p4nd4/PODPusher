@@ -28,18 +28,18 @@ def _execute_service(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any
 
 
 @celery_app.task
-def fetch_trends_task():
-    return _execute_service(fetch_trends)
+def fetch_trends_task(category: str | None = None):
+    return asyncio.run(fetch_trends(category))
 
 
 @celery_app.task
 def generate_ideas_task(trends):
-    return _execute_service(generate_ideas, trends)
+    return asyncio.run(generate_ideas(trends))
 
 
 @celery_app.task
 def generate_images_task(ideas):
-    return _execute_service(generate_images, ideas)
+    return asyncio.run(generate_images(ideas))
 
 
 @celery_app.task
@@ -53,7 +53,8 @@ def publish_listing_task(product):
 
 
 @celery_app.task
-def generate_social_post_task(payload: dict):
+def generate_social_post_task(payload: dict[str, object]):
     """Celery task to create social media content."""
-
-    return _execute_service(generate_post, payload)
+    if not isinstance(payload, dict):
+        raise ValueError("Payload must be a dictionary")
+    return asyncio.run(generate_post(payload))

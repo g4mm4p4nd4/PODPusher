@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next';
 import axios from 'axios';
 import { useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { resolveApiUrl } from '../services/apiBase';
 
 export type ABMetric = {
   id: number;
@@ -29,7 +30,6 @@ export default function ABTests({ metrics: initial }: Props) {
   const [experimentType, setExperimentType] = useState('image');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,16 +43,14 @@ export default function ABTests({ metrics: initial }: Props) {
       .filter(w => !isNaN(w));
     if (!name || !parts.length) return;
     try {
-      const res = await axios.post(`${api}/ab_tests`, {
+      const res = await axios.post(resolveApiUrl('/ab_tests'), {
         name,
         experiment_type: experimentType,
         start_time: start ? new Date(start).toISOString() : null,
         end_time: end ? new Date(end).toISOString() : null,
         variants: parts.map((name, i) => ({ name, weight: weightParts[i] ?? 1 / parts.length })),
       });
-      const metricsRes = await axios.get<ABMetric[]>(
-        `${api}/ab_tests/${res.data.id}/metrics`
-      );
+      const metricsRes = await axios.get<ABMetric[]>(resolveApiUrl(`/ab_tests/${res.data.id}/metrics`));
       setMetrics(metricsRes.data);
     } catch (err) {
       console.error(err);
@@ -135,9 +133,8 @@ export default function ABTests({ metrics: initial }: Props) {
 }
 
 export const getServerSideProps: GetServerSideProps<Props> = async () => {
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
   try {
-    const res = await axios.get<ABMetric[]>(`${api}/ab_tests/metrics`);
+    const res = await axios.get<ABMetric[]>(resolveApiUrl('/ab_tests/metrics'));
     return { props: { metrics: res.data } };
   } catch (err) {
     console.error(err);
