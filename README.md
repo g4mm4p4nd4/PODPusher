@@ -155,3 +155,59 @@ End users benefit from streamlined and intelligent automation:
 - **Personalization & customization**: Localization features tailor products to specific languages and seasonal events, while trend filters allow sellers to choose niches aligned with their brand.
 - **Transparency & privacy**: Data used for trend analyses is aggregated and anonymized; merchants control which integrations and notifications they enable.
 - **Real‑world outcomes**: Leveraging accurate trend signals and A/B testing tools improves product visibility, increases conversion rates and reduces the time and cost of trial-and-error product development.
+
+
+## Overview & Purpose
+
+PODPusher (POD Automator AI) is a suite of microservices designed to automate product research, listing creation and trend analysis for print-on-demand sellers. It centralizes trending keywords, seasonal events, niche suggestions and A/B testing into an accessible dashboard so sellers can discover profitable ideas and automate repetitive tasks.
+
+## Features & Tech Stack
+
+Key features include:
+- **Trend and keyword insights**: endpoints for trending categories, seasonal events, popular product categories and design ideas.
+- **Automated listing composer**: generates optimized Etsy listings with metadata, tags and character counters.
+- **Search and suggestions**: search API filters products by category and ratings, while suggestion endpoints offer phrases and design inspiration.
+- **Notifications and scheduling**: sends weekly keyword digests and manages image quotas via a background scheduler.
+- **A/B testing**: provides endpoints to create tests, track impressions/clicks and view metrics.
+- **Localization and customization**: supports multiple languages and allows sellers to target niches aligned with their brand.
+
+Tech stack:
+
+| Technology | Role |
+|-----------|------|
+| **Python (FastAPI, Celery)** | Implements microservices and background workers |
+| **TypeScript (Next.js)** | Frontend dashboard for interacting with services |
+| **PostgreSQL & Redis** | Persistence and caching/message queue |
+| **Docker Compose** | Orchestrates local development environment |
+
+## Installation & Usage
+
+Follow these steps to run the services locally:
+
+```bash
+# clone the repository
+git clone https://github.com/g4mm4p4nd4/PODPusher.git
+cd PODPusher
+
+# install Python dependencies
+pip install -r requirements.txt
+
+# start all services, Postgres, Redis and the Celery worker
+docker-compose up --build
+```
+
+To start the dashboard:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Run tests and lint checks with:
+
+```bash
+black .
+flake8
+pytest
+```
