@@ -21,6 +21,7 @@ from ..ab_tests.api import app as ab_app
 from ..listing_composer.api import app as listing_app
 from ..social_generator.api import app as social_app
 from ..auth.api import app as auth_app
+from ..billing.api import app as billing_app
 from ..common.observability import register_observability
 from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
 from fastapi import Request
@@ -47,6 +48,7 @@ app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
 app.mount("/api/social", social_app)
 app.mount("/api/auth", auth_app)
+app.mount("/api/billing", billing_app)
 app.add_middleware(AnalyticsMiddleware)
 
 def _assemble_products(ideas: List[dict], images: List[dict]) -> List[dict]:
