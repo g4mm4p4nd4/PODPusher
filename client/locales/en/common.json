@@ -27,7 +27,11 @@
   "generate": {
     "title": "Generate Product Idea",
     "placeholder": "Enter trend term",
-    "button": "Generate"
+    "button": "Generate",
+    "generating": "Generating...",
+    "connectionRequired": "Connection Required",
+    "connectProviders": "To generate and publish listings, please connect the following accounts: {{providers}}",
+    "goToSettings": "Go to Settings"
   },
   "suggestions": {
     "title": "Product Suggestions",
@@ -100,7 +104,9 @@
     "download": "Download Image"
   },
   "settings": {
+    "pageTitle": "Settings",
     "title": "Social Settings",
+    "usageQuota": "Usage & Quota",
     "auto": "Auto-generate social posts",
     "instagram": "Instagram handle",
     "facebook": "Facebook handle",
@@ -112,6 +118,25 @@
     "notConnected": "Not connected",
     "disconnect": "Disconnect",
     "connect": "Connect"
+  },
+  "oauth": {
+    "connectedAccounts": "Connected Accounts",
+    "connected": "Connected",
+    "notConnected": "Not Connected",
+    "expired": "Expired",
+    "expiringSoon": "Expiring Soon",
+    "connectedAs": "Connected as",
+    "expiresOn": "Expires",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "disconnect": "Disconnect",
+    "refresh": "Refresh Connection",
+    "confirmDisconnect": "Are you sure?",
+    "yes": "Yes",
+    "cancel": "Cancel",
+    "etsyDesc": "Publish listings to your Etsy shop",
+    "printifyDesc": "Create products and manage inventory",
+    "stripeDesc": "Manage billing and subscriptions"
   },
   "search": {
     "title": "Search",

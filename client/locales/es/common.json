@@ -27,7 +27,11 @@
   "generate": {
     "title": "Generar idea de producto",
     "placeholder": "Introduce un término",
-    "button": "Generar"
+    "button": "Generar",
+    "generating": "Generando...",
+    "connectionRequired": "Conexión requerida",
+    "connectProviders": "Para generar y publicar, conecta las siguientes cuentas: {{providers}}",
+    "goToSettings": "Ir a Configuración"
   },
   "suggestions": {
     "title": "Sugerencias de producto",
@@ -100,7 +104,9 @@
     "download": "Descargar imagen"
   },
   "settings": {
+    "pageTitle": "Configuración",
     "title": "Configuración Social",
+    "usageQuota": "Uso y Cuota",
     "auto": "Autogenerar publicaciones",
     "instagram": "Usuario de Instagram",
     "facebook": "Usuario de Facebook",
@@ -112,6 +118,25 @@
     "notConnected": "No conectado",
     "disconnect": "Desconectar",
     "connect": "Conectar"
+  },
+  "oauth": {
+    "connectedAccounts": "Cuentas conectadas",
+    "connected": "Conectado",
+    "notConnected": "No conectado",
+    "expired": "Expirado",
+    "expiringSoon": "Expira pronto",
+    "connectedAs": "Conectado como",
+    "expiresOn": "Expira",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
+    "disconnect": "Desconectar",
+    "refresh": "Refrescar conexión",
+    "confirmDisconnect": "¿Estás seguro?",
+    "yes": "Sí",
+    "cancel": "Cancelar",
+    "etsyDesc": "Publica en tu tienda de Etsy",
+    "printifyDesc": "Crea productos y gestiona inventario",
+    "stripeDesc": "Gestiona facturación y suscripciones"
   },
   "search": {
     "title": "Buscar",
