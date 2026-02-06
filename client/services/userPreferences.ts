@@ -4,6 +4,11 @@ import { resolveApiUrl } from './apiBase';
 export interface Preferences {
   auto_social: boolean;
   social_handles: Record<string, string>;
+  email_notifications: boolean;
+  push_notifications: boolean;
+  preferred_language: string;
+  preferred_currency: string;
+  timezone: string;
 }
 
 export async function getPreferences(): Promise<Preferences> {

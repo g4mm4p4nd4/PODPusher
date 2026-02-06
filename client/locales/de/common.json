@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "generate": "Generieren",
+    "categories": "Kategorien",
+    "designIdeas": "Design-Ideen",
+    "suggestions": "Vorschläge",
+    "search": "Suche",
+    "analytics": "Analytik",
+    "listings": "Angebote",
+    "abTests": "A/B-Tests",
+    "notifications": "Benachrichtigungen",
+    "socialGenerator": "Social-Generator",
+    "settings": "Einstellungen",
+    "searchPlaceholder": "Suchen..."
+  },
+  "index": {
+    "trending": "Trend-Schlüsselwörter",
+    "events": "Veranstaltungen dieses Monats"
+  },
+  "categories": {
+    "title": "Trendkategorien"
+  },
+  "design": {
+    "title": "Design-Ideen"
+  },
+  "generate": {
+    "title": "Produktidee generieren",
+    "placeholder": "Trendbegriff eingeben",
+    "button": "Generieren",
+    "generating": "Wird generiert...",
+    "connectionRequired": "Verbindung erforderlich",
+    "connectProviders": "Zum Generieren und Veröffentlichen verbinden Sie bitte folgende Konten: {{providers}}",
+    "goToSettings": "Zu den Einstellungen"
+  },
+  "suggestions": {
+    "title": "Produktvorschläge",
+    "category": "Kategorie",
+    "designTheme": "Design-Thema",
+    "fetch": "Abrufen"
+  },
+  "review": {
+    "title": "Bildüberprüfung",
+    "noProducts": "Keine Produkte zur Überprüfung.",
+    "rating": "Bewertung",
+    "unrated": "Nicht bewertet",
+    "stars_one": "{{count}} Stern",
+    "stars_other": "{{count}} Sterne",
+    "tags": "Schlagwörter",
+    "flag": "Als unangemessen melden"
+  },
+  "listings": {
+    "pageTitle": "Angebots-Composer",
+    "title": "Titel",
+    "description": "Beschreibung",
+    "tags": "Schlagwörter",
+    "suggest": "Schlagwörter vorschlagen",
+    "publish": "Veröffentlichen",
+    "save": "Entwurf speichern",
+    "language": "Sprache"
+  },
+  "analytics": {
+    "title": "Analytik-Dashboard",
+    "trendingKeywords": "Trend-Schlüsselwörter",
+    "term": "Begriff",
+    "clicks": "Klicks",
+    "tableLabel": "Klicks nach Trend-Schlüsselwort",
+    "loading": "Analytik wird geladen...",
+    "empty": "Derzeit keine Trend-Schlüsselwort-Daten gefunden.",
+    "error": "Beim Laden der Analytik ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "markRead": "Als gelesen markieren"
+  },
+  "ab": {
+    "title": "A/B-Tests",
+    "name": "Testname",
+    "variants": "Varianten (kommagetrennt)",
+    "create": "Erstellen",
+    "variant": "Variante",
+    "impressions": "Impressionen",
+    "clicks": "Klicks",
+    "rate": "Konversionsrate",
+    "type": "Experimenttyp",
+    "weights": "Traffic-Gewichtung (kommagetrennt)",
+    "start": "Start",
+    "end": "Ende",
+    "weight": "Gewichtung",
+    "types": {
+      "image": "Bild",
+      "description": "Beschreibung",
+      "price": "Preis"
+    }
+  },
+  "social": {
+    "title": "Social-Media-Generator",
+    "titleField": "Produkttitel",
+    "descriptionField": "Beschreibung",
+    "tagsField": "Schlagwörter (kommagetrennt)",
+    "typeField": "Produkttyp",
+    "button": "Generieren",
+    "copy": "Bildunterschrift kopieren",
+    "download": "Bild herunterladen"
+  },
+  "settings": {
+    "pageTitle": "Einstellungen",
+    "title": "Social-Einstellungen",
+    "usageQuota": "Nutzung & Kontingent",
+    "auto": "Beiträge automatisch generieren",
+    "instagram": "Instagram-Name",
+    "facebook": "Facebook-Name",
+    "twitter": "Twitter-Name",
+    "tiktok": "TikTok-Name",
+    "save": "Speichern",
+    "oauthTitle": "Integrationen",
+    "connectedAs": "Verbunden als",
+    "pendingAccount": "Kontoinformationen ausstehend",
+    "notConnected": "Nicht verbunden",
+    "disconnect": "Trennen",
+    "connect": "Verbinden",
+    "preferences": "Einstellungen",
+    "notificationChannels": "Benachrichtigungskanäle",
+    "emailNotifications": "E-Mail-Benachrichtigungen",
+    "pushNotifications": "Push-Benachrichtigungen",
+    "defaultLanguage": "Standardsprache",
+    "currency": "Währung",
+    "timezone": "Zeitzone",
+    "upgrade": "Upgrade",
+    "creditsLeft": "{{count}} Credits übrig",
+    "usageBreakdown": "Nutzungsübersicht",
+    "listings_quota": "Angebote",
+    "images_quota": "Bilder",
+    "ideas_quota": "Ideen"
+  },
+  "oauth": {
+    "connectedAccounts": "Verbundene Konten",
+    "connected": "Verbunden",
+    "notConnected": "Nicht verbunden",
+    "expired": "Abgelaufen",
+    "expiringSoon": "Läuft bald ab",
+    "connectedAs": "Verbunden als",
+    "expiresOn": "Läuft ab am",
+    "connect": "Verbinden",
+    "connecting": "Wird verbunden...",
+    "disconnect": "Trennen",
+    "refresh": "Verbindung aktualisieren",
+    "confirmDisconnect": "Sind Sie sicher?",
+    "yes": "Ja",
+    "cancel": "Abbrechen",
+    "etsyDesc": "Angebote in Ihrem Etsy-Shop veröffentlichen",
+    "printifyDesc": "Produkte erstellen und Inventar verwalten",
+    "stripeDesc": "Abrechnung und Abonnements verwalten"
+  },
+  "search": {
+    "title": "Suche",
+    "keywordPlaceholder": "Schlüsselwort",
+    "allCategories": "Alle Kategorien",
+    "tagPlaceholder": "Schlagwort",
+    "rating": "Bewertung",
+    "button": "Suchen",
+    "loading": "Wird geladen...",
+    "results": "{{count}} Ergebnisse",
+    "ratingLabel": "Bewertung: {{rating}}",
+    "noResults": "Keine Ergebnisse gefunden"
+  },
+  "bulk": {
+    "title": "Massenprodukt-Upload",
+    "upload": "Datei hochladen",
+    "uploading": "Wird hochgeladen...",
+    "success": "Erstellt",
+    "error": "Fehler"
+  },
+  "loading": "Wird geladen..."
+}

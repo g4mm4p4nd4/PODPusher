@@ -65,6 +65,11 @@ class User(SQLModel, table=True):
     last_reset: datetime = Field(default_factory=datetime.utcnow)
     auto_social: bool = True
     social_handles: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
+    email_notifications: bool = True
+    push_notifications: bool = False
+    preferred_language: str = "en"
+    preferred_currency: str = "USD"
+    timezone: str = "UTC"
 
 
 class Notification(SQLModel, table=True):

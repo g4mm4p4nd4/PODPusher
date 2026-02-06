@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import random
 import re
@@ -11,8 +12,29 @@ from playwright.async_api import async_playwright
 from sqlmodel import select
 
 from ..common.database import get_session
+from ..common.observability import Counter, Histogram
 from ..models import TrendSignal
+from .circuit_breaker import scraper_circuit_breaker
 from .sources import PLATFORM_CONFIG, SourceConfig, SelectorSet
+
+logger = logging.getLogger(__name__)
+
+# --- Scrape Metrics (per DS-06 / DevOps-Engineer monitoring) ---
+SCRAPE_TOTAL = Counter(
+    "pod_scrape_total",
+    "Total scrape attempts by platform and outcome",
+    labelnames=("platform", "outcome"),
+)
+SCRAPE_DURATION = Histogram(
+    "pod_scrape_duration_seconds",
+    "Duration of scrape operations by platform",
+    labelnames=("platform",),
+)
+SCRAPE_KEYWORDS = Counter(
+    "pod_scrape_keywords_total",
+    "Total keywords extracted per platform",
+    labelnames=("platform",),
+)
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
@@ -167,12 +189,42 @@ async def _scrape_source(playwright, name: str, config: SourceConfig) -> List[Di
     return results
 
 
+async def _scrape_with_circuit_breaker(
+    playwright, name: str, config: SourceConfig
+) -> List[Dict[str, Any]]:
+    """Wrap _scrape_source with circuit breaker and metrics."""
+    import time as _time
+
+    if not scraper_circuit_breaker.allow_request(name):
+        logger.warning("Circuit breaker OPEN for %s — skipping scrape", name)
+        SCRAPE_TOTAL.labels(name, "circuit_open").inc()
+        return []
+
+    start = _time.monotonic()
+    try:
+        results = await _scrape_source(playwright, name, config)
+        duration = _time.monotonic() - start
+        SCRAPE_DURATION.labels(name).observe(duration)
+        SCRAPE_TOTAL.labels(name, "success").inc()
+        SCRAPE_KEYWORDS.labels(name).inc(len(results))
+        scraper_circuit_breaker.record_success(name)
+        logger.info("Scraped %s: %d results in %.1fs", name, len(results), duration)
+        return results
+    except Exception as exc:
+        duration = _time.monotonic() - start
+        SCRAPE_DURATION.labels(name).observe(duration)
+        SCRAPE_TOTAL.labels(name, "failure").inc()
+        scraper_circuit_breaker.record_failure(name)
+        logger.error("Scrape failed for %s after %.1fs: %s", name, duration, exc)
+        return []
+
+
 async def _gather_trends() -> List[Dict[str, Any]]:
     if STUB_ONLY:
         return []
     async with async_playwright() as pw:
         tasks = [
-            _scrape_source(pw, name, config)
+            _scrape_with_circuit_breaker(pw, name, config)
             for name, config in PLATFORM_CONFIG.items()
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)

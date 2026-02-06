@@ -30,9 +30,19 @@ function mapCredentials(values: OAuthCredentialSummary[]): CredentialMap {
   return map;
 }
 
+const DEFAULT_PREFS: Preferences = {
+  auto_social: true,
+  social_handles: {},
+  email_notifications: true,
+  push_notifications: false,
+  preferred_language: 'en',
+  preferred_currency: 'USD',
+  timezone: 'UTC',
+};
+
 export default function SocialSettings() {
   const { t } = useTranslation('common');
-  const [prefs, setPrefs] = useState<Preferences>({ auto_social: true, social_handles: {} });
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
   const [providers, setProviders] = useState<OAuthProviderInfo[]>([]);
   const [credentials, setCredentials] = useState<CredentialMap>({});
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -139,7 +149,95 @@ export default function SocialSettings() {
           value={prefs.social_handles.twitter || ''}
           onChange={(e) => updateHandle('twitter', e.target.value)}
         />
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white">
+        <input
+          className="border p-2 w-full"
+          placeholder={t('settings.tiktok')}
+          value={prefs.social_handles.tiktok || ''}
+          onChange={(e) => updateHandle('tiktok', e.target.value)}
+        />
+
+        {/* Notification Channel Preferences */}
+        <fieldset className="border rounded p-4 space-y-2">
+          <legend className="text-lg font-semibold px-2">
+            {t('settings.notificationChannels')}
+          </legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.email_notifications}
+              onChange={(e) => setPrefs({ ...prefs, email_notifications: e.target.checked })}
+            />
+            <span>{t('settings.emailNotifications')}</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.push_notifications}
+              onChange={(e) => setPrefs({ ...prefs, push_notifications: e.target.checked })}
+            />
+            <span>{t('settings.pushNotifications')}</span>
+          </label>
+        </fieldset>
+
+        {/* Language, Currency, Timezone Preferences */}
+        <fieldset className="border rounded p-4 space-y-3">
+          <legend className="text-lg font-semibold px-2">
+            {t('settings.preferences')}
+          </legend>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.defaultLanguage')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.preferred_language}
+              onChange={(e) => setPrefs({ ...prefs, preferred_language: e.target.value })}
+            >
+              <option value="en">English</option>
+              <option value="es">Espa&#241;ol</option>
+              <option value="fr">Fran&#231;ais</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.currency')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.preferred_currency}
+              onChange={(e) => setPrefs({ ...prefs, preferred_currency: e.target.value })}
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (&euro;)</option>
+              <option value="GBP">GBP (&pound;)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="AUD">AUD ($)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.timezone')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.timezone}
+              onChange={(e) => setPrefs({ ...prefs, timezone: e.target.value })}
+            >
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">Eastern (US)</option>
+              <option value="America/Chicago">Central (US)</option>
+              <option value="America/Denver">Mountain (US)</option>
+              <option value="America/Los_Angeles">Pacific (US)</option>
+              <option value="Europe/London">London</option>
+              <option value="Europe/Paris">Paris / Berlin</option>
+              <option value="Asia/Tokyo">Tokyo</option>
+              <option value="Australia/Sydney">Sydney</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
           {t('settings.save')}
         </button>
       </form>
