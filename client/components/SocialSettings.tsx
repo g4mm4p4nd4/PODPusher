@@ -40,6 +40,13 @@ const DEFAULT_PREFS: Preferences = {
   timezone: 'UTC',
 };
 
+/** Validates a social media handle: optional @, then 1-30 alphanumeric/underscore/dot chars. */
+const HANDLE_REGEX = /^@?[a-zA-Z0-9_.]{1,30}$/;
+
+function isValidHandle(value: string): boolean {
+  return value === '' || HANDLE_REGEX.test(value);
+}
+
 export default function SocialSettings() {
   const { t } = useTranslation('common');
   const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
@@ -47,6 +54,7 @@ export default function SocialSettings() {
   const [credentials, setCredentials] = useState<CredentialMap>({});
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
+  const [handleErrors, setHandleErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     getPreferences().then(setPrefs).catch((err) => console.error(err));
@@ -76,10 +84,22 @@ export default function SocialSettings() {
 
   const updateHandle = (network: string, value: string) => {
     setPrefs({ ...prefs, social_handles: { ...prefs.social_handles, [network]: value } });
+    if (value && !isValidHandle(value)) {
+      setHandleErrors((prev) => ({ ...prev, [network]: t('settings.invalidHandle', 'Invalid handle format') }));
+    } else {
+      setHandleErrors((prev) => {
+        const next = { ...prev };
+        delete next[network];
+        return next;
+      });
+    }
   };
+
+  const hasHandleErrors = Object.keys(handleErrors).length > 0;
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (hasHandleErrors) return;
     await savePreferences(prefs);
   };
 
@@ -131,30 +151,42 @@ export default function SocialSettings() {
           />
           <span>{t('settings.auto')}</span>
         </label>
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.instagram')}
-          value={prefs.social_handles.instagram || ''}
-          onChange={(e) => updateHandle('instagram', e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.facebook')}
-          value={prefs.social_handles.facebook || ''}
-          onChange={(e) => updateHandle('facebook', e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.twitter')}
-          value={prefs.social_handles.twitter || ''}
-          onChange={(e) => updateHandle('twitter', e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.tiktok')}
-          value={prefs.social_handles.tiktok || ''}
-          onChange={(e) => updateHandle('tiktok', e.target.value)}
-        />
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.instagram ? ' border-red-500' : ''}`}
+            placeholder={t('settings.instagram')}
+            value={prefs.social_handles.instagram || ''}
+            onChange={(e) => updateHandle('instagram', e.target.value)}
+          />
+          {handleErrors.instagram && <p className="text-sm text-red-600 mt-1">{handleErrors.instagram}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.facebook ? ' border-red-500' : ''}`}
+            placeholder={t('settings.facebook')}
+            value={prefs.social_handles.facebook || ''}
+            onChange={(e) => updateHandle('facebook', e.target.value)}
+          />
+          {handleErrors.facebook && <p className="text-sm text-red-600 mt-1">{handleErrors.facebook}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.twitter ? ' border-red-500' : ''}`}
+            placeholder={t('settings.twitter')}
+            value={prefs.social_handles.twitter || ''}
+            onChange={(e) => updateHandle('twitter', e.target.value)}
+          />
+          {handleErrors.twitter && <p className="text-sm text-red-600 mt-1">{handleErrors.twitter}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.tiktok ? ' border-red-500' : ''}`}
+            placeholder={t('settings.tiktok')}
+            value={prefs.social_handles.tiktok || ''}
+            onChange={(e) => updateHandle('tiktok', e.target.value)}
+          />
+          {handleErrors.tiktok && <p className="text-sm text-red-600 mt-1">{handleErrors.tiktok}</p>}
+        </div>
 
         {/* Notification Channel Preferences */}
         <fieldset className="border rounded p-4 space-y-2">

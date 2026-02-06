@@ -1,0 +1,127 @@
+# Prometheus alerting rules for PODPusher scraper health.
+#
+# Owner: DevOps-Engineer (per DEVELOPMENT_PLAN.md Task 1.2.7)
+# Reference: DO-05, agents_dev_ops_engineer.md §5
+#
+# These rules monitor the trend ingestion scrapers and fire alerts
+# when failure rates exceed acceptable thresholds.
+
+groups:
+  - name: scraper_alerts
+    rules:
+      # ---------------------------------------------------------------
+      # High Scraper Failure Rate (>= 5%)
+      # ---------------------------------------------------------------
+      - alert: ScraperHighFailureRate
+        expr: >
+          100 * rate(pod_scrape_total{outcome="failure"}[15m])
+          /
+          (rate(pod_scrape_total{outcome="success"}[15m]) + rate(pod_scrape_total{outcome="failure"}[15m]))
+          >= 5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Scraper failure rate >= 5% for {{ $labels.platform }}"
+          description: >
+            Platform {{ $labels.platform }} has a scrape failure rate of
+            {{ printf "%.1f" $value }}% over the last 15 minutes.
+            Check the circuit breaker state and proxy rotation configuration.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # Critical Scraper Failure Rate (>= 25%)
+      # ---------------------------------------------------------------
+      - alert: ScraperCriticalFailureRate
+        expr: >
+          100 * rate(pod_scrape_total{outcome="failure"}[15m])
+          /
+          (rate(pod_scrape_total{outcome="success"}[15m]) + rate(pod_scrape_total{outcome="failure"}[15m]))
+          >= 25
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "CRITICAL: Scraper failure rate >= 25% for {{ $labels.platform }}"
+          description: >
+            Platform {{ $labels.platform }} has a scrape failure rate of
+            {{ printf "%.1f" $value }}% over the last 15 minutes.
+            Circuit breaker is likely OPEN. Immediate investigation required.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # Circuit Breaker Open
+      # ---------------------------------------------------------------
+      - alert: ScraperCircuitBreakerOpen
+        expr: rate(pod_scrape_total{outcome="circuit_open"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Circuit breaker OPEN for {{ $labels.platform }}"
+          description: >
+            The circuit breaker for {{ $labels.platform }} has been tripped to OPEN state
+            and is actively blocking scrape requests. The breaker will transition to
+            HALF_OPEN after the recovery timeout (default 300s). See runbook for manual
+            recovery steps.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # No Scrape Activity (Dead Scraper)
+      # ---------------------------------------------------------------
+      - alert: ScraperNoActivity
+        expr: >
+          absent_over_time(pod_scrape_total[30m])
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "No scrape activity detected in the last 30 minutes"
+          description: >
+            The pod_scrape_total metric has not been reported in 30 minutes.
+            The scraper scheduler may have crashed or the service may be down.
+            Check the trend_ingestion service health and APScheduler status.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # Slow Scraping (p95 > 20s)
+      # ---------------------------------------------------------------
+      - alert: ScraperSlowDuration
+        expr: >
+          histogram_quantile(0.95, rate(pod_scrape_duration_seconds_bucket[15m])) > 20
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Scraper p95 latency > 20s for {{ $labels.platform }}"
+          description: >
+            The 95th percentile scrape duration for {{ $labels.platform }} exceeds 20 seconds.
+            This may indicate network issues, proxy slowness, or the target site
+            adding new anti-bot measures. Consider increasing TREND_INGESTION_TIMEOUT_MS
+            or rotating proxies.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # Low Keyword Extraction
+      # ---------------------------------------------------------------
+      - alert: ScraperLowKeywordExtraction
+        expr: >
+          rate(pod_scrape_keywords_total[30m]) == 0
+          and
+          rate(pod_scrape_total{outcome="success"}[30m]) > 0
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Scraper extracting 0 keywords despite successful scrapes for {{ $labels.platform }}"
+          description: >
+            Platform {{ $labels.platform }} scrapes are succeeding but extracting
+            zero keywords. The target site may have changed its DOM structure,
+            requiring selector updates in sources.py.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"

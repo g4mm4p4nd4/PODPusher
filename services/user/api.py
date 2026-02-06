@@ -1,7 +1,9 @@
 from datetime import datetime
 
+import re
+
 from fastapi import Depends, FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from ..common.database import get_session
 from ..models import User
 from ..common.quotas import ensure_quota_state
@@ -50,6 +52,9 @@ async def increment_quota(
         }
 
 
+HANDLE_PATTERN = re.compile(r"^@?[a-zA-Z0-9_.]{1,30}$")
+
+
 class Preferences(BaseModel):
     auto_social: bool = True
     social_handles: dict[str, str] = {}
@@ -58,6 +63,16 @@ class Preferences(BaseModel):
     preferred_language: str = "en"
     preferred_currency: str = "USD"
     timezone: str = "UTC"
+
+    @field_validator("social_handles")
+    @classmethod
+    def validate_handles(cls, v: dict[str, str]) -> dict[str, str]:
+        for network, handle in v.items():
+            if handle and not HANDLE_PATTERN.match(handle):
+                raise ValueError(
+                    f"Invalid handle for {network}: must be 1-30 alphanumeric/underscore/dot chars, optional leading @"
+                )
+        return v
 
 
 @app.get("/api/user/preferences")

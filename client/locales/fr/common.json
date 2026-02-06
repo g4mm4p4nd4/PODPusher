@@ -131,7 +131,8 @@
     "usageBreakdown": "Détail de l'utilisation",
     "listings_quota": "Annonces",
     "images_quota": "Images",
-    "ideas_quota": "Idées"
+    "ideas_quota": "Idées",
+    "invalidHandle": "Format de pseudo invalide"
   },
   "oauth": {
     "connectedAccounts": "Comptes connectés",

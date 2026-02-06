@@ -131,7 +131,8 @@
     "usageBreakdown": "Desglose de uso",
     "listings_quota": "Publicaciones",
     "images_quota": "Imágenes",
-    "ideas_quota": "Ideas"
+    "ideas_quota": "Ideas",
+    "invalidHandle": "Formato de usuario inválido"
   },
   "oauth": {
     "connectedAccounts": "Cuentas conectadas",

@@ -131,7 +131,8 @@
     "usageBreakdown": "Usage Breakdown",
     "listings_quota": "Listings",
     "images_quota": "Images",
-    "ideas_quota": "Ideas"
+    "ideas_quota": "Ideas",
+    "invalidHandle": "Invalid handle format"
   },
   "oauth": {
     "connectedAccounts": "Connected Accounts",
