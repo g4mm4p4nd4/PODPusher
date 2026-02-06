@@ -131,7 +131,8 @@
     "usageBreakdown": "Nutzungsübersicht",
     "listings_quota": "Angebote",
     "images_quota": "Bilder",
-    "ideas_quota": "Ideen"
+    "ideas_quota": "Ideen",
+    "invalidHandle": "Ungültiges Handle-Format"
   },
   "oauth": {
     "connectedAccounts": "Verbundene Konten",

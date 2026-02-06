@@ -7,14 +7,14 @@ This file tracks the remaining work required to bring PODPusher to production re
 ## Current Sprint: MVP Completion
 
 **Target:** Production-ready MVP
-**Completion:** ~90% (Phase 0 + Phase 1 complete)
+**Completion:** ~100% Phase 0 + Phase 1 (Phase 2+ remaining)
 
 ## Phase Status Summary
 
 | Phase | Status | Completion |
 |-------|--------|------------|
 | Phase 0: Critical MVP Blockers | **COMPLETE** | 100% |
-| Phase 1: Core Experience Polish | **COMPLETE** | 95% |
+| Phase 1: Core Experience Polish | **COMPLETE** | 100% |
 | Phase 2: Enhanced Reliability | Not Started | 0% |
 | Phase 3: Launch Preparation | Not Started | 0% |
 
@@ -60,7 +60,12 @@ This file tracks the remaining work required to bring PODPusher to production re
 - **Stripe Billing Integration (Phase 0.2)** - Full billing service (api, service, webhooks, plans), 5 webhook event handlers, portal endpoint, tier-specific quota enforcement, comprehensive test suite (468 lines).
 - **i18n Expansion (Phase 1.1)** - 4 locales (EN, ES, FR, DE) with 170+ keys each. `scripts/i18n_extract.ts` extraction script. `client/services/currency.ts` ICU formatting utility. Updated `next-i18next.config.js`. Expanded E2E locale tests.
 - **Live Trend Scrapers (Phase 1.2)** - All 5 platforms configured (TikTok, Instagram, Twitter, Pinterest, Etsy). Circuit breaker (`services/trend_ingestion/circuit_breaker.py`). Prometheus scrape metrics. Auth on refresh endpoint. Scraper status endpoint. Comprehensive test coverage.
-- **Settings Page Polish (Phase 1.3)** - Notification toggles (email/push). Language/currency/timezone selectors. TikTok handle input. Quota usage breakdown by resource type. Upgrade CTA to Stripe portal. Backend preferences API extended with 5 new fields.
+- **Settings Page Polish (Phase 1.3)** - Notification toggles (email/push). Language/currency/timezone selectors. TikTok handle input. Quota usage breakdown by resource type. Upgrade CTA to Stripe portal. Backend preferences API extended with 5 new fields. Handle format validation (frontend regex + backend Pydantic).
+- **Currency Formatting E2E Tests (Phase 1.1.6)** - 6 Playwright E2E tests exercising USD/EUR/GBP/CAD formatting across EN/ES/FR/DE locales. Currency selector persistence test.
+- **Grafana Scraper Health Dashboard (Phase 1.2.7)** - `grafana/dashboards/scraper-health.json` with 8 panels: success/failure rates, failure gauge, duration quantiles, keyword extraction, cumulative stats, circuit breaker events, average duration by platform. Platform template variable.
+- **Prometheus Alert Rules (Phase 1.2.7)** - `prometheus/alerts/scraper.yml` with 6 alert rules: high failure rate (>=5%), critical failure rate (>=25%), circuit breaker open, no scrape activity, slow duration (p95>20s), low keyword extraction.
+- **Scraper Outage Runbook (Phase 1.2.7)** - `docs/runbooks/scraper-outage.md` covering circuit breaker states, diagnosis steps, manual refresh, circuit breaker reset, proxy rotation troubleshooting, selector updates, environment variables, escalation protocol.
+- **RTL Support** - Deferred (internal tool only, no Arabic/Hebrew locale needed).
 
 ## Instructions to Agents
 

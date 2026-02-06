@@ -168,14 +168,14 @@
 #### 1.1.5 Update i18n Config [FC]
 - [x] Add new locales to `next-i18next.config.js`
 - [x] Update language switcher with new options
-- [ ] Test RTL support (future Arabic/Hebrew)
+- [x] ~~Test RTL support~~ — Deferred (internal tool only, no Arabic/Hebrew needed)
 
 #### 1.1.6 E2E Locale Tests [QA]
 - [x] Update `tests/e2e/localization.spec.ts`
 - [x] Test all pages with ES locale
 - [x] Test all pages with FR locale
 - [x] Test all pages with DE locale
-- [ ] Test currency formatting
+- [x] Test currency formatting
 
 ---
 
@@ -224,9 +224,9 @@
 
 #### 1.2.7 Monitoring & Alerting [DO]
 - [x] Add Prometheus metrics for scraping
-- [ ] Create Grafana dashboard for scrape health
-- [ ] Configure alerts for ≥5% failure rate
-- [ ] Document runbook for scraper outages
+- [x] Create Grafana dashboard for scrape health
+- [x] Configure alerts for ≥5% failure rate
+- [x] Document runbook for scraper outages
 
 #### 1.2.8 Unit Tests [UT]
 - [x] Create `tests/test_trend_scrapers.py`
@@ -253,7 +253,7 @@
 - [x] Add Instagram handle input
 - [x] Add TikTok handle input
 - [x] Add Twitter handle input
-- [ ] Validate handle formats
+- [x] Validate handle formats
 
 #### 1.3.3 Quota Display [FC]
 - [x] Enhance UserQuota component
@@ -493,9 +493,9 @@
 |-------|-------|-------|-----------|----------|
 | Phase 0.1 | 8 | FC, AU, UT, QA | 8 | 100% |
 | Phase 0.2 | 6 | IN, BC, UT | 6 | 100% |
-| Phase 1.1 | 6 | FC, DW, QA | 5 | 95% |
-| Phase 1.2 | 8 | DS, BC, UT, DO | 7 | 90% |
-| Phase 1.3 | 4 | FC, BC | 4 | 95% |
+| Phase 1.1 | 6 | FC, DW, QA | 6 | 100% |
+| Phase 1.2 | 8 | DS, BC, UT, DO | 8 | 100% |
+| Phase 1.3 | 4 | FC, BC | 4 | 100% |
 | Phase 2.1 | 5 | BC, FC, IN, AI | 0 | 0% |
 | Phase 2.2 | 3 | BC, AU, FC | 0 | 0% |
 | Phase 2.3 | 4 | BC, FC, DO | 0 | 0% |
@@ -503,7 +503,7 @@
 | Phase 3.2 | 4 | DW, AR | 0 | 0% |
 | Phase 3.3 | 3 | DO, QA | 0 | 0% |
 | Tech Debt | 4 | DS, BC, IN, AI | 0 | 0% |
-| **Total** | **60** | | **30** | **50%** |
+| **Total** | **60** | | **36** | **60%** |
 
 ---
 
