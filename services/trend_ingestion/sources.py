@@ -64,6 +64,19 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
         wait_for_selector="article[data-testid='tweet']",
         scroll_iterations=1,
     ),
+    "pinterest": SourceConfig(
+        url="https://www.pinterest.com/today/",
+        selectors=SelectorSet(
+            item=["div[data-test-id='pin']", "div[data-test-id='pinWrapper']"],
+            title=["div[data-test-id='pin-description']", "h3"],
+            hashtags=["a[href*='/search/pins/']", "a[data-test-id='hashtag']"],
+            likes=["span[data-test-id='save-count']", "span[data-test-id='repin-count']"],
+            shares=["span[data-test-id='repin-count']"],
+            comments=["span[data-test-id='comment-count']"],
+        ),
+        wait_for_selector="div[data-test-id='pin']",
+        scroll_iterations=2,
+    ),
     "etsy": SourceConfig(
         url="https://www.etsy.com/trending-items",
         selectors=SelectorSet(

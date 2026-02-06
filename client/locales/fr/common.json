@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "generate": "Générer",
+    "categories": "Catégories",
+    "designIdeas": "Idées de design",
+    "suggestions": "Suggestions",
+    "search": "Rechercher",
+    "analytics": "Analytique",
+    "listings": "Annonces",
+    "abTests": "Tests A/B",
+    "notifications": "Notifications",
+    "socialGenerator": "Générateur Social",
+    "settings": "Paramètres",
+    "searchPlaceholder": "Rechercher..."
+  },
+  "index": {
+    "trending": "Mots-clés tendance",
+    "events": "Événements du mois"
+  },
+  "categories": {
+    "title": "Catégories tendance"
+  },
+  "design": {
+    "title": "Idées de design"
+  },
+  "generate": {
+    "title": "Générer une idée de produit",
+    "placeholder": "Entrez un terme tendance",
+    "button": "Générer",
+    "generating": "Génération en cours...",
+    "connectionRequired": "Connexion requise",
+    "connectProviders": "Pour générer et publier, veuillez connecter les comptes suivants : {{providers}}",
+    "goToSettings": "Aller aux Paramètres"
+  },
+  "suggestions": {
+    "title": "Suggestions de produits",
+    "category": "Catégorie",
+    "designTheme": "Thème de design",
+    "fetch": "Récupérer"
+  },
+  "review": {
+    "title": "Revue d'images",
+    "noProducts": "Aucun produit à examiner.",
+    "rating": "Note",
+    "unrated": "Non noté",
+    "stars_one": "{{count}} étoile",
+    "stars_other": "{{count}} étoiles",
+    "tags": "Étiquettes",
+    "flag": "Signaler comme inapproprié"
+  },
+  "listings": {
+    "pageTitle": "Compositeur d'annonces",
+    "title": "Titre",
+    "description": "Description",
+    "tags": "Étiquettes",
+    "suggest": "Suggérer des étiquettes",
+    "publish": "Publier",
+    "save": "Enregistrer le brouillon",
+    "language": "Langue"
+  },
+  "analytics": {
+    "title": "Tableau de bord analytique",
+    "trendingKeywords": "Mots-clés tendance",
+    "term": "Terme",
+    "clicks": "Clics",
+    "tableLabel": "Clics par mot-clé tendance",
+    "loading": "Chargement des analytiques...",
+    "empty": "Aucune donnée de mots-clés tendance trouvée pour le moment.",
+    "error": "Une erreur est survenue lors du chargement des analytiques. Veuillez réessayer."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markRead": "Marquer comme lu"
+  },
+  "ab": {
+    "title": "Tests A/B",
+    "name": "Nom du test",
+    "variants": "Variantes (séparées par des virgules)",
+    "create": "Créer",
+    "variant": "Variante",
+    "impressions": "Impressions",
+    "clicks": "Clics",
+    "rate": "Taux de conversion",
+    "type": "Type d'expérience",
+    "weights": "Poids du trafic (séparés par des virgules)",
+    "start": "Début",
+    "end": "Fin",
+    "weight": "Poids",
+    "types": {
+      "image": "Image",
+      "description": "Description",
+      "price": "Prix"
+    }
+  },
+  "social": {
+    "title": "Générateur de Médias Sociaux",
+    "titleField": "Titre du produit",
+    "descriptionField": "Description",
+    "tagsField": "Étiquettes (séparées par des virgules)",
+    "typeField": "Type de produit",
+    "button": "Générer",
+    "copy": "Copier la légende",
+    "download": "Télécharger l'image"
+  },
+  "settings": {
+    "pageTitle": "Paramètres",
+    "title": "Paramètres sociaux",
+    "usageQuota": "Utilisation et Quota",
+    "auto": "Générer automatiquement les publications",
+    "instagram": "Identifiant Instagram",
+    "facebook": "Identifiant Facebook",
+    "twitter": "Identifiant Twitter",
+    "tiktok": "Identifiant TikTok",
+    "save": "Enregistrer",
+    "oauthTitle": "Intégrations",
+    "connectedAs": "Connecté en tant que",
+    "pendingAccount": "Informations du compte en attente",
+    "notConnected": "Non connecté",
+    "disconnect": "Déconnecter",
+    "connect": "Connecter",
+    "preferences": "Préférences",
+    "notificationChannels": "Canaux de notification",
+    "emailNotifications": "Notifications par email",
+    "pushNotifications": "Notifications push",
+    "defaultLanguage": "Langue par défaut",
+    "currency": "Devise",
+    "timezone": "Fuseau horaire",
+    "upgrade": "Passer au niveau supérieur",
+    "creditsLeft": "{{count}} crédits restants",
+    "usageBreakdown": "Détail de l'utilisation",
+    "listings_quota": "Annonces",
+    "images_quota": "Images",
+    "ideas_quota": "Idées"
+  },
+  "oauth": {
+    "connectedAccounts": "Comptes connectés",
+    "connected": "Connecté",
+    "notConnected": "Non connecté",
+    "expired": "Expiré",
+    "expiringSoon": "Expire bientôt",
+    "connectedAs": "Connecté en tant que",
+    "expiresOn": "Expire le",
+    "connect": "Connecter",
+    "connecting": "Connexion en cours...",
+    "disconnect": "Déconnecter",
+    "refresh": "Rafraîchir la connexion",
+    "confirmDisconnect": "Êtes-vous sûr ?",
+    "yes": "Oui",
+    "cancel": "Annuler",
+    "etsyDesc": "Publiez des annonces sur votre boutique Etsy",
+    "printifyDesc": "Créez des produits et gérez l'inventaire",
+    "stripeDesc": "Gérez la facturation et les abonnements"
+  },
+  "search": {
+    "title": "Rechercher",
+    "keywordPlaceholder": "Mot-clé",
+    "allCategories": "Toutes les catégories",
+    "tagPlaceholder": "Étiquette",
+    "rating": "Note",
+    "button": "Rechercher",
+    "loading": "Chargement...",
+    "results": "{{count}} résultats",
+    "ratingLabel": "Note : {{rating}}",
+    "noResults": "Aucun résultat trouvé"
+  },
+  "bulk": {
+    "title": "Téléchargement en masse de produits",
+    "upload": "Télécharger le fichier",
+    "uploading": "Téléchargement en cours...",
+    "success": "Créé",
+    "error": "Erreur"
+  },
+  "loading": "Chargement..."
+}

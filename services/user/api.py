@@ -53,6 +53,11 @@ async def increment_quota(
 class Preferences(BaseModel):
     auto_social: bool = True
     social_handles: dict[str, str] = {}
+    email_notifications: bool = True
+    push_notifications: bool = False
+    preferred_language: str = "en"
+    preferred_currency: str = "USD"
+    timezone: str = "UTC"
 
 
 @app.get("/api/user/preferences")
@@ -67,6 +72,11 @@ async def get_preferences(user_id: int = Depends(require_user_id)):
         return {
             "auto_social": user.auto_social,
             "social_handles": user.social_handles,
+            "email_notifications": user.email_notifications,
+            "push_notifications": user.push_notifications,
+            "preferred_language": user.preferred_language,
+            "preferred_currency": user.preferred_currency,
+            "timezone": user.timezone,
         }
 
 
@@ -81,10 +91,20 @@ async def set_preferences(
             user = User(id=user_id)
         user.auto_social = data.auto_social
         user.social_handles = data.social_handles
+        user.email_notifications = data.email_notifications
+        user.push_notifications = data.push_notifications
+        user.preferred_language = data.preferred_language
+        user.preferred_currency = data.preferred_currency
+        user.timezone = data.timezone
         session.add(user)
         await session.commit()
         await session.refresh(user)
         return {
             "auto_social": user.auto_social,
             "social_handles": user.social_handles,
+            "email_notifications": user.email_notifications,
+            "push_notifications": user.push_notifications,
+            "preferred_language": user.preferred_language,
+            "preferred_currency": user.preferred_currency,
+            "timezone": user.timezone,
         }

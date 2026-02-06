@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from ..common.auth import require_user_id
 from ..common.observability import register_observability
 
+from .circuit_breaker import scraper_circuit_breaker
 from .service import get_live_trends, refresh_trends, start_scheduler
 
 @asynccontextmanager
@@ -20,6 +22,17 @@ async def live_trends(category: str | None = None):
 
 
 @app.post("/trends/refresh")
-async def refresh_endpoint():
+async def refresh_endpoint(user_id: int = Depends(require_user_id)):
+    """Trigger an immediate trend refresh. Requires authentication."""
     await refresh_trends()
     return {"status": "ok"}
+
+
+@app.get("/trends/scraper-status")
+async def scraper_status():
+    """Return circuit breaker state for each platform."""
+    from .sources import PLATFORM_CONFIG
+    return {
+        name: scraper_circuit_breaker.state(name).value
+        for name in PLATFORM_CONFIG
+    }
