@@ -23,6 +23,9 @@ from ..social_generator.api import app as social_app
 from ..auth.api import app as auth_app
 from ..billing.api import app as billing_app
 from ..common.observability import register_observability
+from ..common.errors import register_error_handlers
+from ..common.rate_limit import register_rate_limiting
+from ..common.cache import cache_get, cache_set, cache_key, CACHE_TTL_TRENDS
 from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
 from fastapi import Request
 from ..trend_scraper.events import EVENTS
@@ -40,6 +43,8 @@ def _gateway_lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=_gateway_lifespan)
 register_observability(app, service_name="gateway")
+register_error_handlers(app)
+register_rate_limiting(app)
 app.mount("/api/products", product_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)
@@ -138,7 +143,13 @@ async def bulk_create(request: Request):
 
 @app.get("/trends")
 async def list_trends(category: str | None = None):
-    return await fetch_trends(category)
+    ck = cache_key("trends", category or "all")
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+    result = await fetch_trends(category)
+    cache_set(ck, result, CACHE_TTL_TRENDS)
+    return result
 
 @app.get("/events/{month}")
 async def list_events(month: str):
@@ -160,7 +171,13 @@ async def product_suggestions(category: str | None = None, design: str | None = 
 
 @app.get("/api/trends/live")
 async def live_trends(category: str | None = None):
-    return await get_live_trends(category)
+    ck = cache_key("live_trends", category or "all")
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+    result = await get_live_trends(category)
+    cache_set(ck, result, CACHE_TTL_TRENDS)
+    return result
 
 @app.post("/api/trends/refresh")
 async def refresh_trends_endpoint():

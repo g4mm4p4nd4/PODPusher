@@ -1,0 +1,111 @@
+# Prometheus alerting rules for PODPusher API performance.
+#
+# Owner: DevOps-Engineer (per DEVELOPMENT_PLAN.md Task 2.3.4)
+# Reference: DO-05, agents_dev_ops_engineer.md §5
+
+groups:
+  - name: performance_alerts
+    rules:
+      # ---------------------------------------------------------------
+      # P95 Latency Exceeds SLO (> 300ms)
+      # ---------------------------------------------------------------
+      - alert: APILatencyP95High
+        expr: >
+          histogram_quantile(0.95, rate(pod_request_latency_seconds_bucket[5m])) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "P95 API latency > 300ms for {{ $labels.service }}"
+          description: >
+            Service {{ $labels.service }} has a p95 latency of
+            {{ printf "%.3f" $value }}s, exceeding the 300ms SLO target.
+            Investigate slow endpoints and consider caching or query optimization.
+
+      # ---------------------------------------------------------------
+      # P99 Latency Exceeds 1s
+      # ---------------------------------------------------------------
+      - alert: APILatencyP99Critical
+        expr: >
+          histogram_quantile(0.99, rate(pod_request_latency_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "P99 API latency > 1s for {{ $labels.service }}"
+          description: >
+            Service {{ $labels.service }} has a p99 latency of
+            {{ printf "%.3f" $value }}s. This indicates severe performance degradation.
+
+      # ---------------------------------------------------------------
+      # High 5xx Error Rate (> 1%)
+      # ---------------------------------------------------------------
+      - alert: APIHighErrorRate
+        expr: >
+          100 * sum(rate(pod_request_total{status=~"5.."}[15m])) by (service)
+          /
+          sum(rate(pod_request_total[15m])) by (service)
+          > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "5xx error rate > 1% for {{ $labels.service }}"
+          description: >
+            Service {{ $labels.service }} has a 5xx error rate of
+            {{ printf "%.2f" $value }}% over the last 15 minutes.
+
+      # ---------------------------------------------------------------
+      # Critical Error Rate (> 5%)
+      # ---------------------------------------------------------------
+      - alert: APICriticalErrorRate
+        expr: >
+          100 * sum(rate(pod_request_total{status=~"5.."}[15m])) by (service)
+          /
+          sum(rate(pod_request_total[15m])) by (service)
+          > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "CRITICAL: 5xx error rate > 5% for {{ $labels.service }}"
+          description: >
+            Service {{ $labels.service }} has a 5xx error rate of
+            {{ printf "%.2f" $value }}%. Immediate investigation required.
+
+      # ---------------------------------------------------------------
+      # High Rate Limiting (> 10 req/min being 429'd)
+      # ---------------------------------------------------------------
+      - alert: HighRateLimitHits
+        expr: >
+          sum(rate(pod_request_total{status="429"}[5m])) by (service) > 0.17
+        for: 10m
+        labels:
+          severity: info
+          team: backend
+        annotations:
+          summary: "Elevated rate limiting for {{ $labels.service }}"
+          description: >
+            Service {{ $labels.service }} is generating > 10 rate-limited
+            responses per minute. Consider adjusting rate limits or
+            investigating abusive traffic patterns.
+
+      # ---------------------------------------------------------------
+      # No Requests (Service Down)
+      # ---------------------------------------------------------------
+      - alert: APINoTraffic
+        expr: >
+          absent_over_time(pod_request_total{service="gateway"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "No API traffic detected for the gateway service"
+          description: >
+            The gateway service has not reported any request metrics
+            in 10 minutes. The service may be down or unreachable.
