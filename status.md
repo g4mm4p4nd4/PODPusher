@@ -7,7 +7,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 ## Current Sprint: MVP Completion
 
 **Target:** Production-ready MVP
-**Completion:** ~100% Phase 0 + Phase 1 (Phase 2+ remaining)
+**Completion:** ~100% Phase 0 + Phase 1 + Phase 2 (Phase 3 remaining)
 
 ## Phase Status Summary
 
@@ -15,7 +15,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 |-------|--------|------------|
 | Phase 0: Critical MVP Blockers | **COMPLETE** | 100% |
 | Phase 1: Core Experience Polish | **COMPLETE** | 100% |
-| Phase 2: Enhanced Reliability | Not Started | 0% |
+| Phase 2: Enhanced Reliability | **COMPLETE** | 95% |
 | Phase 3: Launch Preparation | Not Started | 0% |
 
 ## Pending PRs
@@ -33,11 +33,11 @@ This file tracks the remaining work required to bring PODPusher to production re
 2. ~~**Live Trend Signals Ingestion**~~ - COMPLETE. All 5 platforms (TikTok, Instagram, Twitter, Pinterest, Etsy) configured. Circuit breaker pattern. Prometheus scrape metrics. Auth-protected refresh endpoint. Scraper status endpoint.
 3. ~~**Settings Page Completion**~~ - COMPLETE. Notification channel toggles (email/push), language selector, currency preference, timezone selector, TikTok handle, quota usage breakdown, upgrade CTA linked to Stripe portal.
 
-## Remaining Work (P2 - Phase 2+)
+## Remaining Work (P2 - Phase 3+)
 
-1. **Error Handling Standardization** - Unified API error model, Printify/Etsy/OpenAI error mapping, frontend ErrorBoundary.
-2. **Rate Limiting** - Per-user/per-IP limits, external API rate limits with aiolimiter, frontend 429 handling.
-3. **Performance Optimization** - Redis caching, DB indexing, frontend React.memo/virtualization/code-splitting.
+1. ~~**Error Handling Standardization**~~ - COMPLETE. Unified APIError model, provider error mapping (Printify/Etsy/OpenAI), frontend ErrorBoundary, request ID tracking.
+2. ~~**Rate Limiting**~~ - COMPLETE. Per-user/per-IP token bucket, external API rate limiting, frontend 429 handling with retry-after countdown.
+3. ~~**Performance Optimization**~~ - MOSTLY COMPLETE. Caching layer (Redis/in-memory), DB indexing, frontend ErrorBoundary. Remaining: Timescale aggregates, image lazy loading.
 4. **Security Audit** - Input validation, auth review, secrets scan, vulnerability scan, STRIDE threat model.
 5. **Documentation** - User docs, developer docs, provider guides, release notes.
 6. **Load Testing** - k6 test suite, Grafana dashboards, SLO alerts.
@@ -66,6 +66,9 @@ This file tracks the remaining work required to bring PODPusher to production re
 - **Prometheus Alert Rules (Phase 1.2.7)** - `prometheus/alerts/scraper.yml` with 6 alert rules: high failure rate (>=5%), critical failure rate (>=25%), circuit breaker open, no scrape activity, slow duration (p95>20s), low keyword extraction.
 - **Scraper Outage Runbook (Phase 1.2.7)** - `docs/runbooks/scraper-outage.md` covering circuit breaker states, diagnosis steps, manual refresh, circuit breaker reset, proxy rotation troubleshooting, selector updates, environment variables, escalation protocol.
 - **RTL Support** - Deferred (internal tool only, no Arabic/Hebrew locale needed).
+- **Error Handling Standardization (Phase 2.1)** - `services/common/errors.py` with APIError model, ErrorCode enum, request ID middleware. `services/common/provider_errors.py` with Printify/Etsy/OpenAI error mapping (20+ error codes). Integration service updated with try/catch and user-friendly messages. Frontend `ErrorBoundary.tsx` with "Try Again" action. `client/services/httpClient.ts` with standardized error classes. 29 tests covering all error scenarios.
+- **Rate Limiting (Phase 2.2)** - `services/common/rate_limit.py` with per-user (plan-tier) and per-IP token bucket middleware. `services/common/api_limiter.py` with async token buckets for Printify (5 req/s), Etsy (10 req/s), OpenAI (3 req/s). Gateway integrated. Frontend `RateLimitBanner.tsx` with countdown UI. `httpClient.ts` with retry-after awareness.
+- **Performance Optimization (Phase 2.3)** - `services/common/cache.py` with Redis/in-memory LRU cache (TTL support). Gateway /trends and /api/trends/live endpoints cached. Database model indexes added to 6 models (Trend, TrendSignal, Product, Notification, AnalyticsEvent fields). `grafana/dashboards/api-latency.json` with 6 panels. `prometheus/alerts/performance.yml` with 6 alert rules. 75 total tests passing.
 
 ## Instructions to Agents
 

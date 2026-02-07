@@ -8,18 +8,18 @@ from sqlmodel import Field, SQLModel
 
 class Trend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    term: str
-    category: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    term: str = Field(index=True)
+    category: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class TrendSignal(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    source: str
-    keyword: str
+    source: str = Field(index=True)
+    keyword: str = Field(index=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
     engagement_score: int = 0
-    category: str = "other"
+    category: str = Field(default="other", index=True)
 
 
 class Idea(SQLModel, table=True):
@@ -31,13 +31,13 @@ class Idea(SQLModel, table=True):
 
 class Product(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    idea_id: int
+    idea_id: int = Field(index=True)
     image_url: str
-    sku: Optional[str] = None
+    sku: Optional[str] = Field(default=None, index=True)
     rating: Optional[int] = None
     tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     flagged: Optional[bool] = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class Listing(SQLModel, table=True):
@@ -74,10 +74,10 @@ class User(SQLModel, table=True):
 
 class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int
+    user_id: int = Field(index=True)
     message: str
     type: str = "info"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     read_status: bool = False
 
 
@@ -131,13 +131,13 @@ class AnalyticsEvent(SQLModel, table=True):
     """Stored analytics event for dashboards."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    event_type: EventType
+    event_type: EventType = Field(index=True)
     path: str
-    user_id: Optional[int] = None
+    user_id: Optional[int] = Field(default=None, index=True)
     meta: Dict[str, Any] | None = Field(
         default=None, sa_column=Column("metadata", JSON)
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class OAuthProvider(str, Enum):

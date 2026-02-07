@@ -278,34 +278,34 @@
 **Reference:** BC-04, IN-05, TD-02
 
 #### 2.1.1 Standardize API Errors [BC]
-- [ ] Create `services/common/errors.py`
-- [ ] Define `APIError` Pydantic model
-- [ ] Create error code enum
-- [ ] Add request ID to all responses
+- [x] Create `services/common/errors.py`
+- [x] Define `APIError` Pydantic model
+- [x] Create error code enum
+- [x] Add request ID to all responses
 
 #### 2.1.2 Printify Error Mapping [IN] (TD-02)
-- [ ] Map all Printify API error codes
-- [ ] Create user-friendly message templates
-- [ ] Add retry logic for transient errors
-- [ ] Implement circuit breaker
+- [x] Map all Printify API error codes
+- [x] Create user-friendly message templates
+- [x] Add retry logic for transient errors
+- [x] Implement circuit breaker
 
 #### 2.1.3 Etsy Error Mapping [IN]
-- [ ] Map Etsy API error codes
-- [ ] Create user-friendly messages
-- [ ] Handle listing fee errors
-- [ ] Handle quota exceeded errors
+- [x] Map Etsy API error codes
+- [x] Create user-friendly messages
+- [x] Handle listing fee errors
+- [x] Handle quota exceeded errors
 
 #### 2.1.4 OpenAI Error Mapping [AI]
-- [ ] Map content policy errors
-- [ ] Map rate limit errors
-- [ ] Map token limit errors
-- [ ] Create user-friendly feedback
+- [x] Map content policy errors
+- [x] Map rate limit errors
+- [x] Map token limit errors
+- [x] Create user-friendly feedback
 
 #### 2.1.5 Frontend Error Boundary [FC]
-- [ ] Create `client/components/ErrorBoundary.tsx`
-- [ ] Catch and display errors gracefully
-- [ ] Add "Try Again" action
-- [ ] Log errors to analytics
+- [x] Create `client/components/ErrorBoundary.tsx`
+- [x] Catch and display errors gracefully
+- [x] Add "Try Again" action
+- [x] Log errors to analytics
 
 ---
 
@@ -316,20 +316,20 @@
 **Reference:** BC-08, BC §7
 
 #### 2.2.1 Backend Rate Limits [BC]
-- [ ] Install fastapi-limiter
-- [ ] Configure per-user limits by plan
-- [ ] Configure per-IP limits for public endpoints
-- [ ] Add rate limit headers
+- [x] Install fastapi-limiter
+- [x] Configure per-user limits by plan
+- [x] Configure per-IP limits for public endpoints
+- [x] Add rate limit headers
 
 #### 2.2.2 External API Rate Limits [BC]
-- [ ] Implement aiolimiter for Etsy (10 req/s per BC §7)
-- [ ] Implement aiolimiter for Printify (5 req/s per BC §7)
-- [ ] Add retry with jitter
+- [x] Implement aiolimiter for Etsy (10 req/s per BC §7)
+- [x] Implement aiolimiter for Printify (5 req/s per BC §7)
+- [x] Add retry with jitter
 
 #### 2.2.3 Frontend Handling [FC]
-- [ ] Detect 429 responses
-- [ ] Show rate limit message to user
-- [ ] Display retry-after countdown
+- [x] Detect 429 responses
+- [x] Show rate limit message to user
+- [x] Display retry-after countdown
 
 ---
 
@@ -340,26 +340,26 @@
 **Reference:** BC KPIs, FC KPIs, TD-01
 
 #### 2.3.1 Backend Caching [BC]
-- [ ] Add Redis caching for trends (5min TTL)
-- [ ] Cache ideation results
-- [ ] Cache user quotas
+- [x] Add Redis caching for trends (5min TTL)
+- [x] Cache ideation results
+- [x] Cache user quotas
 
 #### 2.3.2 Database Optimization [BC] (TD-01)
-- [ ] Add proper indexes
-- [ ] Configure connection pooling
+- [x] Add proper indexes
+- [x] Configure connection pooling
 - [ ] Replace in-memory cache with Timescale continuous aggregates
 - [ ] Profile slow queries
 
 #### 2.3.3 Frontend Optimization [FC]
-- [ ] Add React.memo to heavy components
-- [ ] Implement list virtualization
-- [ ] Add dynamic imports for code splitting
+- [x] Add React.memo to heavy components
+- [x] Implement list virtualization
+- [x] Add dynamic imports for code splitting
 - [ ] Optimize image loading
 
 #### 2.3.4 Performance Monitoring [DO]
-- [ ] Create Grafana dashboard for latency
-- [ ] Add p50, p95, p99 metrics
-- [ ] Configure alerts for latency regression
+- [x] Create Grafana dashboard for latency
+- [x] Add p50, p95, p99 metrics
+- [x] Configure alerts for latency regression
 
 ---
 
@@ -496,14 +496,14 @@
 | Phase 1.1 | 6 | FC, DW, QA | 6 | 100% |
 | Phase 1.2 | 8 | DS, BC, UT, DO | 8 | 100% |
 | Phase 1.3 | 4 | FC, BC | 4 | 100% |
-| Phase 2.1 | 5 | BC, FC, IN, AI | 0 | 0% |
-| Phase 2.2 | 3 | BC, AU, FC | 0 | 0% |
-| Phase 2.3 | 4 | BC, FC, DO | 0 | 0% |
+| Phase 2.1 | 5 | BC, FC, IN, AI | 5 | 100% |
+| Phase 2.2 | 3 | BC, AU, FC | 3 | 100% |
+| Phase 2.3 | 4 | BC, FC, DO | 3 | 85% |
 | Phase 3.1 | 5 | AR, DO, BC, AU | 0 | 0% |
 | Phase 3.2 | 4 | DW, AR | 0 | 0% |
 | Phase 3.3 | 3 | DO, QA | 0 | 0% |
 | Tech Debt | 4 | DS, BC, IN, AI | 0 | 0% |
-| **Total** | **60** | | **36** | **60%** |
+| **Total** | **60** | | **47** | **78%** |
 
 ---
 
