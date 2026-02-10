@@ -89,6 +89,8 @@ export default function SocialMediaGenerator() {
             <img
               src={`data:image/png;base64,${result.image}`}
               alt={result.caption}
+              loading="lazy"
+              decoding="async"
               className="w-64 h-64 object-contain"
             />
           )}

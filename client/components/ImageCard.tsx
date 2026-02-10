@@ -21,7 +21,7 @@ interface ImageCardProps {
 
 const STAR_VALUES = [1, 2, 3, 4, 5];
 
-const ImageCard: React.FC<ImageCardProps> = ({
+const ImageCard: React.FC<ImageCardProps> = React.memo(({
   product,
   onOptimisticUpdate,
   onCommit,
@@ -132,7 +132,13 @@ const ImageCard: React.FC<ImageCardProps> = ({
   return (
     <div className="border p-4 rounded space-y-4" data-testid={`image-card-${product.id}`}>
       <div className="space-y-2">
-        <img src={product.image_url} alt={product.name} className="w-full h-auto rounded" />
+        <img
+          src={product.image_url}
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-auto rounded"
+        />
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{product.name}</h2>
           <button
@@ -225,6 +231,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
       ) : null}
     </div>
   );
-};
+});
+
+ImageCard.displayName = 'ImageCard';
 
 export default ImageCard;
