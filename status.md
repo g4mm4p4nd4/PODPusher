@@ -15,7 +15,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 |-------|--------|------------|
 | Phase 0: Critical MVP Blockers | **COMPLETE** | 100% |
 | Phase 1: Core Experience Polish | **COMPLETE** | 100% |
-| Phase 2: Enhanced Reliability | **COMPLETE** | 95% |
+| Phase 2: Enhanced Reliability | **COMPLETE** | 100% |
 | Phase 3: Launch Preparation | Not Started | 0% |
 
 ## Pending PRs
@@ -37,7 +37,7 @@ This file tracks the remaining work required to bring PODPusher to production re
 
 1. ~~**Error Handling Standardization**~~ - COMPLETE. Unified APIError model, provider error mapping (Printify/Etsy/OpenAI), frontend ErrorBoundary, request ID tracking.
 2. ~~**Rate Limiting**~~ - COMPLETE. Per-user/per-IP token bucket, external API rate limiting, frontend 429 handling with retry-after countdown.
-3. ~~**Performance Optimization**~~ - MOSTLY COMPLETE. Caching layer (Redis/in-memory), DB indexing, frontend ErrorBoundary. Remaining: Timescale aggregates, image lazy loading.
+3. ~~**Performance Optimization**~~ - COMPLETE. Caching layer (Redis/in-memory), DB indexing, Timescale continuous aggregates migration, slow query profiling, image lazy loading, frontend ErrorBoundary.
 4. **Security Audit** - Input validation, auth review, secrets scan, vulnerability scan, STRIDE threat model.
 5. **Documentation** - User docs, developer docs, provider guides, release notes.
 6. **Load Testing** - k6 test suite, Grafana dashboards, SLO alerts.
@@ -69,6 +69,9 @@ This file tracks the remaining work required to bring PODPusher to production re
 - **Error Handling Standardization (Phase 2.1)** - `services/common/errors.py` with APIError model, ErrorCode enum, request ID middleware. `services/common/provider_errors.py` with Printify/Etsy/OpenAI error mapping (20+ error codes). Integration service updated with try/catch and user-friendly messages. Frontend `ErrorBoundary.tsx` with "Try Again" action. `client/services/httpClient.ts` with standardized error classes. 29 tests covering all error scenarios.
 - **Rate Limiting (Phase 2.2)** - `services/common/rate_limit.py` with per-user (plan-tier) and per-IP token bucket middleware. `services/common/api_limiter.py` with async token buckets for Printify (5 req/s), Etsy (10 req/s), OpenAI (3 req/s). Gateway integrated. Frontend `RateLimitBanner.tsx` with countdown UI. `httpClient.ts` with retry-after awareness.
 - **Performance Optimization (Phase 2.3)** - `services/common/cache.py` with Redis/in-memory LRU cache (TTL support). Gateway /trends and /api/trends/live endpoints cached. Database model indexes added to 6 models (Trend, TrendSignal, Product, Notification, AnalyticsEvent fields). `grafana/dashboards/api-latency.json` with 6 panels. `prometheus/alerts/performance.yml` with 6 alert rules. 75 total tests passing.
+- **Timescale Continuous Aggregates (TD-01)** - `alembic/versions/0003_timescale_trend_aggregates.py` migration with PostgreSQL/SQLite detection. Creates hypertable on `trendsignal`, hourly/daily continuous aggregates, refresh policies (30min/6h), 90-day retention policy. Composite indexes on both backends.
+- **Slow Query Profiling (Phase 2.3.2)** - `services/common/database.py` rewritten with SQLAlchemy event listeners for `before_cursor_execute`/`after_cursor_execute`. Configurable threshold via `SLOW_QUERY_THRESHOLD_MS` env var (default 200ms). PostgreSQL connection pooling (pool_size=10, max_overflow=20, pool_pre_ping=True).
+- **Image Lazy Loading (Phase 2.3.3)** - Added `loading="lazy"` and `decoding="async"` to `<img>` tags in `ImageCard.tsx`, `search.tsx`, and `SocialMediaGenerator.tsx`. `ImageCard` wrapped with `React.memo()` for render optimization.
 
 ## Instructions to Agents
 
