@@ -5,6 +5,7 @@ import {
   imageGeneratedEvent,
   quotaRefreshEvent,
   UserProfile,
+  createBillingPortalSession,
 } from '../services/user';
 
 const REFRESH_EVENTS = [quotaRefreshEvent, imageGeneratedEvent];
@@ -68,9 +69,23 @@ export default function UserQuota() {
     return PLAN_BREAKDOWN[profile.plan] ?? PLAN_BREAKDOWN.free;
   }, [profile]);
 
-  const handleUpgrade = () => {
-    window.location.href = '/api/billing/portal';
-  };
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
+
+  const handleUpgrade = useCallback(async () => {
+    if (typeof window === 'undefined' || isOpeningPortal) {
+      return;
+    }
+
+    setIsOpeningPortal(true);
+    try {
+      const portalUrl = await createBillingPortalSession(window.location.pathname);
+      window.location.href = portalUrl;
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  }, [isOpeningPortal]);
 
   if (!profile) {
     return (
@@ -144,9 +159,10 @@ export default function UserQuota() {
           data-testid="upgrade-cta"
           type="button"
           onClick={handleUpgrade}
-          className="mt-2 w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors"
+          disabled={isOpeningPortal}
+          className="mt-2 w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {t('settings.upgrade')}
+          {isOpeningPortal ? t('loading') : t('settings.upgrade')}
         </button>
       )}
     </div>
