@@ -3,7 +3,12 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import UserQuota from '../components/UserQuota';
-import { fetchCurrentUser, imageGeneratedEvent } from '../services/user';
+import {
+  createBillingPortalSession,
+  fetchCurrentUser,
+  imageGeneratedEvent,
+} from '../services/user';
+import { navigateTo } from '../utils/navigation';
 
 const translationMock = {
   t: (key: string, options?: Record<string, string | number>) => {
@@ -15,7 +20,7 @@ const translationMock = {
       case 'quota.remaining':
         return `${options?.count} credits left`;
       case 'quota.unlimited':
-        return `${options?.plan} · Unlimited`;
+        return `${options?.plan} Unlimited`;
       case 'quota.ariaProgress':
         return `${options?.percentage}% used`;
       default:
@@ -30,14 +35,22 @@ jest.mock('next-i18next', () => ({
 
 jest.mock('../services/user', () => ({
   fetchCurrentUser: jest.fn(),
+  createBillingPortalSession: jest.fn(),
   imageGeneratedEvent: 'image:generated',
   quotaRefreshEvent: 'quota:refresh',
 }));
+jest.mock('../utils/navigation', () => ({
+  navigateTo: jest.fn(),
+}));
 
 const mockedFetch = fetchCurrentUser as jest.Mock;
+const mockedCreatePortalSession = createBillingPortalSession as jest.Mock;
+const mockedNavigateTo = navigateTo as jest.Mock;
 
 afterEach(() => {
   mockedFetch.mockReset();
+  mockedCreatePortalSession.mockReset();
+  mockedNavigateTo.mockReset();
 });
 
 test('renders a progress bar for metered plans', async () => {
@@ -56,9 +69,7 @@ test('shows unlimited status for pro plans', async () => {
 
   render(<UserQuota />);
 
-  await waitFor(() =>
-    expect(screen.getByTestId('quota')).toHaveTextContent('Pro · Unlimited')
-  );
+  await waitFor(() => expect(screen.getByText('Pro Unlimited')).toBeInTheDocument());
 });
 
 test('refreshes usage when quota events are emitted', async () => {
@@ -76,4 +87,20 @@ test('refreshes usage when quota events are emitted', async () => {
   });
 
   await waitFor(() => expect(screen.getByText('10/20')).toBeInTheDocument());
+});
+
+test('opens billing portal from upgrade CTA using current-location return URL', async () => {
+  window.history.replaceState({}, '', '/search?q=abc#results');
+  mockedFetch.mockResolvedValue({ plan: 'free', quota_used: 5, quota_limit: 20 });
+  mockedCreatePortalSession.mockResolvedValue('https://billing.example.com/portal/session');
+  render(<UserQuota />);
+
+  await waitFor(() => expect(screen.getByTestId('upgrade-cta')).toBeInTheDocument());
+
+  await act(async () => {
+    screen.getByTestId('upgrade-cta').click();
+  });
+
+  expect(mockedCreatePortalSession).toHaveBeenCalledWith('/search?q=abc#results');
+  expect(mockedNavigateTo).toHaveBeenCalledWith('https://billing.example.com/portal/session');
 });
