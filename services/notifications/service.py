@@ -64,10 +64,10 @@ async def list_notifications(user_id: int) -> List[dict]:
     return [_to_dict(item) for item in notifications]
 
 
-async def mark_read(notification_id: int) -> Optional[dict]:
+async def mark_read_for_user(notification_id: int, user_id: int) -> Optional[dict]:
     async with get_session() as session:
         record = await session.get(Notification, notification_id)
-        if not record:
+        if not record or record.user_id != user_id:
             return None
         record.read_status = True
         session.add(record)
@@ -247,3 +247,4 @@ scheduler.add_job(
 def start_scheduler() -> None:
     if not scheduler.running:
         scheduler.start()
+

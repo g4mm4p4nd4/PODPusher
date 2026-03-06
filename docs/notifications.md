@@ -26,9 +26,11 @@ Notifications are stored in the database and surfaced via the `/api/notification
 
 - `GET /api/notifications/` - List delivered notifications for the authenticated user.
 - `POST /api/notifications/` - Create an immediate notification (internal use).
-- `PUT /api/notifications/{id}/read` - Mark a notification as read.
+- `PUT /api/notifications/{id}/read` - Mark a notification as read for the authenticated user only.
 - `GET /api/notifications/scheduled` - List upcoming or historical scheduled notifications.
 - `POST /api/notifications/scheduled` - Schedule a future notification with optional metadata payload.
 - `DELETE /api/notifications/scheduled/{id}` - Cancel a pending notification.
+
+All endpoints are user-scoped. A valid numeric `X-User-Id` header is required when a request does not provide a payload `user_id`. Invalid header values return `400`.
 
 Scheduler intervals are configurable via `NOTIFY_DISPATCH_INTERVAL_MINUTES` and `NOTIFY_LAUNCH_DIGEST_HOUR` environment variables.
