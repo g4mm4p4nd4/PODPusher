@@ -1,7 +1,9 @@
+import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { completeOAuthCallback } from '../../../services/oauth';
+import { getCommonServerSideProps } from '../../../utils/translationProps';
 
 type Status = 'preparing' | 'working' | 'success' | 'error';
 
@@ -114,3 +116,7 @@ export default function OAuthCallbackPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: await getCommonServerSideProps(locale),
+});

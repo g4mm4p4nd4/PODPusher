@@ -1,5 +1,6 @@
 import ListingComposer from '../components/ListingComposer';
 import { useTranslation } from 'next-i18next';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function Listings() {
   const { t } = useTranslation('common');
@@ -10,3 +11,5 @@ export default function Listings() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

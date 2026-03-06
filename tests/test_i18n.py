@@ -1,7 +1,7 @@
 """Translation key verification tests.
 
 Owner: Unit-Tester (per DEVELOPMENT_PLAN.md Task 1.1)
-Reference: FC §7 (Internationalisation)
+Reference: FC Section 7 (Internationalisation)
 
 Ensures all locale files have identical key sets to prevent
 missing translations at runtime.

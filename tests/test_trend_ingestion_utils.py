@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -100,4 +100,3 @@ async def test_get_live_trends_applies_source_dedup_recency_and_limit():
     assert len(trends["animals"]) == 1
     assert trends["animals"][0]["keyword"] == "Funny Cat"
     assert trends["animals"][0]["source"] == "tiktok"
-

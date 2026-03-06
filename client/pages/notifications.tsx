@@ -1,3 +1,4 @@
+import { getCommonStaticProps } from '../utils/translationProps';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
@@ -56,3 +57,5 @@ export default function Notifications() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

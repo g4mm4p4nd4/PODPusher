@@ -1,4 +1,5 @@
 import BulkUploader from '../components/BulkUploader';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function BulkUploadPage() {
   return (
@@ -7,3 +8,5 @@ export default function BulkUploadPage() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

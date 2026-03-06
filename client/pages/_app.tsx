@@ -1,5 +1,7 @@
 import type { AppProps } from 'next/app';
 import { appWithTranslation } from 'next-i18next';
+import type { UserConfig } from 'next-i18next';
+import nextI18NextConfig from '../i18n.shared';
 import '../styles/globals.css';
 import Layout from '../components/Layout';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -17,4 +19,4 @@ function MyApp({ Component, pageProps }: AppProps) {
   );
 }
 
-export default appWithTranslation(MyApp);
+export default appWithTranslation(MyApp, nextI18NextConfig as UserConfig);

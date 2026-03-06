@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 import { resolveApiUrl } from '../services/apiBase';
 import {
@@ -149,3 +150,5 @@ export default function Home() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

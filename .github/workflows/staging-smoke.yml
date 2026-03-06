@@ -1,0 +1,33 @@
+name: Staging Pipeline Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      category:
+        description: "Trend category to seed the smoke path"
+        required: false
+        default: "general"
+
+jobs:
+  staging-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+      - name: Run credential-backed trend-to-listing smoke
+        env:
+          POD_STAGING_SMOKE: "1"
+          POD_STAGING_CATEGORY: ${{ github.event.inputs.category }}
+          OPENAI_USE_STUB: "0"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ETSY_CLIENT_ID: ${{ secrets.ETSY_CLIENT_ID }}
+          ETSY_ACCESS_TOKEN: ${{ secrets.ETSY_ACCESS_TOKEN }}
+          ETSY_SHOP_ID: ${{ secrets.ETSY_SHOP_ID }}
+          PRINTIFY_API_KEY: ${{ secrets.PRINTIFY_API_KEY }}
+          PRINTIFY_SHOP_ID: ${{ secrets.PRINTIFY_SHOP_ID }}
+        run: pytest -q tests/test_staging_pipeline_smoke.py

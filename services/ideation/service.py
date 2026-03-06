@@ -1,6 +1,5 @@
 from typing import List, Dict, Union
 import asyncio
-import os
 from datetime import datetime
 from ..models import Idea, Trend
 from ..common.database import get_session

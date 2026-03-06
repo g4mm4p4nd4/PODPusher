@@ -1,5 +1,11 @@
-
 # Internal Documentation
+
+## Source-of-Truth Integration
+
+The integration runbook for reconciling local work with `origin/main` lives in
+`docs/source_of_truth_integration.md`. It defines the replay-based workflow,
+validation ladder, and automation guardrails used to prove that a local branch
+has actually been integrated into the remote source of truth.
 
 ## Testing & QA Strategy
 
@@ -28,8 +34,8 @@ npx playwright test
 
 Roles from `agents.md`:
 
-- **QA‑Automator** – maintains end-to-end scenarios and CI reliability.
-- **Unit‑Tester** – expands service level coverage and mocks
+- **QAâ€‘Automator** â€“ maintains end-to-end scenarios and CI reliability.
+- **Unitâ€‘Tester** â€“ expands service level coverage and mocks
   integrations.
 
 ## Integration Service
@@ -124,8 +130,8 @@ flowchart LR
 
 Environment variables:
 
-- `PLAYWRIGHT_PROXY` – optional proxy passed to Playwright.
-- `SCRAPE_INTERVAL_HOURS` – schedule interval for automatic scraping.
+- `PLAYWRIGHT_PROXY` â€“ optional proxy passed to Playwright.
+- `SCRAPE_INTERVAL_HOURS` â€“ schedule interval for automatic scraping.
 
 ## Frontend Page
 
@@ -155,9 +161,9 @@ resumed, and listings can be composed in multiple languages.
 
 ### Draft API
 
-- **POST `/api/listing-composer/drafts`** – save or update a draft. Body
+- **POST `/api/listing-composer/drafts`** â€“ save or update a draft. Body
   includes `title`, `description`, `tags`, `language` and `field_order`.
-- **GET `/api/listing-composer/drafts/{id}`** – fetch a previously saved draft.
+- **GET `/api/listing-composer/drafts/{id}`** â€“ fetch a previously saved draft.
 
 The tag suggestion endpoint now ranks suggestions using historical sales and
 search frequency data for improved relevance.
@@ -170,10 +176,10 @@ The analytics module records user interactions and exposes aggregated metrics fo
 ### Components
 - **Model**: `AnalyticsEvent` in `services/models.py` stores `event_type`, `path`, optional `user_id` and `metadata`.
 - **API** (`services/analytics/api.py`):
-  - `POST /analytics/events` – record an event.
-  - `GET /analytics/events` – list events by type.
-  - `GET /analytics/summary` – aggregate counts and conversion rates per path.
-- **Middleware**: `AnalyticsMiddleware` attaches to FastAPI apps and logs `page_view` events asynchronously to keep p95 latency under 300 ms.
+  - `POST /analytics/events` â€“ record an event.
+  - `GET /analytics/events` â€“ list events by type.
+  - `GET /analytics/summary` â€“ aggregate counts and conversion rates per path.
+- **Middleware**: `AnalyticsMiddleware` attaches to FastAPI apps and logs `page_view` events asynchronously to keep p95 latency under 300â€¯ms.
 - **Stripe Usage**: conversion events trigger an async usage report to Stripe for billing (skipped when `STRIPE_API_KEY` is absent).
 
 ### Architecture Diagram
@@ -206,16 +212,16 @@ for the dashboard to display remaining credits.
 
 ### API
 
-- **GET `/api/user/me`** – returns `{ plan, quota_used, quota_limit }` and resets
+- **GET `/api/user/me`** â€“ returns `{ plan, quota_used, quota_limit }` and resets
   monthly usage when needed. `quota_limit` is `null` for unlimited plans.
-- **POST `/api/user/me`** – increment usage by `count`; returns updated
+- **POST `/api/user/me`** â€“ increment usage by `count`; returns updated
   `{ plan, quota_used, quota_limit }` or 403 when the quota would be exceeded.
 
 ### Frontend
 
 The `UserQuota` component in the dashboard navigation calls the GET endpoint
 via a typed client and renders a progress bar that refreshes when image
-generation completes. Unlimited plans show a simple “Unlimited” badge instead
+generation completes. Unlimited plans show a simple â€œUnlimitedâ€ badge instead
 of the meter.
 
 ## Advanced Search Service

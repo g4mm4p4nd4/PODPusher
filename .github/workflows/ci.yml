@@ -37,11 +37,12 @@ jobs:
       - name: Frontend build
         run: npm run build --prefix client
       - name: Playwright tests
+        env:
+          NODE_PATH: ${{ github.workspace }}/client/node_modules
         run: |
-          if npx playwright --version > /dev/null 2>&1; then
-            npx playwright install --with-deps
-            npx playwright test
+          if npm exec --prefix client playwright -- --version > /dev/null 2>&1; then
+            npm exec --prefix client playwright -- install --with-deps
+            npm exec --prefix client playwright -- test
           else
             echo 'Playwright not available, skipping'
           fi
-

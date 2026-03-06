@@ -1,9 +1,9 @@
 """Tests for billing service."""
 
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
-from services.billing.plans import PlanTier, PlanLimits, get_plan_limits, get_tier_from_stripe_product
+from services.billing.plans import PlanTier, get_plan_limits, get_tier_from_stripe_product
 
 
 class TestPlanTiers:

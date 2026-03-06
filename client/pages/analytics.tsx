@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useTranslation } from 'next-i18next';
 import AnalyticsChart from '../components/AnalyticsChart';
 import { fetchTrendingKeywords, TrendingKeyword } from '../services/analytics';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function Analytics() {
   const { t, i18n } = useTranslation('common');
@@ -74,3 +75,5 @@ export default function Analytics() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

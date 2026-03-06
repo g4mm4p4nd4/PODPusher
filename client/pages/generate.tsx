@@ -6,6 +6,7 @@ import { useTranslation } from 'next-i18next';
 import { useProviders } from '../contexts/ProviderContext';
 import { getAuthHeaders, resolveApiUrl } from '../services/apiBase';
 import { formatCurrency } from '../utils/intl';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 interface GenerateResult {
   trends?: Array<Record<string, any>>;
@@ -231,3 +232,5 @@ export default function Generate() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

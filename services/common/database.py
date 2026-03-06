@@ -1,11 +1,13 @@
-﻿"""Database engine, session helper, and slow-query profiling.
+"""Database engine, session helper, and slow-query profiling.
 
 Owner: Backend-Coder (per DEVELOPMENT_PLAN.md Task 2.3.2)
 """
 
 import logging
 import os
+import tempfile
 import time
+import uuid
 from contextlib import asynccontextmanager
 
 from sqlalchemy import event
@@ -66,25 +68,41 @@ except Exception:
     pass  # Silently skip if engine doesn't expose sync_engine yet
 
 
+def _sqlite_file_path(url: str) -> str:
+    return url.split("///", maxsplit=1)[-1]
+
+
+def _sqlite_url(path: str) -> str:
+    return f"sqlite+aiosqlite:///{path}"
+
+
 async def init_db() -> None:
-    global engine
+    global engine, DATABASE_URL
     if DATABASE_URL.startswith("sqlite"):
-        path = DATABASE_URL.split("///")[-1]
-        if os.path.exists(path):
+        db_path = _sqlite_file_path(DATABASE_URL)
+        try:
+            await engine.dispose()  # ensure no open connections block removal
+        except Exception:
+            pass
+
+        if os.path.exists(db_path):
             try:
-                await engine.dispose()  # ensure no open connections block removal
-            except Exception:
-                pass
-            try:
-                os.remove(path)
+                os.remove(db_path)
             except PermissionError:
-                # Windows may keep the SQLite file locked; fall back to drop_all.
-                pass
+                # On Windows, a locked SQLite file can leave partial schema state behind.
+                # Switch to a fresh temp file instead of reusing the stale database.
+                temp_path = os.path.join(
+                    tempfile.gettempdir(),
+                    f"podpusher-{uuid.uuid4().hex}.db",
+                )
+                DATABASE_URL = _sqlite_url(temp_path)
+
         engine = create_async_engine(DATABASE_URL, echo=False, future=True)
         try:
             _register_query_profiling(engine.sync_engine)
         except Exception:
             pass
+
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -94,5 +112,3 @@ async def init_db() -> None:
 async def get_session() -> AsyncSession:
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
-
-

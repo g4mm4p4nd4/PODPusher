@@ -1,19 +1,44 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 import { spawn, ChildProcess } from 'child_process';
+import path from 'path';
 
-const api = 'http://localhost:8000';
+const api = 'http://127.0.0.1:18000';
 let server: ChildProcess;
+const repoRoot = path.resolve(__dirname, '..', '..');
 
-test.beforeAll(async () => {
+async function waitForHealthcheck(request: APIRequestContext) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    try {
+      const response = await request.get(`${api}/healthz`);
+      if (response.ok()) {
+        return;
+      }
+    } catch (error) {
+      // Service is still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error('Timed out waiting for image service health check');
+}
+
+test.beforeAll(async ({ request }) => {
   await new Promise((resolve) => {
     const init = spawn('python', [
       '-c',
       'import asyncio; from services.common.database import init_db; asyncio.run(init_db())',
-    ]);
+    ], { cwd: repoRoot });
     init.on('exit', resolve);
   });
-  server = spawn('python', ['-m', 'uvicorn', 'services.image_gen.api:app', '--port', '8000']);
-  await new Promise((r) => setTimeout(r, 1000));
+  server = spawn('python', [
+    '-m',
+    'uvicorn',
+    'services.image_gen.api:app',
+    '--host',
+    '127.0.0.1',
+    '--port',
+    '18000',
+  ], { cwd: repoRoot });
+  await waitForHealthcheck(request);
 });
 
 test.afterAll(() => {

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { resolveApiUrl } from '../services/apiBase';
+import { getCommonStaticProps } from '../utils/translationProps';
 
 interface Suggestion {
   category: string;
@@ -64,3 +65,5 @@ export default function Suggestions() {
     </div>
   );
 }
+
+export const getStaticProps = getCommonStaticProps;

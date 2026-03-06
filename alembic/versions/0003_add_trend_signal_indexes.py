@@ -1,7 +1,6 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from alembic import op
-import sqlalchemy as sa
 
 
 revision = "0003_add_trend_signal_indexes"

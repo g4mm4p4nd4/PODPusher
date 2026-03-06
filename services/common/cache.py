@@ -125,6 +125,6 @@ def cache_clear() -> None:
 
 
 # Default TTLs for different data types
-CACHE_TTL_TRENDS = int(os.getenv("CACHE_TTL_TRENDS", "300"))        # 5 min
-CACHE_TTL_IDEAS = int(os.getenv("CACHE_TTL_IDEAS", "600"))          # 10 min
-CACHE_TTL_USER_QUOTA = int(os.getenv("CACHE_TTL_USER_QUOTA", "60")) # 1 min
+CACHE_TTL_TRENDS = int(os.getenv("CACHE_TTL_TRENDS", "300"))  # 5 min
+CACHE_TTL_IDEAS = int(os.getenv("CACHE_TTL_IDEAS", "600"))  # 10 min
+CACHE_TTL_USER_QUOTA = int(os.getenv("CACHE_TTL_USER_QUOTA", "60"))  # 1 min

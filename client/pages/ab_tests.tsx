@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { resolveApiUrl } from '../services/apiBase';
+import { getCommonServerSideProps } from '../utils/translationProps';
 
 export type ABMetric = {
   id: number;
@@ -132,12 +133,22 @@ export default function ABTests({ metrics: initial }: Props) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<Props> = async () => {
+export const getServerSideProps: GetServerSideProps<Props> = async ({ locale }) => {
   try {
     const res = await axios.get<ABMetric[]>(resolveApiUrl('/ab_tests/metrics'));
-    return { props: { metrics: res.data } };
+    return {
+      props: {
+        ...(await getCommonServerSideProps(locale)),
+        metrics: res.data,
+      },
+    };
   } catch (err) {
     console.error(err);
-    return { props: { metrics: [] } };
+    return {
+      props: {
+        ...(await getCommonServerSideProps(locale)),
+        metrics: [],
+      },
+    };
   }
 };
