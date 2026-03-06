@@ -1,18 +1,34 @@
 from __future__ import annotations
 
-import logging
+import os
 from typing import Dict, List, Optional
 
+import httpx
 from sqlmodel import select
 
 from packages.integrations.printify import get_printify_client
 from packages.integrations.etsy import get_etsy_client
 from services.auth import service as auth_service
 from ..common.database import get_session
-from ..common.provider_errors import handle_printify_error, handle_etsy_error
 from ..models import OAuthCredential, OAuthProvider
 
-logger = logging.getLogger(__name__)
+
+class IntegrationServiceError(Exception):
+    """Base error for integration operations."""
+
+    status_code = 500
+
+
+class IntegrationCredentialError(IntegrationServiceError):
+    status_code = 424
+
+
+class IntegrationPayloadError(IntegrationServiceError):
+    status_code = 422
+
+
+class IntegrationUpstreamError(IntegrationServiceError):
+    status_code = 502
 
 
 async def load_oauth_credentials(
@@ -43,19 +59,60 @@ async def load_oauth_credentials(
         }
 
 
-def create_sku(products: List[dict], credential: Optional[Dict[str, Optional[str]]] = None) -> List[dict]:
-    """Create SKUs via Printify with error handling and rate limiting."""
+def _ensure_live_credential(
+    provider: OAuthProvider,
+    credential: Optional[Dict[str, Optional[str]]],
+) -> Dict[str, Optional[str]]:
+    if not credential:
+        raise IntegrationCredentialError(
+            f"OAuth credentials for {provider.value} are required"
+        )
+    if not credential.get("access_token"):
+        raise IntegrationCredentialError(
+            f"{provider.value} credential missing access token"
+        )
+    if not credential.get("account_id"):
+        raise IntegrationCredentialError(
+            f"{provider.value} credential missing account ID"
+        )
+    return credential
+
+
+def create_sku(
+    products: List[dict],
+    credential: Optional[Dict[str, Optional[str]]] = None,
+    require_live: bool = False,
+) -> List[dict]:
+    if require_live:
+        credential = _ensure_live_credential(OAuthProvider.PRINTIFY, credential)
     client = get_printify_client(credential)
     try:
-        return client(products)
-    except Exception as exc:
-        raise handle_printify_error(exc, context={"product_count": len(products)})
+        created = client(products)
+    except ValueError as exc:
+        raise IntegrationPayloadError(str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise IntegrationUpstreamError("Printify request failed") from exc
+    if require_live and any(str(item.get("sku", "")).startswith("stub-sku-") for item in created):
+        raise IntegrationCredentialError("Printify live credentials are not configured")
+    return created
 
 
-def publish_listing(product: dict, credential: Optional[Dict[str, Optional[str]]] = None) -> dict:
-    """Publish a listing via Etsy with error handling and rate limiting."""
+def publish_listing(
+    product: dict,
+    credential: Optional[Dict[str, Optional[str]]] = None,
+    require_live: bool = False,
+) -> dict:
+    if require_live:
+        credential = _ensure_live_credential(OAuthProvider.ETSY, credential)
+        if not os.getenv("ETSY_CLIENT_ID"):
+            raise IntegrationCredentialError("ETSY_CLIENT_ID is required for live listing")
     client = get_etsy_client(credential)
     try:
-        return client(product)
-    except Exception as exc:
-        raise handle_etsy_error(exc, context={"title": product.get("title", "")[:50]})
+        listing = client(product)
+    except ValueError as exc:
+        raise IntegrationPayloadError(str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise IntegrationUpstreamError("Etsy request failed") from exc
+    if require_live and str(listing.get("etsy_url", "")).startswith("https://etsy.example/"):
+        raise IntegrationCredentialError("Etsy live credentials are not configured")
+    return listing
