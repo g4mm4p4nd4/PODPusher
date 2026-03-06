@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 from httpx import ASGITransport, AsyncClient
+from sqlmodel import select
 
 from services.common.database import get_session, init_db
 from services.models import Notification, ScheduledNotification, User
@@ -12,7 +13,6 @@ from services.notifications.service import (
     schedule_notification,
     weekly_trending_summary,
 )
-from sqlmodel import select
 
 
 @pytest.fixture(autouse=True)
@@ -52,24 +52,26 @@ async def test_notification_crud():
 
 
 @pytest.mark.asyncio
-async def test_mark_read_requires_owning_user():
+async def test_mark_read_denies_other_user():
     await init_db()
     transport = _transport()
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
+        create_resp = await client.post(
             "/",
             json={"message": "private", "type": "info"},
-            headers={"X-User-Id": "101"},
+            headers={"X-User-Id": "11"},
         )
-        assert resp.status_code == 200
-        notification_id = resp.json()["id"]
+        notification_id = create_resp.json()["id"]
 
-        resp = await client.put(f"/{notification_id}/read", headers={"X-User-Id": "202"})
-        assert resp.status_code == 404
+        denied_resp = await client.put(
+            f"/{notification_id}/read",
+            headers={"X-User-Id": "12"},
+        )
+        assert denied_resp.status_code == 404
 
-        resp = await client.get("/", headers={"X-User-Id": "101"})
-        assert resp.status_code == 200
-        assert resp.json()[0]["read_status"] is False
+        owner_list_resp = await client.get("/", headers={"X-User-Id": "11"})
+        owner_notifications = owner_list_resp.json()
+        assert owner_notifications[0]["read_status"] is False
 
 
 @pytest.mark.asyncio
@@ -77,9 +79,13 @@ async def test_invalid_user_header_returns_400():
     await init_db()
     transport = _transport()
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/", headers={"X-User-Id": "abc"})
-        assert resp.status_code == 400
-        assert resp.json()["detail"] == "Invalid X-User-Id header"
+        list_resp = await client.get("/", headers={"X-User-Id": "abc"})
+        assert list_resp.status_code == 400
+        assert list_resp.json()["detail"] == "Invalid X-User-Id header"
+
+        read_resp = await client.put("/1/read", headers={"X-User-Id": "abc"})
+        assert read_resp.status_code == 400
+        assert read_resp.json()["detail"] == "Invalid X-User-Id header"
 
 
 @pytest.mark.asyncio
@@ -145,6 +151,31 @@ async def test_scheduled_notification_api():
         resp = await client.get("/scheduled", headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         assert resp.json()[0]["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_scheduled_cancel_denies_other_user():
+    await init_db()
+    transport = _transport()
+    schedule_time = datetime.utcnow() + timedelta(minutes=10)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        create_resp = await client.post(
+            "/scheduled",
+            json={
+                "message": "Owner only",
+                "type": "launch",
+                "scheduled_for": schedule_time.isoformat(),
+            },
+            headers={"X-User-Id": "10"},
+        )
+        job_id = create_resp.json()["id"]
+
+        denied_resp = await client.delete(
+            f"/scheduled/{job_id}",
+            headers={"X-User-Id": "11"},
+        )
+        assert denied_resp.status_code == 404
 
 
 @pytest.mark.asyncio

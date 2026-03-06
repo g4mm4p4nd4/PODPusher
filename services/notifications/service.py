@@ -67,7 +67,9 @@ async def list_notifications(user_id: int) -> List[dict]:
 async def mark_read_for_user(notification_id: int, user_id: int) -> Optional[dict]:
     async with get_session() as session:
         record = await session.get(Notification, notification_id)
-        if not record or record.user_id != user_id:
+        if not record:
+            return None
+        if record.user_id != user_id:
             return None
         record.read_status = True
         session.add(record)
@@ -109,10 +111,12 @@ async def list_scheduled_notifications(user_id: int) -> List[dict]:
     return [_scheduled_to_dict(job) for job in jobs]
 
 
-async def cancel_scheduled_notification(job_id: int) -> Optional[dict]:
+async def cancel_scheduled_notification(job_id: int, user_id: int) -> Optional[dict]:
     async with get_session() as session:
         job = await session.get(ScheduledNotification, job_id)
         if not job:
+            return None
+        if job.user_id != user_id:
             return None
         if job.status == "pending":
             job.status = "cancelled"
@@ -247,4 +251,3 @@ scheduler.add_job(
 def start_scheduler() -> None:
     if not scheduler.running:
         scheduler.start()
-
