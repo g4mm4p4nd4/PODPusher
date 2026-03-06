@@ -27,8 +27,14 @@ services:
     build: .
     command: uvicorn services.integration.api:app --port 8004 --host 0.0.0.0
     environment:
+      - PRINTIFY_CLIENT_ID=${PRINTIFY_CLIENT_ID}
+      - PRINTIFY_CLIENT_SECRET=${PRINTIFY_CLIENT_SECRET}
       - PRINTIFY_API_KEY=${PRINTIFY_API_KEY}
-      - ETSY_API_KEY=${ETSY_API_KEY}
+      - PRINTIFY_SHOP_ID=${PRINTIFY_SHOP_ID}
+      - ETSY_CLIENT_ID=${ETSY_CLIENT_ID}
+      - ETSY_CLIENT_SECRET=${ETSY_CLIENT_SECRET}
+      - ETSY_ACCESS_TOKEN=${ETSY_ACCESS_TOKEN}
+      - ETSY_SHOP_ID=${ETSY_SHOP_ID}
   gateway:
     build: .
     command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
