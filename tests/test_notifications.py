@@ -1,17 +1,17 @@
 import pytest
 from datetime import datetime, timedelta
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
+from services.common.database import get_session, init_db
+from services.models import Notification, ScheduledNotification, User
 from services.notifications.api import app as notif_app
 from services.notifications.service import (
-    reset_monthly_quotas,
-    weekly_trending_summary,
-    schedule_notification,
     dispatch_due_notifications,
     list_scheduled_notifications,
+    reset_monthly_quotas,
+    schedule_notification,
+    weekly_trending_summary,
 )
-from services.common.database import init_db, get_session
-from services.models import User, Notification, ScheduledNotification
 from sqlmodel import select
 
 
@@ -19,6 +19,7 @@ from sqlmodel import select
 def _stub_delivery(monkeypatch):
     monkeypatch.setattr("packages.integrations.notifications.send_email", lambda *_, **__: None)
     monkeypatch.setattr("packages.integrations.notifications.send_push", lambda *_, **__: None)
+
 
 def _transport():
     return ASGITransport(app=notif_app)
@@ -45,9 +46,40 @@ async def test_notification_crud():
         assert len(notifs) == 1
         assert notifs[0]["read_status"] is False
 
-        resp = await client.put(f"/{data['id']}/read")
+        resp = await client.put(f"/{data['id']}/read", headers={"X-User-Id": "1"})
         assert resp.status_code == 200
         assert resp.json()["read_status"] is True
+
+
+@pytest.mark.asyncio
+async def test_mark_read_requires_owning_user():
+    await init_db()
+    transport = _transport()
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/",
+            json={"message": "private", "type": "info"},
+            headers={"X-User-Id": "101"},
+        )
+        assert resp.status_code == 200
+        notification_id = resp.json()["id"]
+
+        resp = await client.put(f"/{notification_id}/read", headers={"X-User-Id": "202"})
+        assert resp.status_code == 404
+
+        resp = await client.get("/", headers={"X-User-Id": "101"})
+        assert resp.status_code == 200
+        assert resp.json()[0]["read_status"] is False
+
+
+@pytest.mark.asyncio
+async def test_invalid_user_header_returns_400():
+    await init_db()
+    transport = _transport()
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/", headers={"X-User-Id": "abc"})
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "Invalid X-User-Id header"
 
 
 @pytest.mark.asyncio

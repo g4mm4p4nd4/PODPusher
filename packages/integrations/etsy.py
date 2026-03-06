@@ -45,6 +45,20 @@ def build_listing_payload(product: Dict) -> Dict:
     }
 
 
+def _extract_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        for key in ("message", "error", "detail"):
+            value = payload.get(key)
+            if value:
+                return str(value)
+    body = response.text.strip()
+    return body[:200] if body else "No response body"
+
+
 def _publish_listing_stub(product: Dict) -> Dict:
     logger.info("ETSY credentials missing; returning stub listing")
     replica = dict(product)
@@ -75,9 +89,18 @@ def _publish_listing_real(
             timeout=15,
         )
         response.raise_for_status()
-    except httpx.HTTPError as exc:
-        logger.error("Etsy API error: %s", exc)
-        raise
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        detail = _extract_error_detail(exc.response)
+        logger.error("Etsy API error status=%s detail=%s", status, detail)
+        raise RuntimeError(
+            f"Etsy API request failed with status {status}: {detail}"
+        ) from exc
+    except httpx.RequestError as exc:
+        logger.error("Etsy API transport error: %s", exc)
+        raise RuntimeError(
+            f"Etsy API transport error: {exc.__class__.__name__}"
+        ) from exc
     data = response.json()
     listing_id = data.get("listing_id") or data.get("id")
     url = (

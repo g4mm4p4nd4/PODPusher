@@ -3,6 +3,7 @@ from importlib import reload
 
 import httpx
 
+from services.common.errors import AppError, ErrorCode
 from services.integration import service
 from packages.integrations import etsy as etsy_mod
 from packages.integrations import printify as printify_mod
@@ -83,3 +84,62 @@ def test_publish_listing_calls_api_when_key(monkeypatch):
     result = service.publish_listing(product)
     assert result["etsy_url"] == "http://etsy.com/listing/1"
     assert result["listing_url"] == "http://etsy.com/listing/1"
+
+
+def test_create_sku_surfaces_printify_error_details(monkeypatch):
+    monkeypatch.setenv("PRINTIFY_API_KEY", "real")
+    monkeypatch.setenv("PRINTIFY_SHOP_ID", "shop-1")
+    _reload_modules()
+
+    class FailingPrintifyClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def post(self, url, json, headers, timeout=None):
+            return httpx.Response(
+                400,
+                json={"message": "Invalid blueprint"},
+                request=httpx.Request("POST", url),
+            )
+
+    monkeypatch.setattr(printify_mod.httpx, "Client", FailingPrintifyClient)
+
+    try:
+        service.create_sku([{"title": "Test", "image_url": "http://example.com/image.png"}])
+        assert False, "Expected AppError"
+    except AppError as exc:
+        assert exc.code == ErrorCode.PRINTIFY_VALIDATION
+        assert exc.status_code == 400
+        assert exc.details and exc.details.get("provider_detail") == "Invalid blueprint"
+
+
+def test_publish_listing_surfaces_etsy_error_details(monkeypatch):
+    monkeypatch.setenv("ETSY_CLIENT_ID", "cid")
+    monkeypatch.setenv("ETSY_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("ETSY_SHOP_ID", "123")
+    _reload_modules()
+
+    def fake_post(url, json, headers, timeout):
+        return httpx.Response(
+            429,
+            json={"error": "Rate limited"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(etsy_mod.httpx, "post", fake_post)
+
+    try:
+        service.publish_listing({"title": "Test"})
+        assert False, "Expected AppError"
+    except AppError as exc:
+        assert exc.code == ErrorCode.ETSY_RATE_LIMITED
+        assert exc.status_code == 429
+        assert exc.details and exc.details.get("provider_detail") == "Rate limited"
+
+

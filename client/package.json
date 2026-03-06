@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "jest"
+    "test": "jest",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
     "autoprefixer": "10.4.17",

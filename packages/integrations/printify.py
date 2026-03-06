@@ -58,6 +58,20 @@ PRODUCT_TEMPLATES: Dict[str, Dict] = {
 }
 
 
+def _extract_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        for key in ("message", "error", "detail"):
+            value = payload.get(key)
+            if value:
+                return str(value)
+    body = response.text.strip()
+    return body[:200] if body else "No response body"
+
+
 def _resolve_template(product: Dict) -> Dict:
     template_key = product.get("template") or CATEGORY_DEFAULTS.get(
         (product.get("category") or "apparel").lower(),
@@ -171,9 +185,18 @@ def _create_sku_real(
                     json=payload,
                 )
                 response.raise_for_status()
-            except httpx.HTTPError as exc:
-                logger.error("Printify API error: %s", exc)
-                raise
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                detail = _extract_error_detail(exc.response)
+                logger.error("Printify API error status=%s detail=%s", status, detail)
+                raise RuntimeError(
+                    f"Printify API request failed with status {status}: {detail}"
+                ) from exc
+            except httpx.RequestError as exc:
+                logger.error("Printify API transport error: %s", exc)
+                raise RuntimeError(
+                    f"Printify API transport error: {exc.__class__.__name__}"
+                ) from exc
             data = response.json()
             replica = dict(product)
             replica["sku"] = str(data.get("id") or data.get("product_id") or data.get("slug") or "")
