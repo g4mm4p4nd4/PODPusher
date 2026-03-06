@@ -1,4 +1,4 @@
-"""Database engine, session helper, and slow-query profiling.
+﻿"""Database engine, session helper, and slow-query profiling.
 
 Owner: Backend-Coder (per DEVELOPMENT_PLAN.md Task 2.3.2)
 """
@@ -12,6 +12,9 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+# Ensure SQLModel metadata includes all tables before init_db/create_all.
+from .. import models  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -91,3 +94,5 @@ async def init_db() -> None:
 async def get_session() -> AsyncSession:
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
+
+

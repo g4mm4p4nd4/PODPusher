@@ -1,7 +1,12 @@
-__pycache__/
+﻿__pycache__/
 *.pyc
 *.db
 .pytest_cache/
 client/node_modules/
 client/.next/
+.npm-cache/
+.pip-cache/
+.tmp/
+.pydeps/
+.codex-venv/
 *.tsbuildinfo

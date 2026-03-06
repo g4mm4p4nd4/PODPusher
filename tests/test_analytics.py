@@ -5,21 +5,63 @@ from httpx import ASGITransport, AsyncClient
 
 from services.analytics.api import app as analytics_app
 from services.analytics.service import list_events, log_event
-from services.common.database import init_db
+from services.common.database import get_session, init_db
+from services.models import Trend, TrendSignal
 
 
 @pytest.mark.asyncio
-async def test_mock_keywords_endpoint_returns_sorted_top_10():
+async def test_keywords_endpoint_aggregates_live_trend_signals():
+    await init_db()
+    async with get_session() as session:
+        session.add(
+            TrendSignal(source="tiktok", keyword="Funny Cat", engagement_score=5, category="animals")
+        )
+        session.add(
+            TrendSignal(source="reddit", keyword="funny   cat", engagement_score=7, category="animals")
+        )
+        session.add(
+            TrendSignal(source="etsy", keyword="dog mom", engagement_score=2, category="animals")
+        )
+        await session.commit()
+
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/analytics", params={"limit": 2})
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload == [{"term": "funny cat", "clicks": 12}, {"term": "dog mom", "clicks": 2}]
+
+
+@pytest.mark.asyncio
+async def test_keywords_endpoint_falls_back_to_trend_terms_when_signals_missing():
+    await init_db()
+    async with get_session() as session:
+        session.add(Trend(term="pet portrait", category="art"))
+        session.add(Trend(term="pet portrait", category="art"))
+        session.add(Trend(term="custom mug", category="home"))
+        await session.commit()
+
+    transport = ASGITransport(app=analytics_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/analytics", params={"limit": 5})
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload[0] == {"term": "pet portrait", "clicks": 2}
+    assert payload[1] == {"term": "custom mug", "clicks": 1}
+
+
+@pytest.mark.asyncio
+async def test_keywords_endpoint_rejects_invalid_query_values():
     await init_db()
     transport = ASGITransport(app=analytics_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/analytics")
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert 1 <= len(payload) <= 10
-    clicks = [item["clicks"] for item in payload]
-    assert clicks == sorted(clicks, reverse=True)
-    assert all("term" in item and "clicks" in item for item in payload)
+        bad_limit = await client.get("/api/analytics", params={"limit": 0})
+        bad_window = await client.get("/api/analytics", params={"lookback_hours": 1000})
+
+    assert bad_limit.status_code == 422
+    assert bad_window.status_code == 422
 
 
 @pytest.mark.asyncio

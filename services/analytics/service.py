@@ -1,10 +1,14 @@
 import asyncio
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict
+
 import httpx
-from typing import Dict, Any
-from .repository import create_event, fetch_events, aggregate_metrics
+from sqlmodel import select
+
+from .repository import aggregate_metrics, create_event, fetch_events
 from ..common.database import get_session
-from ..models import AnalyticsEvent, EventType
+from ..models import AnalyticsEvent, EventType, Trend, TrendSignal
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 
@@ -71,3 +75,42 @@ async def get_summary():
             }
         )
     return summary
+
+
+def _normalize_keyword(value: str | None) -> str:
+    if not value:
+        return ""
+    return " ".join(value.split()).strip().lower()
+
+
+async def get_trending_keywords(limit: int = 10, lookback_hours: int = 24 * 7):
+    """Return top keywords from live trend signals with a Trend table fallback."""
+    cutoff = datetime.utcnow() - timedelta(hours=max(1, lookback_hours))
+    keyword_scores: dict[str, int] = {}
+
+    async with get_session() as session:
+        stmt = select(TrendSignal.keyword, TrendSignal.engagement_score).where(
+            TrendSignal.timestamp >= cutoff
+        )
+        signal_rows = (await session.exec(stmt)).all()
+
+        for keyword, score in signal_rows:
+            term = _normalize_keyword(keyword)
+            if not term:
+                continue
+            weight = max(1, int(score or 0))
+            keyword_scores[term] = keyword_scores.get(term, 0) + weight
+
+        if not keyword_scores:
+            fallback_stmt = select(Trend.term).where(Trend.created_at >= cutoff)
+            trend_rows = (await session.exec(fallback_stmt)).all()
+            for term in trend_rows:
+                normalized = _normalize_keyword(term)
+                if normalized:
+                    keyword_scores[normalized] = keyword_scores.get(normalized, 0) + 1
+
+    clamped_limit = max(1, min(limit, 50))
+    ranked = sorted(keyword_scores.items(), key=lambda item: (-item[1], item[0]))[
+        :clamped_limit
+    ]
+    return [{"term": term, "clicks": clicks} for term, clicks in ranked]

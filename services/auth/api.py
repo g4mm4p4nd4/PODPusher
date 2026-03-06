@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, HttpUrl
 
 from ..common.auth import require_user_id
@@ -14,14 +15,15 @@ from .service import (
     PROVIDERS,
     create_authorization_url,
     create_session,
+    delete_oauth_credential,
     exchange_code,
     list_credentials,
     prune_expired_oauth_records,
     revoke_session,
     start_cleanup_scheduler,
     stop_cleanup_scheduler,
-    delete_oauth_credential,
 )
+
 
 @asynccontextmanager
 async def _auth_lifespan(_: FastAPI):
@@ -32,34 +34,42 @@ async def _auth_lifespan(_: FastAPI):
     finally:
         stop_cleanup_scheduler()
 
+
 app = FastAPI(lifespan=_auth_lifespan)
 register_observability(app, service_name="auth")
 
 SESSION_SECRET = os.getenv("POD_SESSION_SECRET")
+
 
 class SessionRequest(BaseModel):
     user_id: int
     ttl_hours: Optional[int] = 24
     secret: Optional[str] = None
 
+
 class SessionResponse(BaseModel):
     token: str
     expires_at: datetime
 
+
 class SessionRevokeRequest(BaseModel):
     token: str
+
 
 class AuthorizeRequest(BaseModel):
     redirect_uri: HttpUrl
     scope: Optional[List[str]] = None
 
+
 class AuthorizeResponse(BaseModel):
     authorization_url: HttpUrl
+
 
 class CallbackRequest(BaseModel):
     code: str
     state: str
     redirect_uri: Optional[HttpUrl] = None
+
 
 class CallbackResponse(BaseModel):
     provider: str
@@ -68,12 +78,32 @@ class CallbackResponse(BaseModel):
     account_id: Optional[str] = None
     account_name: Optional[str] = None
 
+
 class CredentialSummary(BaseModel):
     provider: str
     expires_at: Optional[datetime] = None
     scope: Optional[str] = None
     account_id: Optional[str] = None
     account_name: Optional[str] = None
+
+
+def _map_oauth_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, ValueError):
+        return HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    if isinstance(exc, RuntimeError):
+        return HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    if isinstance(exc, httpx.HTTPStatusError):
+        return HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail=f"OAuth provider token exchange failed: {exc.response.status_code}",
+        )
+    if isinstance(exc, httpx.RequestError):
+        return HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail="OAuth provider request failed",
+        )
+    return HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="OAuth flow failed")
+
 
 @app.post("/session", response_model=SessionResponse)
 async def create_session_endpoint(payload: SessionRequest) -> SessionResponse:
@@ -83,10 +113,12 @@ async def create_session_endpoint(payload: SessionRequest) -> SessionResponse:
     token, expires_at = await create_session(payload.user_id, ttl)
     return SessionResponse(token=token, expires_at=expires_at)
 
+
 @app.post("/session/revoke")
 async def revoke_session_endpoint(payload: SessionRevokeRequest) -> dict[str, str]:
     await revoke_session(payload.token)
     return {"status": "ok"}
+
 
 @app.get("/providers")
 async def list_providers() -> List[dict[str, object]]:
@@ -103,19 +135,24 @@ async def list_providers() -> List[dict[str, object]]:
         )
     return items
 
+
 @app.post("/{provider}/authorize", response_model=AuthorizeResponse)
 async def authorize_provider(
     provider: str,
     payload: AuthorizeRequest,
     user_id: int = Depends(require_user_id),
 ) -> AuthorizeResponse:
-    url = await create_authorization_url(
-        user_id=user_id,
-        provider=provider,
-        redirect_uri=str(payload.redirect_uri),
-        scope=payload.scope,
-    )
+    try:
+        url = await create_authorization_url(
+            user_id=user_id,
+            provider=provider,
+            redirect_uri=str(payload.redirect_uri),
+            scope=payload.scope,
+        )
+    except Exception as exc:
+        raise _map_oauth_error(exc) from exc
     return AuthorizeResponse(authorization_url=url)
+
 
 @app.post("/{provider}/callback", response_model=CallbackResponse)
 async def authorize_callback(
@@ -123,13 +160,17 @@ async def authorize_callback(
     payload: CallbackRequest,
     user_id: int = Depends(require_user_id),
 ) -> CallbackResponse:
-    data = await exchange_code(
-        user_id=user_id,
-        provider=provider,
-        code=payload.code,
-        state=payload.state,
-        redirect_uri=str(payload.redirect_uri) if payload.redirect_uri else None,
-    )
+    try:
+        data = await exchange_code(
+            user_id=user_id,
+            provider=provider,
+            code=payload.code,
+            state=payload.state,
+            redirect_uri=str(payload.redirect_uri) if payload.redirect_uri else None,
+        )
+    except Exception as exc:
+        raise _map_oauth_error(exc) from exc
+
     expires_at = (
         datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None
     )
@@ -141,10 +182,15 @@ async def authorize_callback(
         account_name=data.get("account_name"),
     )
 
+
 @app.delete("/credentials/{provider}")
 async def delete_credential(provider: str, user_id: int = Depends(require_user_id)) -> dict[str, str]:
-    await delete_oauth_credential(user_id, provider)
+    try:
+        await delete_oauth_credential(user_id, provider)
+    except Exception as exc:
+        raise _map_oauth_error(exc) from exc
     return {"status": "ok"}
+
 
 @app.get("/credentials", response_model=List[CredentialSummary])
 async def get_credentials(user_id: int = Depends(require_user_id)) -> List[CredentialSummary]:

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useTranslation } from 'next-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 import UserQuota from './UserQuota';
-import { getApiBase } from '../services/apiBase';
+import { getApiBase, getAuthHeaders } from '../services/apiBase';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     axios
-      .get(`${api}/api/notifications`, { headers: { 'X-User-Id': '1' } })
+      .get(`${api}/api/notifications`, { headers: getAuthHeaders() })
       .then((res) => setUnread(res.data.filter((n: any) => !n.read_status).length))
       .catch((err) => console.error(err));
   }, [api]);

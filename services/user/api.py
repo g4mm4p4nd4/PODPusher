@@ -1,18 +1,18 @@
+import re
 from datetime import datetime
 
-import re
-
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
-from ..common.database import get_session
-from ..models import User
-from ..common.quotas import ensure_quota_state
+
 from ..common.auth import ensure_user_record, require_user_id
+from ..common.database import get_session
+from ..common.quotas import ensure_quota_state
+from ..models import User
 
-app = FastAPI()
+router = APIRouter(prefix="/api/user")
 
 
-@app.get("/api/user/me")
+@router.get("/me")
 async def user_me(user_id: int = Depends(require_user_id)):
     user = await ensure_user_record(user_id)
     return {
@@ -26,7 +26,7 @@ class QuotaUpdate(BaseModel):
     count: int
 
 
-@app.post("/api/user/me")
+@router.post("/me")
 async def increment_quota(
     data: QuotaUpdate,
     user_id: int = Depends(require_user_id),
@@ -66,16 +66,16 @@ class Preferences(BaseModel):
 
     @field_validator("social_handles")
     @classmethod
-    def validate_handles(cls, v: dict[str, str]) -> dict[str, str]:
-        for network, handle in v.items():
+    def validate_handles(cls, value: dict[str, str]) -> dict[str, str]:
+        for network, handle in value.items():
             if handle and not HANDLE_PATTERN.match(handle):
                 raise ValueError(
                     f"Invalid handle for {network}: must be 1-30 alphanumeric/underscore/dot chars, optional leading @"
                 )
-        return v
+        return value
 
 
-@app.get("/api/user/preferences")
+@router.get("/preferences")
 async def get_preferences(user_id: int = Depends(require_user_id)):
     async with get_session() as session:
         user = await session.get(User, user_id)
@@ -95,7 +95,7 @@ async def get_preferences(user_id: int = Depends(require_user_id)):
         }
 
 
-@app.post("/api/user/preferences")
+@router.post("/preferences")
 async def set_preferences(
     data: Preferences,
     user_id: int = Depends(require_user_id),
@@ -123,3 +123,7 @@ async def set_preferences(
             "preferred_currency": user.preferred_currency,
             "timezone": user.timezone,
         }
+
+
+app = FastAPI()
+app.include_router(router)

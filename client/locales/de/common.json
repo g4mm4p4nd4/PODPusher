@@ -16,7 +16,19 @@
   },
   "index": {
     "trending": "Trend-Schlüsselwörter",
-    "events": "Veranstaltungen dieses Monats"
+    "events": "Veranstaltungen dieses Monats",
+    "loading": "Live-Trends werden geladen...",
+    "empty": "Noch keine Live-Trends verfuegbar. Fuehre eine Aktualisierung aus.",
+    "loadError": "Live-Trends konnten nicht geladen werden. Bitte erneut versuchen.",
+    "refreshError": "Live-Trends konnten nicht aktualisiert werden. Bitte erneut versuchen.",
+    "refresh": "Live-Signale aktualisieren",
+    "refreshing": "Aktualisierung...",
+    "source": "Quelle",
+    "engagement": "Interaktion",
+    "lastRun": "Letzte Aktualisierung",
+    "mode": "Modus",
+    "signals": "Gespeicherte Signale",
+    "notAvailable": "Nicht verfuegbar"
   },
   "categories": {
     "title": "Trendkategorien"
@@ -31,7 +43,22 @@
     "generating": "Wird generiert...",
     "connectionRequired": "Verbindung erforderlich",
     "connectProviders": "Zum Generieren und Veröffentlichen verbinden Sie bitte folgende Konten: {{providers}}",
-    "goToSettings": "Zu den Einstellungen"
+    "goToSettings": "Zu den Einstellungen",
+    "results": {
+      "trends": "Trend-Signale",
+      "ideas": "Generierte Ideen",
+      "products": "Vorgeschlagene Produkte",
+      "description": "Beschreibung",
+      "price": "Preis",
+      "tags": "Tags",
+      "listing": "Angebotsvorschau",
+      "viewListing": "Angebot ansehen",
+      "missingIntegrations": "Verbinde {{providers}}, um automatisch zu veroeffentlichen.",
+      "noData": "Die Generierung wurde abgeschlossen, lieferte aber keine darstellbaren Inhalte.",
+      "none": "Keine",
+      "unknown": "Unbekannt",
+      "untitled": "Ohne Titel"
+    }
   },
   "suggestions": {
     "title": "Produktvorschläge",
@@ -47,7 +74,16 @@
     "stars_one": "{{count}} Stern",
     "stars_other": "{{count}} Sterne",
     "tags": "Schlagwörter",
-    "flag": "Als unangemessen melden"
+    "flag": "Als unangemessen melden",
+    "loading": "Wird geladen...",
+    "updateError": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen.",
+    "setRating": "Bewertung auf {{count}} setzen",
+    "clear": "Leeren",
+    "removeTag": "Tag {{tag}} entfernen",
+    "addTagPlaceholder": "Tag hinzufuegen",
+    "addTagInput": "Tag-Eingabe",
+    "add": "Hinzufuegen",
+    "flagForReview": "Zur Pruefung markieren"
   },
   "listings": {
     "pageTitle": "Angebots-Composer",
@@ -101,7 +137,9 @@
     "typeField": "Produkttyp",
     "button": "Generieren",
     "copy": "Bildunterschrift kopieren",
-    "download": "Bild herunterladen"
+    "download": "Bild herunterladen",
+    "loading": "Wird generiert...",
+    "error": "Social-Inhalt konnte nicht generiert werden. Bitte erneut versuchen."
   },
   "settings": {
     "pageTitle": "Einstellungen",
@@ -132,7 +170,30 @@
     "listings_quota": "Angebote",
     "images_quota": "Bilder",
     "ideas_quota": "Ideen",
-    "invalidHandle": "Ungültiges Handle-Format"
+    "invalidHandle": "Ungültiges Handle-Format",
+    "providers": {
+      "etsy": "Etsy",
+      "printify": "Printify",
+      "stripe": "Stripe"
+    },
+    "status": {
+      "connected": "Verbunden",
+      "disconnected": "Nicht verbunden",
+      "expiresIn": "Laeuft in {{count}} Tagen ab",
+      "expiresToday": "Laeuft heute ab",
+      "expired": "Abgelaufen"
+    },
+    "error": {
+      "load": "Integrationen konnten nicht geladen werden.",
+      "oauth": "OAuth konnte nicht gestartet werden.",
+      "disconnect": "Trennen fehlgeschlagen."
+    },
+    "retry": "Erneut versuchen",
+    "flash": {
+      "linked": "{{provider}}-Konto verbunden.",
+      "removed": "{{provider}}-Konto getrennt.",
+      "error": "OAuth-Verbindung fehlgeschlagen."
+    }
   },
   "oauth": {
     "connectedAccounts": "Verbundene Konten",
@@ -151,7 +212,14 @@
     "cancel": "Abbrechen",
     "etsyDesc": "Angebote in Ihrem Etsy-Shop veröffentlichen",
     "printifyDesc": "Produkte erstellen und Inventar verwalten",
-    "stripeDesc": "Abrechnung und Abonnements verwalten"
+    "stripeDesc": "Abrechnung und Abonnements verwalten",
+    "title": "OAuth-Verbindung",
+    "preparing": "Verbindung wird vorbereitet...",
+    "success": "{{provider}} erfolgreich verknuepft.",
+    "redirect": "Weiterleitung zu den Einstellungen...",
+    "error": "OAuth-Rueckgabe fehlgeschlagen.",
+    "missingParams": "Fehlende OAuth-Parameter.",
+    "return": "Zu den Einstellungen zurueck"
   },
   "search": {
     "title": "Suche",
@@ -172,5 +240,12 @@
     "success": "Erstellt",
     "error": "Fehler"
   },
-  "loading": "Wird geladen..."
+  "loading": "Wird geladen...",
+  "quota": {
+    "plan": "{{plan}} Tarif",
+    "unlimited": "{{plan}} - Unbegrenzt",
+    "summary": "{{used}} / {{limit}}",
+    "remaining": "{{count}} Credits uebrig",
+    "ariaProgress": "Kontingentnutzung {{percentage}} Prozent"
+  }
 }
