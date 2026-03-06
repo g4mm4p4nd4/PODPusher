@@ -2,6 +2,10 @@
 
 This repository contains microservices for the POD Automator AI system. Each service is a small FastAPI application and Celery task worker.
 
+## Codex WSL
+
+For the repo-scoped Codex WSL setup, use `./scripts/codex_wsl_tasks.sh bootstrap` from WSL and see [docs/codex-wsl.md](docs/codex-wsl.md) for the repo-local environment, CLI wrapper, and the external `%USERPROFILE%\.codex` migration steps.
+
 ## Requirements
 - Python 3.11+
 - Redis and PostgreSQL for local development
@@ -69,18 +73,18 @@ Use `/events/{month}` to retrieve notable holidays for that month. For example:
 curl http://localhost:8002/events/february
 ```
 
-returns Valentine’s Day, the Super Bowl and more.
+returns ValentineÃ¢â‚¬â„¢s Day, the Super Bowl and more.
 
 ## Product Ideas
-Top print‑on‑demand categories include apparel, home decor, drinkware and
-accessories. Among apparel, t‑shirts, sportswear and leggings are the most
+Top printÃ¢â‚¬â€˜onÃ¢â‚¬â€˜demand categories include apparel, home decor, drinkware and
+accessories. Among apparel, tÃ¢â‚¬â€˜shirts, sportswear and leggings are the most
 popular products.
 
 ## Trending Product Categories
-The `/product-categories` endpoint returns 2025’s leading niches based on market
+The `/product-categories` endpoint returns 2025Ã¢â‚¬â„¢s leading niches based on market
 research. Categories include apparel, home_decor, pet_items, jewelry,
 accessories, tech_accessories, athletic_accessories and holiday_items. These
-lists show that unisex t‑shirts, hoodies, leggings, mugs and posters lead sales.
+lists show that unisex tÃ¢â‚¬â€˜shirts, hoodies, leggings, mugs and posters lead sales.
 
 Start the frontend and navigate to `/categories` to view them.
 
@@ -144,9 +148,9 @@ page at `/ab_tests` lets you create tests and view results.
 
 This repository provides a microservices architecture that can unlock multiple revenue models:
 - **Subscription or licensing**: Offer the AI-driven trend analysis and listing automation as a paid service to ecommerce merchants, print-on-demand sellers or marketplaces. Different tiers can include premium design recommendations, localized suggestions and A/B testing features.
-- **Upsells & integration**: Integrate with platforms like Etsy, Shopify or Amazon to upsell advanced analytics, notifications and cross-selling modules. White‑label the services to agencies or SaaS providers.
-- **Scalability & efficiency**: The modular services can be deployed independently, enabling cost‑effective scaling as user demand grows. Automated data collection, keyword research and listing composition reduce manual workload, lowering operational costs.
-- **Integration & analytics**: Deliver aggregated insights across categories and seasonal events, helping merchants make data‑driven decisions about inventory, marketing and product development.
+- **Upsells & integration**: Integrate with platforms like Etsy, Shopify or Amazon to upsell advanced analytics, notifications and cross-selling modules. WhiteÃ¢â‚¬â€˜label the services to agencies or SaaS providers.
+- **Scalability & efficiency**: The modular services can be deployed independently, enabling costÃ¢â‚¬â€˜effective scaling as user demand grows. Automated data collection, keyword research and listing composition reduce manual workload, lowering operational costs.
+- **Integration & analytics**: Deliver aggregated insights across categories and seasonal events, helping merchants make dataÃ¢â‚¬â€˜driven decisions about inventory, marketing and product development.
 
 ## Consumer Value
 
@@ -154,7 +158,7 @@ End users benefit from streamlined and intelligent automation:
 - **Ease of use & time savings**: Sellers can automatically generate optimized listings, trending keywords and design suggestions without extensive research, speeding up product launches.
 - **Personalization & customization**: Localization features tailor products to specific languages and seasonal events, while trend filters allow sellers to choose niches aligned with their brand.
 - **Transparency & privacy**: Data used for trend analyses is aggregated and anonymized; merchants control which integrations and notifications they enable.
-- **Real‑world outcomes**: Leveraging accurate trend signals and A/B testing tools improves product visibility, increases conversion rates and reduces the time and cost of trial-and-error product development.
+- **RealÃ¢â‚¬â€˜world outcomes**: Leveraging accurate trend signals and A/B testing tools improves product visibility, increases conversion rates and reduces the time and cost of trial-and-error product development.
 
 
 ## Overview & Purpose

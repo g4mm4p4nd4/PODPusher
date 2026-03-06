@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 *.db
 .pytest_cache/
@@ -9,4 +9,7 @@ client/.next/
 .tmp/
 .pydeps/
 .codex-venv/
+.codex-venv-wsl/
+.codex-tools/
+.playwright-wsl/
 *.tsbuildinfo
