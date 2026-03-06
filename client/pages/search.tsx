@@ -112,7 +112,7 @@ export default function SearchPage({ categories }: SearchProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {results.map(r => (
               <div key={r.id} className="border p-2 rounded">
-                <img src={r.image_url} alt={r.name} className="w-full h-32 object-cover mb-2" />
+                <img src={r.image_url} alt={r.name} loading="lazy" decoding="async" className="w-full h-32 object-cover mb-2" />
                 <h3 className="font-semibold">{r.name}</h3>
                 {r.rating && <p className="text-sm">{t('search.ratingLabel', { rating: r.rating })}</p>}
               </div>

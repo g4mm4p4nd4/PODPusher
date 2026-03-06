@@ -70,7 +70,16 @@
     "stars_one": "{{count}} Star",
     "stars_other": "{{count}} Stars",
     "tags": "Tags",
-    "flag": "Flag as inappropriate"
+    "flag": "Flag as inappropriate",
+    "loading": "Loading...",
+    "updateError": "Unable to update. Please try again.",
+    "setRating": "Set rating to {{count}}",
+    "clear": "Clear",
+    "removeTag": "Remove tag {{tag}}",
+    "addTagPlaceholder": "Add tag",
+    "addTagInput": "Add tag input",
+    "add": "Add",
+    "flagForReview": "Flag for review"
   },
   "listings": {
     "pageTitle": "Listing Composer",

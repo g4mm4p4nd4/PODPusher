@@ -2,7 +2,7 @@ import axios, { isAxiosError } from 'axios';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import ImageCard, { ReviewProduct } from '../../components/ImageCard';
-import { getApiBase, resolveApiUrl } from '../../services/apiBase';
+import { getApiBase } from '../../services/apiBase';
 
 interface ReviewResponse {
   items?: ReviewProduct[];
@@ -156,9 +156,7 @@ const ImageReview = () => {
 
   const handleError = useCallback(
     (id: number, error: unknown) => {
-      const fallback = t('review.updateError', {
-        defaultValue: 'Unable to update. Please try again.',
-      });
+      const fallback = t('review.updateError');
 
       const message = isAxiosError(error)
         ? error.response?.data?.detail || fallback
@@ -190,7 +188,7 @@ const ImageReview = () => {
         <p>{t('review.noProducts')}</p>
       ) : null}
       <div ref={sentinelRef} />
-      {loading ? <p>{t('review.loading', { defaultValue: 'Loading…' })}</p> : null}
+      {loading ? <p>{t('review.loading')}</p> : null}
     </div>
   );
 };

@@ -70,7 +70,16 @@
     "stars_one": "{{count}} estrella",
     "stars_other": "{{count}} estrellas",
     "tags": "Etiquetas",
-    "flag": "Marcar como inapropiado"
+    "flag": "Marcar como inapropiado",
+    "loading": "Cargando...",
+    "updateError": "No se pudo actualizar. Intenta de nuevo.",
+    "setRating": "Establecer calificacion en {{count}}",
+    "clear": "Limpiar",
+    "removeTag": "Quitar etiqueta {{tag}}",
+    "addTagPlaceholder": "Agregar etiqueta",
+    "addTagInput": "Campo para agregar etiqueta",
+    "add": "Agregar",
+    "flagForReview": "Marcar para revision"
   },
   "listings": {
     "pageTitle": "Compositor de publicaciones",

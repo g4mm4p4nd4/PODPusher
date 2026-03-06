@@ -1,8 +1,10 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Query
 
+from ..common.auth import require_user_id
 from ..common.observability import register_observability
+from .circuit_breaker import scraper_circuit_breaker
 from .service import get_live_trends, get_refresh_status, refresh_trends, start_scheduler
 
 
@@ -37,5 +39,12 @@ async def live_trends_status():
 
 
 @app.post("/trends/refresh")
-async def refresh_endpoint():
+async def refresh_endpoint(_: int = Depends(require_user_id)):
     return await refresh_trends()
+
+
+@app.get("/trends/scraper-status")
+async def scraper_status():
+    from .sources import PLATFORM_CONFIG
+
+    return {name: scraper_circuit_breaker.state(name).value for name in PLATFORM_CONFIG}

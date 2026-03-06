@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { getPreferences, savePreferences, Preferences } from '../services/userPreferences';
@@ -37,15 +37,33 @@ function mapCredentials(values: OAuthCredentialSummary[]): CredentialMap {
   return map;
 }
 
+const DEFAULT_PREFS: Preferences = {
+  auto_social: true,
+  social_handles: {},
+  email_notifications: true,
+  push_notifications: false,
+  preferred_language: 'en',
+  preferred_currency: 'USD',
+  timezone: 'UTC',
+};
+
+/** Validates a social media handle: optional @, then 1-30 alphanumeric/underscore/dot chars. */
+const HANDLE_REGEX = /^@?[a-zA-Z0-9_.]{1,30}$/;
+
+function isValidHandle(value: string): boolean {
+  return value === '' || HANDLE_REGEX.test(value);
+}
+
 export default function SocialSettings() {
   const { t } = useTranslation('common');
   const router = useRouter();
-  const [prefs, setPrefs] = useState<Preferences>({ auto_social: true, social_handles: {} });
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
   const [providers, setProviders] = useState<OAuthProviderInfo[]>([]);
   const [credentials, setCredentials] = useState<CredentialMap>({});
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [flash, setFlash] = useState<FlashMessage | null>(null);
+  const [handleErrors, setHandleErrors] = useState<Record<string, string>>({});
 
   const formatProvider = useCallback(
     (provider: string) =>
@@ -131,10 +149,22 @@ export default function SocialSettings() {
 
   const updateHandle = (network: string, value: string) => {
     setPrefs({ ...prefs, social_handles: { ...prefs.social_handles, [network]: value } });
+    if (value && !isValidHandle(value)) {
+      setHandleErrors((prev) => ({ ...prev, [network]: t('settings.invalidHandle', 'Invalid handle format') }));
+    } else {
+      setHandleErrors((prev) => {
+        const next = { ...prev };
+        delete next[network];
+        return next;
+      });
+    }
   };
+
+  const hasHandleErrors = Object.keys(handleErrors).length > 0;
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (hasHandleErrors) return;
     await savePreferences(prefs);
   };
 
@@ -215,25 +245,123 @@ export default function SocialSettings() {
           />
           <span>{t('settings.auto')}</span>
         </label>
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.instagram')}
-          value={prefs.social_handles.instagram || ''}
-          onChange={(e) => updateHandle('instagram', e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.facebook')}
-          value={prefs.social_handles.facebook || ''}
-          onChange={(e) => updateHandle('facebook', e.target.value)}
-        />
-        <input
-          className="border p-2 w-full"
-          placeholder={t('settings.twitter')}
-          value={prefs.social_handles.twitter || ''}
-          onChange={(e) => updateHandle('twitter', e.target.value)}
-        />
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white">
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.instagram ? ' border-red-500' : ''}`}
+            placeholder={t('settings.instagram')}
+            value={prefs.social_handles.instagram || ''}
+            onChange={(e) => updateHandle('instagram', e.target.value)}
+          />
+          {handleErrors.instagram && <p className="text-sm text-red-600 mt-1">{handleErrors.instagram}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.facebook ? ' border-red-500' : ''}`}
+            placeholder={t('settings.facebook')}
+            value={prefs.social_handles.facebook || ''}
+            onChange={(e) => updateHandle('facebook', e.target.value)}
+          />
+          {handleErrors.facebook && <p className="text-sm text-red-600 mt-1">{handleErrors.facebook}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.twitter ? ' border-red-500' : ''}`}
+            placeholder={t('settings.twitter')}
+            value={prefs.social_handles.twitter || ''}
+            onChange={(e) => updateHandle('twitter', e.target.value)}
+          />
+          {handleErrors.twitter && <p className="text-sm text-red-600 mt-1">{handleErrors.twitter}</p>}
+        </div>
+        <div>
+          <input
+            className={`border p-2 w-full${handleErrors.tiktok ? ' border-red-500' : ''}`}
+            placeholder={t('settings.tiktok')}
+            value={prefs.social_handles.tiktok || ''}
+            onChange={(e) => updateHandle('tiktok', e.target.value)}
+          />
+          {handleErrors.tiktok && <p className="text-sm text-red-600 mt-1">{handleErrors.tiktok}</p>}
+        </div>
+
+        <fieldset className="border rounded p-4 space-y-2">
+          <legend className="text-lg font-semibold px-2">
+            {t('settings.notificationChannels')}
+          </legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.email_notifications}
+              onChange={(e) => setPrefs({ ...prefs, email_notifications: e.target.checked })}
+            />
+            <span>{t('settings.emailNotifications')}</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prefs.push_notifications}
+              onChange={(e) => setPrefs({ ...prefs, push_notifications: e.target.checked })}
+            />
+            <span>{t('settings.pushNotifications')}</span>
+          </label>
+        </fieldset>
+
+        <fieldset className="border rounded p-4 space-y-3">
+          <legend className="text-lg font-semibold px-2">
+            {t('settings.preferences')}
+          </legend>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.defaultLanguage')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.preferred_language}
+              onChange={(e) => setPrefs({ ...prefs, preferred_language: e.target.value })}
+            >
+              <option value="en">English</option>
+              <option value="es">Espa&#241;ol</option>
+              <option value="fr">Fran&#231;ais</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.currency')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.preferred_currency}
+              onChange={(e) => setPrefs({ ...prefs, preferred_currency: e.target.value })}
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (&euro;)</option>
+              <option value="GBP">GBP (&pound;)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="AUD">AUD ($)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t('settings.timezone')}
+            </label>
+            <select
+              className="border p-2 w-full rounded"
+              value={prefs.timezone}
+              onChange={(e) => setPrefs({ ...prefs, timezone: e.target.value })}
+            >
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">Eastern (US)</option>
+              <option value="America/Chicago">Central (US)</option>
+              <option value="America/Denver">Mountain (US)</option>
+              <option value="America/Los_Angeles">Pacific (US)</option>
+              <option value="Europe/London">London</option>
+              <option value="Europe/Paris">Paris / Berlin</option>
+              <option value="Asia/Tokyo">Tokyo</option>
+              <option value="Australia/Sydney">Sydney</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
           {t('settings.save')}
         </button>
       </form>

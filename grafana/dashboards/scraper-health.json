@@ -1,0 +1,275 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "PODPusher Scraper Health Dashboard — monitors scrape success/failure rates, durations, and keyword extraction across all platforms.",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Scrape Success vs Failure Rate",
+      "description": "Rate of successful vs failed scrape attempts per platform over the last 5 minutes.",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_total{outcome=\"success\"}[5m])",
+          "legendFormat": "{{platform}} — success",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pod_scrape_total{outcome=\"failure\"}[5m])",
+          "legendFormat": "{{platform}} — failure",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*failure.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*success.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Scrape Failure Rate (%)",
+      "description": "Percentage of scrape attempts that failed, per platform. Alert fires at >= 5%.",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "100 * rate(pod_scrape_total{outcome=\"failure\"}[15m]) / (rate(pod_scrape_total{outcome=\"success\"}[15m]) + rate(pod_scrape_total{outcome=\"failure\"}[15m]))",
+          "legendFormat": "{{platform}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Scrape Duration (p50 / p95 / p99)",
+      "description": "Histogram quantiles of scrape duration by platform.",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(pod_scrape_duration_seconds_bucket[5m]))",
+          "legendFormat": "p50 — {{platform}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(pod_scrape_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95 — {{platform}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(pod_scrape_duration_seconds_bucket[5m]))",
+          "legendFormat": "p99 — {{platform}}",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "title": "Keywords Extracted per Platform",
+      "description": "Rate of keywords successfully extracted from each platform.",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_keywords_total[5m])",
+          "legendFormat": "{{platform}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50
+          }
+        }
+      }
+    },
+    {
+      "title": "Total Scrapes (Cumulative)",
+      "description": "Cumulative total scrape attempts across all platforms, split by outcome.",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(pod_scrape_total{outcome=\"success\"})",
+          "legendFormat": "Successes",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        }
+      }
+    },
+    {
+      "title": "Total Failures (Cumulative)",
+      "description": "Cumulative total failed scrape attempts across all platforms.",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(pod_scrape_total{outcome=\"failure\"})",
+          "legendFormat": "Failures",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        }
+      }
+    },
+    {
+      "title": "Circuit Breaker Open Events",
+      "description": "Rate of scrape attempts blocked by circuit breaker (outcome=circuit_open).",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 16 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_total{outcome=\"circuit_open\"}[5m])",
+          "legendFormat": "{{platform}} — circuit open",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30
+          }
+        }
+      }
+    },
+    {
+      "title": "Average Scrape Duration by Platform",
+      "description": "Average scrape duration across all platforms over the last 15 minutes.",
+      "type": "bargauge",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_duration_seconds_sum[15m]) / rate(pod_scrape_duration_seconds_count[15m])",
+          "legendFormat": "{{platform}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["podpusher", "scrapers", "monitoring"],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": "Prometheus",
+        "definition": "label_values(pod_scrape_total, platform)",
+        "includeAll": true,
+        "label": "Platform",
+        "multi": true,
+        "name": "platform",
+        "query": "label_values(pod_scrape_total, platform)",
+        "refresh": 2,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Scraper Health",
+  "uid": "podpusher-scraper-health",
+  "version": 1
+}

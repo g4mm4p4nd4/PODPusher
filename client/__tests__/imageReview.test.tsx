@@ -89,7 +89,7 @@ test('updates rating when a star is clicked', async () => {
 test('adds a new tag through the input field', async () => {
   await renderWithProduct({ tags: ['existing'] });
 
-  const input = screen.getByLabelText('Add tag input');
+  const input = screen.getByLabelText('review.addTagInput');
   fireEvent.change(input, { target: { value: 'new-tag' } });
   fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 

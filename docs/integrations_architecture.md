@@ -1,13 +1,13 @@
 # Integrations Architecture
 
-The integration service delegates to dedicated clients for Printify and Etsy. Each client reads its API key from environment variables and falls back to stubbed responses when keys are absent.
+The integration service delegates to dedicated clients for Printify and Etsy. Runtime listing calls use stored OAuth access tokens when available, while Etsy requests require an app `ETSY_CLIENT_ID` for request signing. Missing credentials fall back to stubbed responses for local development.
 
 ```mermaid
 flowchart TD
     A[Integration Service] -->|create_sku| B{Printify Client}
-    B -->|API key| C[Printify API]
-    B -->|missing key| D[Stub SKU]
+    B -->|OAuth access token or PRINTIFY_API_KEY| C[Printify API]
+    B -->|missing credentials| D[Stub SKU]
     A -->|publish_listing| E{Etsy Client}
-    E -->|API key| F[Etsy API]
-    E -->|missing key| G[Stub Listing]
+    E -->|ETSY_CLIENT_ID + OAuth token| F[Etsy API]
+    E -->|missing credentials| G[Stub Listing]
 ```

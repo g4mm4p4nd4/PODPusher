@@ -34,7 +34,7 @@ Roles from `agents.md`:
 
 ## Integration Service
 
-Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. Each client reads its API key from the environment and automatically handles missing keys with an internal fallback; no separate stub toggles are required.
+Real Printify and Etsy clients live in `packages/integrations/printify.py` and `packages/integrations/etsy.py`. Printify accepts OAuth access tokens (or `PRINTIFY_API_KEY` fallback), while Etsy listing calls require `ETSY_CLIENT_ID` and an OAuth access token. Missing credentials still fall back to internal stubs for local development.
 
 ### Integration Flow
 
@@ -267,3 +267,4 @@ Alembic is the source of truth for schema changes. The workflow is:
 4. `tests/test_migrations.py` runs `alembic upgrade head` three times; keep it updated with new critical tables.
 
 `services/common/database.init_db()` remains for tests only and should not be used in production deployments.
+

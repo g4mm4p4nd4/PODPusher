@@ -1,4 +1,4 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List
 
@@ -8,9 +8,13 @@ from ..ab_tests.api import app as ab_app
 from ..analytics.api import router as analytics_router
 from ..analytics.middleware import AnalyticsMiddleware
 from ..auth.api import app as auth_app
+from ..billing.api import app as billing_app
 from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
 from ..common.auth import require_user_id
+from ..common.cache import CACHE_TTL_TRENDS, cache_get, cache_key, cache_set
+from ..common.errors import register_error_handlers
 from ..common.observability import register_observability
+from ..common.rate_limit import register_rate_limiting
 from ..ideation.api import app as ideation_app
 from ..ideation.service import generate_ideas
 from ..image_gen.service import generate_images
@@ -23,12 +27,7 @@ from ..search.api import app as search_app
 from ..social_generator.api import app as social_app
 from ..trend_ingestion.service import get_live_trends, get_refresh_status, refresh_trends, start_scheduler
 from ..trend_scraper.events import EVENTS
-from ..trend_scraper.service import (
-    fetch_trends,
-    get_design_ideas,
-    get_product_suggestions,
-    get_trending_categories,
-)
+from ..trend_scraper.service import fetch_trends, get_design_ideas, get_product_suggestions, get_trending_categories
 from ..user.api import router as user_router
 
 
@@ -66,6 +65,8 @@ def _assemble_products(ideas: List[dict], images: List[dict]) -> List[dict]:
 
 app = FastAPI(lifespan=_gateway_lifespan)
 register_observability(app, service_name="gateway")
+register_error_handlers(app)
+register_rate_limiting(app)
 app.include_router(analytics_router)
 app.include_router(user_router)
 app.mount("/api/products", product_app)
@@ -76,6 +77,7 @@ app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
 app.mount("/api/social", social_app)
 app.mount("/api/auth", auth_app)
+app.mount("/api/billing", billing_app)
 app.add_middleware(AnalyticsMiddleware)
 
 
@@ -149,7 +151,13 @@ async def bulk_create(request: Request):
 
 @app.get("/trends")
 async def list_trends(category: str | None = None):
-    return await fetch_trends(category)
+    ck = cache_key("trends", category or "all")
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+    result = await fetch_trends(category)
+    cache_set(ck, result, CACHE_TTL_TRENDS)
+    return result
 
 
 @app.get("/events/{month}")
@@ -181,12 +189,18 @@ async def live_trends(
     lookback_hours: int = Query(default=72, ge=1, le=24 * 14),
     limit: int = Query(default=5, ge=1, le=50),
 ):
-    return await get_live_trends(
+    ck = cache_key("live_trends", category or "all", source or "all", str(lookback_hours), str(limit))
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+    result = await get_live_trends(
         category=category,
         source=source,
         lookback_hours=lookback_hours,
         per_group_limit=limit,
     )
+    cache_set(ck, result, CACHE_TTL_TRENDS)
+    return result
 
 
 @app.get("/api/trends/live/status")
