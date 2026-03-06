@@ -124,7 +124,9 @@
     "typeField": "Tipo de producto",
     "button": "Generar",
     "copy": "Copiar caption",
-    "download": "Descargar imagen"
+    "download": "Descargar imagen",
+    "loading": "Generando...",
+    "error": "No se pudo generar el contenido social. Intenta de nuevo."
   },
   "settings": {
     "title": "Configuración social",

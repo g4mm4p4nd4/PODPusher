@@ -7,6 +7,7 @@ export default function SocialMediaGenerator() {
   const [form, setForm] = useState<SocialRequest>({ language: 'en' });
   const [result, setResult] = useState<SocialPost | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const update = (field: keyof SocialRequest, value: any) => {
     setForm({ ...form, [field]: value });
@@ -16,11 +17,13 @@ export default function SocialMediaGenerator() {
     e.preventDefault();
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
       const data = await generateSocialPost(form);
       setResult(data);
     } catch (err) {
       console.error(err);
+      setError(t('social.error'));
     } finally {
       setLoading(false);
     }
@@ -75,9 +78,14 @@ export default function SocialMediaGenerator() {
           disabled={loading}
           className="bg-blue-600 text-white px-4 py-2"
         >
-          {loading ? '...' : t('social.button')}
+          {loading ? t('social.loading') : t('social.button')}
         </button>
       </form>
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
       {result && (
         <div className="space-y-4">
           <textarea

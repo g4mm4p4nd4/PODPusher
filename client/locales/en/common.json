@@ -124,7 +124,9 @@
     "typeField": "Product type",
     "button": "Generate",
     "copy": "Copy Caption",
-    "download": "Download Image"
+    "download": "Download Image",
+    "loading": "Generating...",
+    "error": "Could not generate social content. Please try again."
   },
   "settings": {
     "title": "Social Settings",

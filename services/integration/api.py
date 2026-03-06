@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel
-from .service import create_sku, publish_listing
+
+from services.common.auth import require_user_id
+from services.models import OAuthProvider
+
+from .service import create_sku, load_oauth_credentials, publish_listing
 
 
 app = FastAPI()
@@ -11,24 +15,40 @@ class ProductList(BaseModel):
 
 
 @app.post("/sku")
-async def sku(data: ProductList):
-    return create_sku(data.products)
+async def sku(
+    data: ProductList,
+    user_id: int = Depends(require_user_id),
+):
+    credential = await load_oauth_credentials(user_id, OAuthProvider.PRINTIFY)
+    return create_sku(data.products, credential=credential)
 
 
 @app.post("/listing")
-async def listing(product: dict):
-    return publish_listing(product)
+async def listing(
+    product: dict,
+    user_id: int = Depends(require_user_id),
+):
+    credential = await load_oauth_credentials(user_id, OAuthProvider.ETSY)
+    return publish_listing(product, credential=credential)
 
 
 @app.post("/create-sku")
-async def create_sku_legacy(data: ProductList):
+async def create_sku_legacy(
+    data: ProductList,
+    user_id: int = Depends(require_user_id),
+):
     """Legacy endpoint for backward compatibility."""
-    products = create_sku(data.products)
+    credential = await load_oauth_credentials(user_id, OAuthProvider.PRINTIFY)
+    products = create_sku(data.products, credential=credential)
     return {"product": products}
 
 
 @app.post("/publish-listing")
-async def publish_listing_legacy(product: dict):
+async def publish_listing_legacy(
+    product: dict,
+    user_id: int = Depends(require_user_id),
+):
     """Legacy endpoint for backward compatibility."""
-    listing = publish_listing(product)
+    credential = await load_oauth_credentials(user_id, OAuthProvider.ETSY)
+    listing = publish_listing(product, credential=credential)
     return {"listing": listing.get("etsy_url"), "product": listing}
