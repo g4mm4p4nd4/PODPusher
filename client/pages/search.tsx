@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'next-i18next';
 import { resolveApiUrl } from '../services/apiBase';
+import { getCommonServerSideProps } from '../utils/translationProps';
 
 interface SearchResult {
   id: number;
@@ -126,12 +127,22 @@ export default function SearchPage({ categories }: SearchProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<SearchProps> = async () => {
+export const getServerSideProps: GetServerSideProps<SearchProps> = async ({ locale }) => {
   try {
     const res = await axios.get<{ name: string }[]>(resolveApiUrl('/product-categories'));
-    return { props: { categories: res.data.map(c => c.name) } };
+    return {
+      props: {
+        ...(await getCommonServerSideProps(locale)),
+        categories: res.data.map(c => c.name),
+      },
+    };
   } catch (err) {
     console.error(err);
-    return { props: { categories: [] } };
+    return {
+      props: {
+        ...(await getCommonServerSideProps(locale)),
+        categories: [],
+      },
+    };
   }
 };

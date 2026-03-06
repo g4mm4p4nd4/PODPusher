@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from pathlib import Path
 
@@ -15,8 +16,15 @@ MIGRATION_DB = ROOT / 'alembic_validation.db'
 
 def _run_upgrade(db_url: str) -> None:
     config = Config(str(ROOT / 'alembic.ini'))
-    config.set_main_option('sqlalchemy.url', db_url.replace('sqlite+aiosqlite://', 'sqlite:///'))
-    command.upgrade(config, 'head')
+    previous = os.environ.get('DATABASE_URL')
+    os.environ['DATABASE_URL'] = db_url
+    try:
+        command.upgrade(config, 'head')
+    finally:
+        if previous is None:
+            os.environ.pop('DATABASE_URL', None)
+        else:
+            os.environ['DATABASE_URL'] = previous
 
 
 def _drop_db(path: Path) -> None:
@@ -25,7 +33,7 @@ def _drop_db(path: Path) -> None:
 
 
 def test_alembic_upgrade_repeatability():
-    db_url = f"sqlite+aiosqlite:///{MIGRATION_DB.as_posix()}"
+    db_url = f"sqlite:///{MIGRATION_DB.as_posix()}"
     _drop_db(MIGRATION_DB)
     try:
         for _ in range(3):

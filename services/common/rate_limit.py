@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable
 

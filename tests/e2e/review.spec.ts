@@ -10,16 +10,19 @@ const product = {
 };
 
 test('review page loads and allows rating', async ({ page }) => {
-  await page.route('**/api/products/review', route => {
-    route.fulfill({
+  const updates: Array<Record<string, unknown>> = [];
+
+  await page.route('**/api/products/review**', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify([product]),
     });
   });
 
-  await page.route('**/api/products/*', route => {
-    route.fulfill({
+  await page.route('**/api/products/review/*', async (route) => {
+    updates.push(route.request().postDataJSON() as Record<string, unknown>);
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ ...product, rating: 5, tags: ['foo'] }),
@@ -28,10 +31,12 @@ test('review page loads and allows rating', async ({ page }) => {
 
   await page.goto('/images/review');
   await expect(page.getByText('Image Review')).toBeVisible();
-  const rating = page.locator('[data-testid="rating-1"]');
-  await rating.selectOption('5');
-  await expect(rating).toHaveValue('5');
-  const tags = page.locator('[data-testid="tags-1"]');
-  await tags.fill('foo');
-  await expect(tags).toHaveValue('foo');
+
+  await page.getByTestId('star-1-5').click();
+  await expect.poll(() => updates.some((payload) => payload.rating === 5)).toBeTruthy();
+
+  const tagInput = page.getByLabel('Add tag input');
+  await tagInput.fill('foo');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect.poll(() => updates.some((payload) => Array.isArray(payload.tags) && payload.tags.includes('foo'))).toBeTruthy();
 });

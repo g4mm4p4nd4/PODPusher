@@ -1,6 +1,5 @@
 import { useTranslation } from 'next-i18next';
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
-import { GetStaticProps } from 'next';
+import { getCommonStaticProps } from '../utils/translationProps';
 import OAuthConnect from '../components/OAuthConnect';
 import SocialSettings from '../components/SocialSettings';
 import UserQuota from '../components/UserQuota';
@@ -35,10 +34,4 @@ export default function SettingsPage() {
   );
 }
 
-export const getStaticProps: GetStaticProps = async ({ locale }) => {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
-    },
-  };
-};
+export const getStaticProps = getCommonStaticProps;

@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'next-i18next';
 import ImageCard, { ReviewProduct } from '../../components/ImageCard';
 import { getApiBase, resolveApiUrl } from '../../services/apiBase';
+import { getCommonStaticProps } from '../../utils/translationProps';
 
 interface ReviewResponse {
   items?: ReviewProduct[];
@@ -196,3 +197,5 @@ const ImageReview = () => {
 };
 
 export default ImageReview;
+
+export const getStaticProps = getCommonStaticProps;

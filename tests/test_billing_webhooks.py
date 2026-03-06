@@ -2,14 +2,12 @@
 
 import json
 import pytest
-from unittest.mock import patch, MagicMock
 
 from services.billing.webhooks import (
     verify_webhook_signature,
     process_webhook_event,
     HANDLED_EVENTS,
 )
-from services.billing.service import BillingError
 
 
 class TestWebhookSignatureVerification:

@@ -13,7 +13,6 @@ Owner: Data-Seeder (per DEVELOPMENT_PLAN.md Technical Debt TD-01)
 from __future__ import annotations
 
 from alembic import op
-import sqlalchemy as sa
 
 
 revision = "0003_timescale_trend_aggregates"

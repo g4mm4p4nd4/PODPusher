@@ -1,4 +1,4 @@
-﻿from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from enum import Enum
 from datetime import datetime
 
@@ -20,7 +20,6 @@ class TrendSignal(SQLModel, table=True):
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
     engagement_score: int = 0
     category: str = Field(default="other", index=True)
-
 
 
 class Idea(SQLModel, table=True):
