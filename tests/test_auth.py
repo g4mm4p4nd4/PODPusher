@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from datetime import datetime, timedelta
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
@@ -297,6 +297,7 @@ async def test_refresh_expiring_credentials(monkeypatch):
         saved = result.one()
         assert saved.access_token == 'new-token'
         assert saved.expires_at and saved.expires_at > datetime.utcnow()
+
 
 @pytest.mark.asyncio
 async def test_authorize_endpoint_returns_503_when_provider_env_missing(monkeypatch):

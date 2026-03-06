@@ -141,5 +141,3 @@ def test_publish_listing_surfaces_etsy_error_details(monkeypatch):
         assert exc.code == ErrorCode.ETSY_RATE_LIMITED
         assert exc.status_code == 429
         assert exc.details and exc.details.get("provider_detail") == "Rate limited"
-
-

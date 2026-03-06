@@ -5,9 +5,7 @@ This migration requires PostgreSQL + TimescaleDB extension. It:
 2. Creates continuous aggregates for hourly and daily trend rollups
 3. Adds a refresh policy for automatic aggregate maintenance
 
-When running on SQLite (development), only the index additions are applied.
-
-Owner: Data-Seeder (per DEVELOPMENT_PLAN.md Technical Debt TD-01)
+When running on SQLite (development), only index additions are attempted.
 """
 
 from __future__ import annotations
@@ -23,43 +21,45 @@ depends_on = None
 
 
 def _is_postgresql() -> bool:
-    """Check if we are running against PostgreSQL."""
     return op.get_bind().dialect.name == "postgresql"
 
 
+def _has_table(name: str) -> bool:
+    inspector = sa.inspect(op.get_bind())
+    return name in inspector.get_table_names()
+
+
+def _has_index(table_name: str, index_name: str) -> bool:
+    inspector = sa.inspect(op.get_bind())
+    try:
+        indexes = inspector.get_indexes(table_name)
+    except Exception:
+        return False
+    return any(idx.get("name") == index_name for idx in indexes)
+
+
 def upgrade() -> None:
-    # Add indexes that work on all backends
-    with op.batch_alter_table("trendsignal") as batch_op:
-        batch_op.create_index(
-            "ix_trendsignal_source_keyword",
-            ["source", "keyword"],
-        )
-        batch_op.create_index(
-            "ix_trendsignal_category_timestamp",
-            ["category", "timestamp"],
-        )
+    if _has_table("trendsignal"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            if not _has_index("trendsignal", "ix_trendsignal_source_keyword"):
+                batch_op.create_index("ix_trendsignal_source_keyword", ["source", "keyword"])
+            if not _has_index("trendsignal", "ix_trendsignal_category_timestamp"):
+                batch_op.create_index("ix_trendsignal_category_timestamp", ["category", "timestamp"])
 
-    with op.batch_alter_table("trend") as batch_op:
-        batch_op.create_index(
-            "ix_trend_category_created",
-            ["category", "created_at"],
-        )
+    if _has_table("trend"):
+        with op.batch_alter_table("trend") as batch_op:
+            if not _has_index("trend", "ix_trend_category_created"):
+                batch_op.create_index("ix_trend_category_created", ["category", "created_at"])
 
-    # TimescaleDB-specific operations (PostgreSQL only)
-    if not _is_postgresql():
+    if not _is_postgresql() or not _has_table("trendsignal"):
         return
 
-    # Enable TimescaleDB extension
     op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE")
-
-    # Convert trendsignal to a hypertable partitioned by timestamp.
-    # The migrate_data option preserves existing rows.
     op.execute(
         "SELECT create_hypertable('trendsignal', 'timestamp', "
         "migrate_data => true, if_not_exists => true)"
     )
 
-    # Hourly trend aggregates: count signals, avg engagement, top keywords per source
     op.execute("""
         CREATE MATERIALIZED VIEW IF NOT EXISTS trend_hourly
         WITH (timescaledb.continuous) AS
@@ -76,7 +76,6 @@ def upgrade() -> None:
         WITH NO DATA
     """)
 
-    # Daily trend aggregates: rolled up from the hourly view
     op.execute("""
         CREATE MATERIALIZED VIEW IF NOT EXISTS trend_daily
         WITH (timescaledb.continuous) AS
@@ -93,9 +92,6 @@ def upgrade() -> None:
         WITH NO DATA
     """)
 
-    # Automatic refresh policies: refresh hourly view every 30 minutes,
-    # daily view every 6 hours.  start_offset / end_offset define the
-    # time window to recompute.
     op.execute("""
         SELECT add_continuous_aggregate_policy('trend_hourly',
             start_offset  => INTERVAL '3 hours',
@@ -114,7 +110,6 @@ def upgrade() -> None:
         )
     """)
 
-    # Retention policy: drop raw data older than 90 days (aggregates kept)
     op.execute("""
         SELECT add_retention_policy('trendsignal',
             INTERVAL '90 days',
@@ -124,16 +119,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if _is_postgresql():
+    if _is_postgresql() and _has_table("trendsignal"):
         op.execute("SELECT remove_retention_policy('trendsignal', if_exists => true)")
         op.execute("SELECT remove_continuous_aggregate_policy('trend_daily', if_not_exists => true)")
         op.execute("SELECT remove_continuous_aggregate_policy('trend_hourly', if_not_exists => true)")
         op.execute("DROP MATERIALIZED VIEW IF EXISTS trend_daily CASCADE")
         op.execute("DROP MATERIALIZED VIEW IF EXISTS trend_hourly CASCADE")
 
-    with op.batch_alter_table("trend") as batch_op:
-        batch_op.drop_index("ix_trend_category_created")
+    if _has_table("trend") and _has_index("trend", "ix_trend_category_created"):
+        with op.batch_alter_table("trend") as batch_op:
+            batch_op.drop_index("ix_trend_category_created")
 
-    with op.batch_alter_table("trendsignal") as batch_op:
-        batch_op.drop_index("ix_trendsignal_category_timestamp")
-        batch_op.drop_index("ix_trendsignal_source_keyword")
+    if _has_table("trendsignal"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            if _has_index("trendsignal", "ix_trendsignal_category_timestamp"):
+                batch_op.drop_index("ix_trendsignal_category_timestamp")
+            if _has_index("trendsignal", "ix_trendsignal_source_keyword"):
+                batch_op.drop_index("ix_trendsignal_source_keyword")

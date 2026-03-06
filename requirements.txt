@@ -18,3 +18,4 @@ playwright
 structlog
 prometheus-client
 alembic
+stripe>=11,<12

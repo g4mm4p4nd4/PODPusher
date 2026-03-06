@@ -3,7 +3,6 @@
 Owner: Unit-Tester (per DEVELOPMENT_PLAN.md Phase 2)
 """
 
-import pytest
 import time
 from unittest.mock import MagicMock
 

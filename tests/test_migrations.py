@@ -25,7 +25,7 @@ def _drop_db(path: Path) -> None:
         path.unlink()
 
 
-async def test_alembic_upgrade_repeatability():
+def test_alembic_upgrade_repeatability():
     db_url = 'sqlite+aiosqlite:///./alembic_validation.db'
     _drop_db(MIGRATION_DB)
     try:
@@ -46,4 +46,3 @@ async def test_alembic_upgrade_repeatability():
             conn.close()
     finally:
         _drop_db(MIGRATION_DB)
-

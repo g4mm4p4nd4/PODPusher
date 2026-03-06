@@ -180,4 +180,3 @@ def handle_openai_error(exc: Exception, context: dict[str, Any] | None = None) -
 
     logger.error("OpenAI error: %s", exc, extra={"provider": "openai", **(context or {})})
     return AppError(code=code, message=message, status_code=status_code, details=context)
-

@@ -88,7 +88,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback when optional depende
                 lines.append(f"{metric.name}_count{{{label_text}}} {count}")
                 lines.append(f"{metric.name}_sum{{{label_text}}} {total}")
         return "\n".join(lines).encode()
-from starlette.responses import PlainTextResponse, Response
+from starlette.responses import Response
 
 from .logging import configure_logging
 

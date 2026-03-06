@@ -15,7 +15,6 @@ from .service import (
     STUB_MODE,
     get_or_create_customer,
     create_portal_session,
-    get_subscription_for_customer,
     get_user_plan_tier,
 )
 from .webhooks import verify_webhook_signature, process_webhook_event

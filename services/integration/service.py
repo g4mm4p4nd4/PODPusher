@@ -10,7 +10,6 @@ from packages.integrations.etsy import get_etsy_client
 from services.auth import service as auth_service
 from ..common.database import get_session
 from ..common.provider_errors import handle_printify_error, handle_etsy_error
-from ..common.api_limiter import rate_limited_call
 from ..models import OAuthCredential, OAuthProvider
 
 logger = logging.getLogger(__name__)
