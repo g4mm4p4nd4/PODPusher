@@ -53,15 +53,19 @@ class ScheduledNotificationResponse(BaseModel):
     dispatched_at: Optional[datetime] = None
 
 
+def _parse_user_id(value: str | None, missing_detail: str = "Missing X-User-Id header") -> int:
+    if value is None:
+        raise HTTPException(status_code=400, detail=missing_detail)
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid X-User-Id header") from exc
+
+
 def _ensure_user_id(header_value: str | None, fallback: int | None) -> int:
     if fallback is not None:
         return fallback
-    if header_value is None:
-        raise HTTPException(status_code=400, detail="Missing X-User-Id header")
-    try:
-        return int(header_value)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid X-User-Id header") from exc
+    return _parse_user_id(header_value)
 
 
 def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
@@ -76,8 +80,7 @@ def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
 
 @app.get("/")
 async def get_notifications(x_user_id: str = Header(..., alias="X-User-Id")):
-    user_id = _ensure_user_id(x_user_id, None)
-    return await list_notifications(user_id)
+    return await list_notifications(_parse_user_id(x_user_id))
 
 
 @app.post("/")
@@ -92,9 +95,9 @@ async def create_notification_endpoint(
 @app.put("/{notification_id}/read")
 async def mark_read_endpoint(
     notification_id: int,
-    x_user_id: str = Header(None, alias="X-User-Id"),
+    x_user_id: str = Header(..., alias="X-User-Id"),
 ):
-    user_id = _ensure_user_id(x_user_id, None)
+    user_id = _parse_user_id(x_user_id)
     notif = await mark_read_for_user(notification_id, user_id)
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -103,8 +106,7 @@ async def mark_read_endpoint(
 
 @app.get("/scheduled", response_model=list[ScheduledNotificationResponse])
 async def list_scheduled_endpoint(x_user_id: str = Header(..., alias="X-User-Id")):
-    user_id = _ensure_user_id(x_user_id, None)
-    items = await list_scheduled_notifications(user_id)
+    items = await list_scheduled_notifications(_parse_user_id(x_user_id))
     return [_scheduled_response(item) for item in items]
 
 
@@ -129,8 +131,8 @@ async def cancel_scheduled_endpoint(
     job_id: int,
     x_user_id: str = Header(..., alias="X-User-Id"),
 ):
-    user_id = _ensure_user_id(x_user_id, None)
-    record = await cancel_scheduled_notification(job_id)
-    if not record or record["user_id"] != user_id:
+    user_id = _parse_user_id(x_user_id)
+    record = await cancel_scheduled_notification(job_id, user_id)
+    if not record:
         raise HTTPException(status_code=404, detail="Scheduled notification not found")
     return _scheduled_response(record)
