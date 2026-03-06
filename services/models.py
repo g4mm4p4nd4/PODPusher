@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+﻿from typing import Any, Dict, List, Optional
 from enum import Enum
 from datetime import datetime
 
@@ -15,11 +15,12 @@ class Trend(SQLModel, table=True):
 
 class TrendSignal(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    source: str
-    keyword: str
+    source: str = Field(index=True)
+    keyword: str = Field(index=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
     engagement_score: int = 0
     category: str = "other"
+
 
 
 class Idea(SQLModel, table=True):

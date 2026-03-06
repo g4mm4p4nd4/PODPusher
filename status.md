@@ -1,32 +1,31 @@
-# Status and Outstanding Tasks
+﻿# Status and Outstanding Tasks
 
-This file tracks the remaining work required to bring PODPusher to production readiness.
+This file tracks the remaining work required to bring PODPusher to internal rollout readiness.
 
 ## Pending PRs
 
 - **Image Review & Tagging PR** - from the `feat/image-review-merge` branch via Codex. Review and merge once complete.
 
-## Outstanding Tasks
+## Current Focus
 
-1. **Localization & Internationalization (i18n)** - Extend translation support beyond current pages and adapt currency formats for different locales (translation key check script added, rollout pending).
-2. **Live Trend Signals Ingestion** - Build Playwright scrapers and storage per Data-Seeder responsibilities in `agents.md`.
-3. **OAuth UI & Flows** - Wire frontend connect/disconnect UX to the new auth endpoints and expand e2e coverage.
+1. **Bootstraps & CI Hardening** - Replace the empty Alembic baseline, align runtime env/docs with the Etsy OAuth contract, and add frontend build plus type-check checks to CI.
+2. **Real Trend Pipeline Validation** - Validate one non-stub trend -> idea -> image -> listing flow in staging when credentials are available.
+3. **Docs & Multi-User Cleanup** - Remove merge artifacts, finish the remaining i18n rollout, and reduce lingering internal-user assumptions.
 
-## Completed
+## Recently Completed
 
-- Documentation Refresh - Internal docs now cover observability and database operations; architecture overview added in `docs/architecture.md`.
-- Database Migrations - Alembic baseline created with scheduled notification migration, CLI helper, and CI upgrade check.
-- Observability Rollout - Structured logging, `/healthz`, and `/metrics` endpoints registered across gateway, auth, notifications, trend scraper, and trend ingestion services.
-- Notification & Scheduling System - Scheduled notifications API, recurring digests, and quota reset automation wired to APScheduler.
-- A/B Testing Support - Flexible engine with experiment types, weighted traffic and scheduling.
-- Real Integrations - Printify and Etsy clients implemented with stub fallbacks.
-- Stub Removal - Placeholder logic eliminated and integrations call real APIs when keys are present.
-- Listing Composer Enhancements - Drag-and-drop fields, improved tag suggestions, draft saving, multi-language input.
-- Analytics Enhancements - Replaced mocked analytics with real metrics collected from the database and user interactions.
-- Social Media Generator - Rule-based captions and images with localisation and dashboard UI.
-- Bulk Product Creation - CSV/JSON bulk upload endpoint and UI implemented.
-- Testing & QA - Expanded unit, integration, and Playwright end-to-end test coverage with CI integration.
+- **P0 Gateway/Client Recovery (March 6, 2026)** - Added the missing shared frontend API-base module, centralized authenticated headers, wired OAuth, generate, quota, and notifications through that shared transport, mounted user and analytics routes in the gateway, and fixed the gateway lifespan declaration.
+- **Mainline Consolidation Sweep (March 6, 2026)** - Folded detached worktree output back into the main workspace for live trend dashboard/status flows, live analytics keyword aggregation, and OAuth API error mapping.
+- **Trend Ingestion Hardening** - Added refresh telemetry, live status endpoints, live trend filtering/recency bounds, RSS fallback handling, and focused backend/frontend coverage.
+- **Analytics Truthfulness** - Replaced mock analytics keyword output with database-backed aggregation from `TrendSignal` plus `Trend` fallback queries.
+
+## Verification Notes
+
+- Passed: targeted backend `pytest` for analytics, auth, gateway, and trend ingestion slices.
+- Passed: frontend TypeScript check in `client/`.
+- Passed: focused frontend Jest coverage for homepage live trends, trend service transport, and user quota UI.
+- Not run: `next build` in this sweep.
 
 ## Instructions to Agents
 
-Please refer to the appended section in `agents.md` for specific instructions on how each agent should tackle these tasks.
+Use `docs/roadmap.md` as the primary planning artifact. Update this file whenever code changes materially alter the verified state, blockers, or next delivery slice.

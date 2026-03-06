@@ -4,3 +4,9 @@ __pycache__/
 .pytest_cache/
 client/node_modules/
 client/.next/
+.npm-cache/
+.pip-cache/
+.tmp/
+.pydeps/
+.codex-venv/
+*.tsbuildinfo

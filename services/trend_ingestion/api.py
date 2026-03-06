@@ -1,8 +1,10 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from ..common.observability import register_observability
+﻿from contextlib import asynccontextmanager
 
-from .service import get_live_trends, refresh_trends, start_scheduler
+from fastapi import FastAPI, Query
+
+from ..common.observability import register_observability
+from .service import get_live_trends, get_refresh_status, refresh_trends, start_scheduler
+
 
 @asynccontextmanager
 async def _trend_ingestion_lifespan(_: FastAPI):
@@ -15,11 +17,25 @@ register_observability(app, service_name="trend_ingestion")
 
 
 @app.get("/trends/live")
-async def live_trends(category: str | None = None):
-    return await get_live_trends(category)
+async def live_trends(
+    category: str | None = None,
+    source: str | None = None,
+    lookback_hours: int = Query(default=72, ge=1, le=24 * 14),
+    limit: int = Query(default=5, ge=1, le=50),
+):
+    return await get_live_trends(
+        category=category,
+        source=source,
+        lookback_hours=lookback_hours,
+        per_group_limit=limit,
+    )
+
+
+@app.get("/trends/live/status")
+async def live_trends_status():
+    return get_refresh_status()
 
 
 @app.post("/trends/refresh")
 async def refresh_endpoint():
-    await refresh_trends()
-    return {"status": "ok"}
+    return await refresh_trends()

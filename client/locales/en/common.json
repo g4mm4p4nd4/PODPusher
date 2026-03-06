@@ -16,7 +16,19 @@
   },
   "index": {
     "trending": "Trending Keywords",
-    "events": "This Month's Events"
+    "events": "This Month's Events",
+    "loading": "Loading live trends...",
+    "empty": "No live trends available yet. Run a refresh to ingest signals.",
+    "loadError": "Could not load live trends right now. Try again.",
+    "refreshError": "Could not refresh live trends right now. Try again.",
+    "refresh": "Refresh live signals",
+    "refreshing": "Refreshing...",
+    "source": "Source",
+    "engagement": "Engagement",
+    "lastRun": "Last refresh",
+    "mode": "Mode",
+    "signals": "Signals stored",
+    "notAvailable": "Not available"
   },
   "categories": {
     "title": "Trending Categories"
@@ -27,7 +39,22 @@
   "generate": {
     "title": "Generate Product Idea",
     "placeholder": "Enter trend term",
-    "button": "Generate"
+    "button": "Generate",
+    "results": {
+      "trends": "Trend Signals",
+      "ideas": "Generated Ideas",
+      "products": "Suggested Products",
+      "description": "Description",
+      "price": "Price",
+      "tags": "Tags",
+      "listing": "Listing Preview",
+      "viewListing": "View listing",
+      "missingIntegrations": "Connect {{providers}} to publish automatically.",
+      "noData": "The generation completed but did not return displayable content.",
+      "none": "None",
+      "unknown": "Unknown",
+      "untitled": "Untitled"
+    }
   },
   "suggestions": {
     "title": "Product Suggestions",
@@ -111,7 +138,30 @@
     "pendingAccount": "Pending account info",
     "notConnected": "Not connected",
     "disconnect": "Disconnect",
-    "connect": "Connect"
+    "connect": "Connect",
+    "providers": {
+      "etsy": "Etsy",
+      "printify": "Printify",
+      "stripe": "Stripe"
+    },
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Not connected",
+      "expiresIn": "Expires in {{count}} days",
+      "expiresToday": "Expires today",
+      "expired": "Expired"
+    },
+    "error": {
+      "load": "Unable to load integrations.",
+      "oauth": "Unable to start OAuth.",
+      "disconnect": "Unable to disconnect."
+    },
+    "retry": "Try again",
+    "flash": {
+      "linked": "{{provider}} account connected.",
+      "removed": "{{provider}} account disconnected.",
+      "error": "OAuth connection failed."
+    }
   },
   "search": {
     "title": "Search",
@@ -132,5 +182,22 @@
     "success": "Created",
     "error": "Error"
   },
-  "loading": "Loading..."
+  "loading": "Loading...",
+  "quota": {
+    "plan": "{{plan}} plan",
+    "unlimited": "{{plan}} - Unlimited",
+    "summary": "{{used}} / {{limit}}",
+    "remaining": "{{count}} credits left",
+    "ariaProgress": "Quota usage {{percentage}} percent"
+  },
+  "oauth": {
+    "title": "OAuth Connection",
+    "preparing": "Preparing connection...",
+    "connecting": "Connecting account...",
+    "success": "Linked {{provider}} successfully.",
+    "redirect": "Redirecting you to settings...",
+    "error": "OAuth callback failed.",
+    "missingParams": "Missing OAuth parameters.",
+    "return": "Return to settings"
+  }
 }

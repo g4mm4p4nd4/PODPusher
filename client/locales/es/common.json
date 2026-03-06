@@ -16,7 +16,19 @@
   },
   "index": {
     "trending": "Palabras clave en tendencia",
-    "events": "Eventos del mes"
+    "events": "Eventos del mes",
+    "loading": "Cargando tendencias en vivo...",
+    "empty": "Aun no hay tendencias en vivo. Ejecuta una actualizacion para ingerir senales.",
+    "loadError": "No se pudieron cargar las tendencias en vivo. Intentalo de nuevo.",
+    "refreshError": "No se pudieron actualizar las tendencias en vivo. Intentalo de nuevo.",
+    "refresh": "Actualizar senales en vivo",
+    "refreshing": "Actualizando...",
+    "source": "Fuente",
+    "engagement": "Interaccion",
+    "lastRun": "Ultima actualizacion",
+    "mode": "Modo",
+    "signals": "Senales guardadas",
+    "notAvailable": "No disponible"
   },
   "categories": {
     "title": "Categorías en tendencia"
@@ -27,7 +39,22 @@
   "generate": {
     "title": "Generar idea de producto",
     "placeholder": "Introduce un término",
-    "button": "Generar"
+    "button": "Generar",
+    "results": {
+      "trends": "Señales de tendencia",
+      "ideas": "Ideas generadas",
+      "products": "Productos sugeridos",
+      "description": "Descripción",
+      "price": "Precio",
+      "tags": "Etiquetas",
+      "listing": "Vista previa del anuncio",
+      "viewListing": "Ver anuncio",
+      "missingIntegrations": "Conecta {{providers}} para publicar automáticamente.",
+      "noData": "La generación finalizó pero no devolvió contenido visible.",
+      "none": "Ninguno",
+      "unknown": "Desconocido",
+      "untitled": "Sin título"
+    }
   },
   "suggestions": {
     "title": "Sugerencias de producto",
@@ -100,8 +127,8 @@
     "download": "Descargar imagen"
   },
   "settings": {
-    "title": "Configuración Social",
-    "auto": "Autogenerar publicaciones",
+    "title": "Configuración social",
+    "auto": "Generar publicaciones automáticas",
     "instagram": "Usuario de Instagram",
     "facebook": "Usuario de Facebook",
     "twitter": "Usuario de Twitter",
@@ -111,7 +138,30 @@
     "pendingAccount": "Información de cuenta pendiente",
     "notConnected": "No conectado",
     "disconnect": "Desconectar",
-    "connect": "Conectar"
+    "connect": "Conectar",
+    "providers": {
+      "etsy": "Etsy",
+      "printify": "Printify",
+      "stripe": "Stripe"
+    },
+    "status": {
+      "connected": "Conectado",
+      "disconnected": "No conectado",
+      "expiresIn": "Expira en {{count}} días",
+      "expiresToday": "Expira hoy",
+      "expired": "Expirado"
+    },
+    "error": {
+      "load": "No se pudieron cargar las integraciones.",
+      "oauth": "No se pudo iniciar la autenticación.",
+      "disconnect": "No se pudo desconectar."
+    },
+    "retry": "Reintentar",
+    "flash": {
+      "linked": "Cuenta de {{provider}} conectada.",
+      "removed": "Cuenta de {{provider}} desconectada.",
+      "error": "Error en la conexion OAuth."
+    }
   },
   "search": {
     "title": "Buscar",
@@ -132,5 +182,22 @@
     "success": "Creado",
     "error": "Error"
   },
-  "loading": "Cargando..."
+  "loading": "Cargando...",
+  "quota": {
+    "plan": "Plan {{plan}}",
+    "unlimited": "{{plan}} - Ilimitado",
+    "summary": "{{used}} / {{limit}}",
+    "remaining": "{{count}} créditos disponibles",
+    "ariaProgress": "Uso de cuota {{percentage}} por ciento"
+  },
+  "oauth": {
+    "title": "Conexion OAuth",
+    "preparing": "Preparando la conexion...",
+    "connecting": "Conectando la cuenta...",
+    "success": "Cuenta de {{provider}} vinculada correctamente.",
+    "redirect": "Redirigiendo a la configuracion...",
+    "error": "La devolucion de OAuth fallo.",
+    "missingParams": "Faltan parametros de OAuth.",
+    "return": "Volver a la configuracion"
+  }
 }

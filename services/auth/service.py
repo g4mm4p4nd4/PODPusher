@@ -428,6 +428,49 @@ async def ensure_credential_fresh(
         raise
 
 
+async def refresh_expiring_credentials(batch_size: int = 10) -> int:
+    """Refresh credentials that are close to expiry."""
+    if batch_size <= 0:
+        return 0
+    async with get_session() as session:
+        stmt = (
+            select(OAuthCredential)
+            .where(
+                OAuthCredential.refresh_token.is_not(None),
+                OAuthCredential.expires_at.is_not(None),
+            )
+            .order_by(OAuthCredential.expires_at)
+            .limit(batch_size)
+        )
+        result = await session.exec(stmt)
+        credentials = result.all()
+        refreshed = 0
+        for credential in credentials:
+            if not _credential_requires_refresh(credential):
+                continue
+            try:
+                await ensure_credential_fresh(session, credential)
+                refreshed += 1
+            except Exception as exc:  # pragma: no cover - network failures bubble up
+                logger.warning(
+                    "OAuth refresh failed",
+                    extra={
+                        "provider": credential.provider.value,
+                        "user_id": credential.user_id,
+                        "error": str(exc),
+                    },
+                )
+        if refreshed:
+            logger.info('OAuth credentials refreshed', extra={'count': refreshed})
+        return refreshed
+
+
+async def _run_oauth_maintenance() -> None:
+    await prune_expired_oauth_records()
+    if REFRESH_LEEWAY_SECONDS > 0:
+        await refresh_expiring_credentials()
+
+
 async def prune_expired_oauth_records() -> None:
     now = datetime.utcnow()
     async with get_session() as session:
@@ -455,7 +498,7 @@ def start_cleanup_scheduler() -> None:
     if _cleanup_scheduler.running:
         return
     _cleanup_scheduler.add_job(
-        prune_expired_oauth_records,
+        _run_oauth_maintenance,
         "interval",
         minutes=CLEANUP_INTERVAL_MINUTES,
     )

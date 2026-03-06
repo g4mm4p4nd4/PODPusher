@@ -1,53 +1,42 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List
-from fastapi import Depends, FastAPI, HTTPException
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+
+from ..ab_tests.api import app as ab_app
+from ..analytics.api import router as analytics_router
+from ..analytics.middleware import AnalyticsMiddleware
+from ..auth.api import app as auth_app
+from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
+from ..common.auth import require_user_id
+from ..common.observability import register_observability
+from ..ideation.api import app as ideation_app
+from ..ideation.service import generate_ideas
+from ..image_gen.service import generate_images
+from ..integration.service import create_sku, load_oauth_credentials, publish_listing
+from ..listing_composer.api import app as listing_app
+from ..models import OAuthProvider
+from ..notifications.api import app as notifications_app
+from ..product.api import app as product_app
+from ..search.api import app as search_app
+from ..social_generator.api import app as social_app
+from ..trend_ingestion.service import get_live_trends, get_refresh_status, refresh_trends, start_scheduler
+from ..trend_scraper.events import EVENTS
 from ..trend_scraper.service import (
     fetch_trends,
-    get_trending_categories,
     get_design_ideas,
     get_product_suggestions,
+    get_trending_categories,
 )
-from ..ideation.service import generate_ideas
-from ..ideation.api import app as ideation_app
-from ..image_gen.service import generate_images
-from ..integration.service import create_sku, publish_listing, load_oauth_credentials
-from ..common.auth import require_user_id
-from ..models import OAuthProvider
-from ..product.api import app as product_app
-from ..notifications.api import app as notifications_app
-from ..search.api import app as search_app
-from ..ab_tests.api import app as ab_app
-from ..listing_composer.api import app as listing_app
-from ..social_generator.api import app as social_app
-from ..auth.api import app as auth_app
-from ..common.observability import register_observability
-from ..bulk_create.api import BulkCreateResponse, bulk_create as bulk_create_handler
-from fastapi import Request
-from ..trend_scraper.events import EVENTS
-from ..analytics.middleware import AnalyticsMiddleware
-from ..trend_ingestion.service import (
-    get_live_trends,
-    refresh_trends,
-    start_scheduler,
-)
+from ..user.api import router as user_router
+
 
 @asynccontextmanager
-def _gateway_lifespan(app: FastAPI):
+async def _gateway_lifespan(_: FastAPI):
     start_scheduler()
     yield
 
-app = FastAPI(lifespan=_gateway_lifespan)
-register_observability(app, service_name="gateway")
-app.mount("/api/products", product_app)
-app.mount("/api/notifications", notifications_app)
-app.mount("/api/search", search_app)
-app.mount("/ab_tests", ab_app)
-app.mount("/api/ideation", ideation_app)
-app.mount("/api/listing-composer", listing_app)
-app.mount("/api/social", social_app)
-app.mount("/api/auth", auth_app)
-app.add_middleware(AnalyticsMiddleware)
 
 def _assemble_products(ideas: List[dict], images: List[dict]) -> List[dict]:
     idea_lookup = {idea.get("id"): idea for idea in ideas if idea.get("id") is not None}
@@ -74,6 +63,22 @@ def _assemble_products(ideas: List[dict], images: List[dict]) -> List[dict]:
         )
     return products
 
+
+app = FastAPI(lifespan=_gateway_lifespan)
+register_observability(app, service_name="gateway")
+app.include_router(analytics_router)
+app.include_router(user_router)
+app.mount("/api/products", product_app)
+app.mount("/api/notifications", notifications_app)
+app.mount("/api/search", search_app)
+app.mount("/ab_tests", ab_app)
+app.mount("/api/ideation", ideation_app)
+app.mount("/api/listing-composer", listing_app)
+app.mount("/api/social", social_app)
+app.mount("/api/auth", auth_app)
+app.add_middleware(AnalyticsMiddleware)
+
+
 @app.post("/generate")
 async def generate(
     category: str | None = None,
@@ -93,26 +98,32 @@ async def generate(
         raise HTTPException(status_code=503, detail="Unable to build product payloads")
 
     printify_credentials = await load_oauth_credentials(user_id, OAuthProvider.PRINTIFY)
-    products = create_sku(product_inputs, credential=printify_credentials)
-    if not products:
-        raise HTTPException(status_code=502, detail="Printify did not return any products")
-
     etsy_credentials = await load_oauth_credentials(user_id, OAuthProvider.ETSY)
-    listing = publish_listing(dict(products[0]), credential=etsy_credentials)
-    if not listing:
-        raise HTTPException(status_code=502, detail="Unable to publish listing")
-
-    month = datetime.utcnow().strftime("%B").lower()
-    events = EVENTS.get(month, [])
-    listing_url = listing.get("etsy_url")
-    listing["listing_url"] = listing_url
-    products_payload = [dict(product) for product in products]
 
     missing_providers: list[str] = []
     if not printify_credentials:
         missing_providers.append(OAuthProvider.PRINTIFY.value)
     if not etsy_credentials:
         missing_providers.append(OAuthProvider.ETSY.value)
+
+    products_payload = [dict(product) for product in product_inputs]
+    listing: dict | None = None
+    listing_url: str | None = None
+
+    if not missing_providers:
+        products = create_sku(product_inputs, credential=printify_credentials)
+        if not products:
+            raise HTTPException(status_code=502, detail="Printify did not return any products")
+        products_payload = [dict(product) for product in products]
+        listing = publish_listing(dict(products[0]), credential=etsy_credentials)
+        if not listing:
+            raise HTTPException(status_code=502, detail="Unable to publish listing")
+        listing_url = listing.get("etsy_url")
+        if listing_url:
+            listing["listing_url"] = listing_url
+
+    month = datetime.utcnow().strftime("%B").lower()
+    events = EVENTS.get(month, [])
 
     response = {
         "listing_url": listing_url,
@@ -130,13 +141,16 @@ async def generate(
     }
     return response
 
+
 @app.post("/api/bulk_create", response_model=BulkCreateResponse)
 async def bulk_create(request: Request):
     return await bulk_create_handler(request)
 
+
 @app.get("/trends")
 async def list_trends(category: str | None = None):
     return await fetch_trends(category)
+
 
 @app.get("/events/{month}")
 async def list_events(month: str):
@@ -144,23 +158,42 @@ async def list_events(month: str):
     events = EVENTS.get(month_key, [])
     return {"month": month_key.capitalize(), "events": events}
 
+
 @app.get("/product-categories")
 async def product_categories(category: str | None = None):
     return get_trending_categories(category)
+
 
 @app.get("/design-ideas")
 async def design_ideas(category: str | None = None):
     return get_design_ideas(category)
 
+
 @app.get("/product-suggestions")
 async def product_suggestions(category: str | None = None, design: str | None = None):
     return get_product_suggestions(category, design)
 
+
 @app.get("/api/trends/live")
-async def live_trends(category: str | None = None):
-    return await get_live_trends(category)
+async def live_trends(
+    category: str | None = None,
+    source: str | None = None,
+    lookback_hours: int = Query(default=72, ge=1, le=24 * 14),
+    limit: int = Query(default=5, ge=1, le=50),
+):
+    return await get_live_trends(
+        category=category,
+        source=source,
+        lookback_hours=lookback_hours,
+        per_group_limit=limit,
+    )
+
+
+@app.get("/api/trends/live/status")
+async def live_trends_status():
+    return get_refresh_status()
+
 
 @app.post("/api/trends/refresh")
 async def refresh_trends_endpoint():
-    await refresh_trends()
-    return {"status": "ok"}
+    return await refresh_trends()

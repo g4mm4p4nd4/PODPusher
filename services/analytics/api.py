@@ -1,14 +1,13 @@
 from datetime import datetime
 from typing import Any, Dict
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Query
 from pydantic import BaseModel
 
+from ..common.observability import register_observability
 from ..models import EventType
 from .middleware import AnalyticsMiddleware
-from .mock import MOCK_KEYWORDS
-from .service import get_summary, list_events, log_event
-from ..common.observability import register_observability
+from .service import get_summary, get_trending_keywords, list_events, log_event
 
 app = FastAPI()
 register_observability(app, service_name="analytics")
@@ -42,8 +41,14 @@ class SummaryOut(BaseModel):
 
 
 @router.get("", response_model=list[KeywordOut])
-async def list_mock_keywords() -> list[KeywordOut]:
-    return [KeywordOut(**item) for item in MOCK_KEYWORDS]
+async def list_keywords(
+    limit: int = Query(default=10, ge=1, le=50),
+    lookback_hours: int = Query(default=24 * 7, ge=1, le=24 * 30),
+) -> list[KeywordOut]:
+    return [
+        KeywordOut(**item)
+        for item in await get_trending_keywords(limit=limit, lookback_hours=lookback_hours)
+    ]
 
 
 @router.post("/events", response_model=EventOut, status_code=201)
