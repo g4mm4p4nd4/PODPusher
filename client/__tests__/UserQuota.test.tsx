@@ -5,6 +5,29 @@ import '@testing-library/jest-dom';
 import UserQuota from '../components/UserQuota';
 import { fetchCurrentUser, imageGeneratedEvent } from '../services/user';
 
+const translationMock = {
+  t: (key: string, options?: Record<string, string | number>) => {
+    switch (key) {
+      case 'quota.plan':
+        return String(options?.plan ?? '');
+      case 'quota.summary':
+        return `${options?.used}/${options?.limit}`;
+      case 'quota.remaining':
+        return `${options?.count} credits left`;
+      case 'quota.unlimited':
+        return `${options?.plan} · Unlimited`;
+      case 'quota.ariaProgress':
+        return `${options?.percentage}% used`;
+      default:
+        return key;
+    }
+  },
+};
+
+jest.mock('next-i18next', () => ({
+  useTranslation: () => translationMock,
+}));
+
 jest.mock('../services/user', () => ({
   fetchCurrentUser: jest.fn(),
   imageGeneratedEvent: 'image:generated',
@@ -22,7 +45,7 @@ test('renders a progress bar for metered plans', async () => {
 
   render(<UserQuota />);
 
-  await waitFor(() => expect(screen.getByText('free')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Free')).toBeInTheDocument());
   expect(screen.getByText('5/20')).toBeInTheDocument();
   expect(screen.getByText('15 credits left')).toBeInTheDocument();
   expect(screen.getByTestId('quota-bar')).toHaveStyle({ width: '25%' });
@@ -34,7 +57,7 @@ test('shows unlimited status for pro plans', async () => {
   render(<UserQuota />);
 
   await waitFor(() =>
-    expect(screen.getByTestId('quota')).toHaveTextContent('Pro Â· Unlimited')
+    expect(screen.getByTestId('quota')).toHaveTextContent('Pro · Unlimited')
   );
 });
 

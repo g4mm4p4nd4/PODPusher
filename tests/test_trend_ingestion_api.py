@@ -1,20 +1,44 @@
-import pytest
-from httpx import AsyncClient, ASGITransport
+﻿from datetime import datetime, timedelta
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from services.common.database import get_session, init_db
 from services.gateway.api import app as gateway_app
-from services.common.database import init_db, get_session
 from services.models import TrendSignal
 
 
 @pytest.mark.asyncio
 async def test_live_trends_endpoint():
     await init_db()
+    now = datetime.utcnow()
     async with get_session() as session:
         session.add(
-            TrendSignal(source="tiktok", keyword="funny cat", engagement_score=5, category="animals")
+            TrendSignal(
+                source="tiktok",
+                keyword="funny cat",
+                engagement_score=5,
+                category="animals",
+                timestamp=now,
+            )
         )
         session.add(
-            TrendSignal(source="twitter", keyword="climate", engagement_score=3, category="activism")
+            TrendSignal(
+                source="twitter",
+                keyword="climate",
+                engagement_score=3,
+                category="activism",
+                timestamp=now,
+            )
+        )
+        session.add(
+            TrendSignal(
+                source="tiktok",
+                keyword="ancient",
+                engagement_score=500,
+                category="animals",
+                timestamp=now - timedelta(hours=90),
+            )
         )
         await session.commit()
 
@@ -31,9 +55,29 @@ async def test_live_trends_endpoint():
         filtered = resp.json()
         assert list(filtered.keys()) == ["activism"]
 
+        resp = await client.get(
+            "/api/trends/live",
+            params={"source": "tiktok", "lookback_hours": 48, "limit": 1},
+        )
+        assert resp.status_code == 200
+        filtered = resp.json()
+        assert list(filtered.keys()) == ["animals"]
+        assert filtered["animals"][0]["source"] == "tiktok"
+
 
 @pytest.mark.asyncio
-async def test_refresh_endpoint(monkeypatch):
+async def test_live_trends_endpoint_rejects_invalid_limits():
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/trends/live", params={"lookback_hours": 0})
+        assert resp.status_code == 422
+
+        resp = await client.get("/api/trends/live", params={"limit": 51})
+        assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_refresh_and_status_endpoint(monkeypatch):
     await init_db()
 
     async def fake_refresh():
@@ -47,14 +91,43 @@ async def test_refresh_endpoint(monkeypatch):
                 )
             )
             await session.commit()
+        return {
+            "last_started_at": "2026-03-06T10:00:00",
+            "last_finished_at": "2026-03-06T10:00:02",
+            "last_mode": "live",
+            "sources_succeeded": ["etsy"],
+            "sources_failed": {},
+            "signals_collected": 1,
+            "signals_persisted": 1,
+        }
 
     monkeypatch.setattr("services.gateway.api.refresh_trends", fake_refresh)
+    monkeypatch.setattr(
+        "services.gateway.api.get_refresh_status",
+        lambda: {
+            "last_started_at": "2026-03-06T10:00:00",
+            "last_finished_at": "2026-03-06T10:00:02",
+            "last_mode": "live",
+            "sources_succeeded": ["etsy"],
+            "sources_failed": {},
+            "signals_collected": 1,
+            "signals_persisted": 1,
+        },
+    )
 
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post("/api/trends/refresh")
         assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["last_mode"] == "live"
+        assert payload["signals_persisted"] == 1
 
-        resp = await client.get("/api/trends/live")
-        data = resp.json()
+        status = await client.get("/api/trends/live/status")
+        assert status.status_code == 200
+        status_data = status.json()
+        assert status_data["last_mode"] == "live"
+
+        live = await client.get("/api/trends/live", params={"lookback_hours": 240})
+        data = live.json()
         assert "other" in data

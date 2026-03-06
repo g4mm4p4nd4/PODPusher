@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from datetime import datetime, timedelta
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
@@ -259,3 +259,82 @@ async def test_delete_oauth_credential_endpoint():
             select(OAuthCredential).where(OAuthCredential.user_id == 77)
         )
         assert result.first() is None
+
+
+@pytest.mark.asyncio
+async def test_refresh_expiring_credentials(monkeypatch):
+    await init_db()
+    monkeypatch.setenv('ETSY_CLIENT_ID', 'cid')
+    monkeypatch.setenv('ETSY_CLIENT_SECRET', 'secret')
+
+    async with get_session() as session:
+        credential = OAuthCredential(
+            user_id=1,
+            provider=OAuthProvider.ETSY,
+            access_token='old-token',
+            refresh_token='refresh-token',
+            expires_at=datetime.utcnow() + timedelta(seconds=30),
+            scope='profile',
+        )
+        session.add(credential)
+        await session.commit()
+
+    async def fake_refresh(session, credential):
+        credential.access_token = 'new-token'
+        credential.expires_at = datetime.utcnow() + timedelta(hours=2)
+        session.add(credential)
+        await session.commit()
+        await session.refresh(credential)
+        return credential
+
+    monkeypatch.setattr(auth_service, 'ensure_credential_fresh', fake_refresh)
+
+    refreshed = await auth_service.refresh_expiring_credentials()
+    assert refreshed == 1
+
+    async with get_session() as session:
+        result = await session.exec(select(OAuthCredential))
+        saved = result.one()
+        assert saved.access_token == 'new-token'
+        assert saved.expires_at and saved.expires_at > datetime.utcnow()
+
+@pytest.mark.asyncio
+async def test_authorize_endpoint_returns_503_when_provider_env_missing(monkeypatch):
+    await init_db()
+    monkeypatch.delenv("PRINTIFY_CLIENT_ID", raising=False)
+    monkeypatch.delenv("PRINTIFY_CLIENT_SECRET", raising=False)
+
+    transport = ASGITransport(app=auth_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        session_resp = await client.post("/session", json={"user_id": 22})
+        token = session_resp.json()["token"]
+
+        resp = await client.post(
+            "/printify/authorize",
+            json={"redirect_uri": "https://example.com/oauth"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert resp.status_code == 503
+    assert "Missing required environment variable" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_callback_invalid_state_returns_400(monkeypatch):
+    await init_db()
+    monkeypatch.setenv("ETSY_CLIENT_ID", "cid")
+    monkeypatch.setenv("ETSY_CLIENT_SECRET", "secret")
+
+    transport = ASGITransport(app=auth_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        session_resp = await client.post("/session", json={"user_id": 31})
+        token = session_resp.json()["token"]
+
+        resp = await client.post(
+            "/etsy/callback",
+            json={"code": "abc", "state": "missing-state", "redirect_uri": "https://example.com/callback"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert resp.status_code == 400
+    assert "state mismatch" in resp.json()["detail"].lower()

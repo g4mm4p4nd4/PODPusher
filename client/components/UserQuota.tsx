@@ -11,10 +11,6 @@ const REFRESH_EVENTS = [quotaRefreshEvent, imageGeneratedEvent];
 
 const formatPlan = (plan: string) => plan.charAt(0).toUpperCase() + plan.slice(1);
 
-/**
- * Tier-based quota breakdown. Mirrors services/common/quotas.py PLAN_LIMITS.
- * Shows how the total quota is distributed across resource types.
- */
 const PLAN_BREAKDOWN: Record<string, { listings: number; images: number; ideas: number }> = {
   free: { listings: 10, images: 20, ideas: 50 },
   starter: { listings: 50, images: 100, ideas: 200 },
@@ -46,9 +42,9 @@ export default function UserQuota() {
     const handler = () => {
       void loadProfile();
     };
-    REFRESH_EVENTS.forEach(event => window.addEventListener(event, handler));
+    REFRESH_EVENTS.forEach((event) => window.addEventListener(event, handler));
     return () => {
-      REFRESH_EVENTS.forEach(event => window.removeEventListener(event, handler));
+      REFRESH_EVENTS.forEach((event) => window.removeEventListener(event, handler));
     };
   }, [loadProfile]);
 
@@ -74,10 +70,7 @@ export default function UserQuota() {
 
   if (!profile) {
     return (
-      <div
-        data-testid="quota"
-        className="ml-auto flex w-56 flex-col gap-1 text-xs text-gray-300"
-      >
+      <div data-testid="quota" className="ml-auto flex w-56 flex-col gap-1 text-xs text-gray-300">
         <div className="flex justify-between">
           <span className="font-medium">&nbsp;</span>
           <span>&nbsp;</span>
@@ -88,10 +81,12 @@ export default function UserQuota() {
     );
   }
 
+  const planLabel = t('quota.plan', { plan: formatPlan(profile.plan) });
+
   if (profile.quota_limit == null) {
     return (
       <div data-testid="quota" className="ml-auto text-sm font-medium text-green-400">
-        {`${formatPlan(profile.plan)} · Unlimited`}
+        {t('quota.unlimited', { plan: planLabel })}
       </div>
     );
   }
@@ -99,8 +94,8 @@ export default function UserQuota() {
   return (
     <div data-testid="quota" className="ml-auto flex w-72 flex-col gap-2 text-xs text-gray-200">
       <div className="flex justify-between">
-        <span className="font-medium capitalize">{profile.plan}</span>
-        <span>{`${progress?.used ?? 0}/${progress?.limit ?? profile.quota_limit}`}</span>
+        <span className="font-medium">{planLabel}</span>
+        <span>{t('quota.summary', { used: progress?.used ?? 0, limit: progress?.limit ?? profile.quota_limit })}</span>
       </div>
       <div className="h-2 overflow-hidden rounded bg-gray-700" aria-hidden="true">
         <div
@@ -109,20 +104,16 @@ export default function UserQuota() {
           aria-valuemin={0}
           aria-valuenow={progress?.percentage ?? 0}
           aria-valuemax={100}
-          className={`h-full transition-all ${
-            (progress?.percentage ?? 0) >= 90 ? 'bg-red-500' : 'bg-blue-500'
-          }`}
+          aria-label={t('quota.ariaProgress', { percentage: progress?.percentage ?? 0 })}
+          className={`h-full transition-all ${(progress?.percentage ?? 0) >= 90 ? 'bg-red-500' : 'bg-blue-500'}`}
           style={{ width: `${progress?.percentage ?? 0}%` }}
         />
       </div>
-      <span>{t('settings.creditsLeft', { count: progress?.remaining ?? 0 })}</span>
+      <span>{t('quota.remaining', { count: progress?.remaining ?? 0 })}</span>
 
-      {/* Usage Breakdown by Resource Type */}
       {breakdown && (
         <div data-testid="quota-breakdown" className="mt-2 space-y-1">
-          <p className="text-xs font-semibold text-gray-400">
-            {t('settings.usageBreakdown')}
-          </p>
+          <p className="text-xs font-semibold text-gray-400">{t('settings.usageBreakdown')}</p>
           <div className="flex justify-between text-gray-300">
             <span>{t('settings.listings_quota')}</span>
             <span>{breakdown.listings}</span>
@@ -138,13 +129,12 @@ export default function UserQuota() {
         </div>
       )}
 
-      {/* Upgrade CTA */}
       {profile.plan !== 'enterprise' && (
         <button
           data-testid="upgrade-cta"
           type="button"
           onClick={handleUpgrade}
-          className="mt-2 w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors"
+          className="mt-2 w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
         >
           {t('settings.upgrade')}
         </button>

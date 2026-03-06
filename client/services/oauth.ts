@@ -1,5 +1,5 @@
 ﻿import axios from 'axios';
-import { resolveApiUrl } from './apiBase';
+import { getAuthHeaders, resolveApiUrl } from './apiBase';
 
 export interface OAuthProviderInfo {
   provider: string;
@@ -19,7 +19,7 @@ export interface OAuthCredentialSummary {
 
 function buildAuthHeaders(token?: string) {
   if (!token) {
-    return undefined;
+    return getAuthHeaders();
   }
   return { Authorization: 'Bearer ' + token };
 }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'next-i18next';
-import { resolveApiUrl } from '../services/apiBase';
+import { getAuthHeaders, resolveApiUrl } from '../services/apiBase';
 
 export type Notification = {
   id: number;
@@ -17,23 +17,23 @@ export default function Notifications() {
 
   useEffect(() => {
     axios
-      .get<Notification[]>(resolveApiUrl('/api/notifications'), {
-        headers: { 'X-User-Id': '1' },
-      })
-      .then(res => setItems(res.data))
-      .catch(err => console.error(err));
+      .get<Notification[]>(resolveApiUrl('/api/notifications'), { headers: getAuthHeaders() })
+      .then((res) => setItems(res.data))
+      .catch((err) => console.error(err));
   }, []);
 
   const markRead = async (id: number) => {
-    await axios.put(resolveApiUrl(`/api/notifications/${id}/read`));
-    setItems(items.map(n => (n.id === id ? { ...n, read_status: true } : n)));
+    await axios.put(resolveApiUrl(`/api/notifications/${id}/read`), undefined, {
+      headers: getAuthHeaders(),
+    });
+    setItems(items.map((n) => (n.id === id ? { ...n, read_status: true } : n)));
   };
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">{t('notifications.title')}</h1>
       <ul className="space-y-2">
-        {items.map(n => (
+        {items.map((n) => (
           <li
             key={n.id}
             className={`p-2 border rounded ${n.read_status ? 'opacity-50' : ''}`}

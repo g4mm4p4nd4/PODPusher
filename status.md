@@ -1,4 +1,4 @@
-# Status and Outstanding Tasks
+﻿# Status and Outstanding Tasks
 
 This file tracks the remaining work required to bring PODPusher to production readiness.
 
@@ -21,6 +21,25 @@ This file tracks the remaining work required to bring PODPusher to production re
 ## Pending PRs
 
 - **Image Review & Tagging PR** - from the `feat/image-review-merge` branch via Codex. Review and merge once complete.
+## Current Focus
+
+1. **Bootstraps & CI Hardening** - Replace the empty Alembic baseline, align runtime env/docs with the Etsy OAuth contract, and keep frontend type-check and build validation in CI.
+2. **Real Trend Pipeline Validation** - Validate one non-stub trend -> idea -> image -> listing flow in staging when credentials are available.
+3. **Docs & Multi-User Cleanup** - Remove merge artifacts, finish the remaining i18n rollout, and reduce lingering internal-user assumptions.
+
+## Recent Integration Work
+
+- **Gateway and Client Recovery (March 6, 2026)** - Restored the shared frontend API-base helper, routed authenticated client calls through it, mounted analytics and user routes in the gateway, and fixed gateway lifespan wiring.
+- **Mainline Consolidation Sweep (March 6, 2026)** - Folded detached worktree output back into the main workspace for live trend dashboard flows, analytics keyword aggregation, and OAuth API error mapping.
+- **Trend Ingestion Hardening** - Added refresh telemetry, RSS fallback handling, live-trend recency and source filters, and focused backend/frontend coverage.
+- **Analytics Truthfulness** - Replaced mock analytics keyword output with database-backed aggregation from TrendSignal plus Trend fallback queries.
+
+## Verification Notes
+
+- Passed: targeted backend pytest coverage for analytics, auth, gateway, and trend ingestion slices before reconciliation.
+- Passed: frontend TypeScript check in client/ before reconciliation.
+- Passed: focused frontend Jest coverage for homepage live trends, trend service transport, and user quota UI before reconciliation.
+- Pending: full CI-equivalent validation on the reconciled branch.
 
 ## Critical Blockers (P0) - RESOLVED
 
@@ -76,3 +95,4 @@ This file tracks the remaining work required to bring PODPusher to production re
 ## Instructions to Agents
 
 Please refer to the appended section in `agents.md` for specific instructions on how each agent should tackle these tasks.
+

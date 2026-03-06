@@ -16,7 +16,19 @@
   },
   "index": {
     "trending": "Mots-clés tendance",
-    "events": "Événements du mois"
+    "events": "Événements du mois",
+    "loading": "Chargement des tendances en direct...",
+    "empty": "Aucune tendance en direct pour le moment. Lancez une actualisation.",
+    "loadError": "Impossible de charger les tendances en direct. Veuillez reessayer.",
+    "refreshError": "Impossible d actualiser les tendances en direct. Veuillez reessayer.",
+    "refresh": "Actualiser les signaux en direct",
+    "refreshing": "Actualisation...",
+    "source": "Source",
+    "engagement": "Engagement",
+    "lastRun": "Derniere actualisation",
+    "mode": "Mode",
+    "signals": "Signaux enregistres",
+    "notAvailable": "Non disponible"
   },
   "categories": {
     "title": "Catégories tendance"
@@ -31,7 +43,22 @@
     "generating": "Génération en cours...",
     "connectionRequired": "Connexion requise",
     "connectProviders": "Pour générer et publier, veuillez connecter les comptes suivants : {{providers}}",
-    "goToSettings": "Aller aux Paramètres"
+    "goToSettings": "Aller aux Paramètres",
+    "results": {
+      "trends": "Signaux de tendance",
+      "ideas": "Idees generees",
+      "products": "Produits suggeres",
+      "description": "Description",
+      "price": "Prix",
+      "tags": "Etiquettes",
+      "listing": "Apercu de l annonce",
+      "viewListing": "Voir l annonce",
+      "missingIntegrations": "Connectez {{providers}} pour publier automatiquement.",
+      "noData": "La generation est terminee mais aucun contenu exploitable n a ete renvoye.",
+      "none": "Aucun",
+      "unknown": "Inconnu",
+      "untitled": "Sans titre"
+    }
   },
   "suggestions": {
     "title": "Suggestions de produits",
@@ -47,7 +74,16 @@
     "stars_one": "{{count}} étoile",
     "stars_other": "{{count}} étoiles",
     "tags": "Étiquettes",
-    "flag": "Signaler comme inapproprié"
+    "flag": "Signaler comme inapproprié",
+    "loading": "Chargement...",
+    "updateError": "Mise a jour impossible. Veuillez reessayer.",
+    "setRating": "Definir la note sur {{count}}",
+    "clear": "Effacer",
+    "removeTag": "Retirer l etiquette {{tag}}",
+    "addTagPlaceholder": "Ajouter une etiquette",
+    "addTagInput": "Champ d etiquette",
+    "add": "Ajouter",
+    "flagForReview": "Marquer pour revision"
   },
   "listings": {
     "pageTitle": "Compositeur d'annonces",
@@ -101,7 +137,9 @@
     "typeField": "Type de produit",
     "button": "Générer",
     "copy": "Copier la légende",
-    "download": "Télécharger l'image"
+    "download": "Télécharger l'image",
+    "loading": "Generation...",
+    "error": "Impossible de generer le contenu social. Veuillez reessayer."
   },
   "settings": {
     "pageTitle": "Paramètres",
@@ -132,7 +170,30 @@
     "listings_quota": "Annonces",
     "images_quota": "Images",
     "ideas_quota": "Idées",
-    "invalidHandle": "Format de pseudo invalide"
+    "invalidHandle": "Format de pseudo invalide",
+    "providers": {
+      "etsy": "Etsy",
+      "printify": "Printify",
+      "stripe": "Stripe"
+    },
+    "status": {
+      "connected": "Connecte",
+      "disconnected": "Non connecte",
+      "expiresIn": "Expire dans {{count}} jours",
+      "expiresToday": "Expire aujourd hui",
+      "expired": "Expire"
+    },
+    "error": {
+      "load": "Impossible de charger les integrations.",
+      "oauth": "Impossible de demarrer OAuth.",
+      "disconnect": "Impossible de deconnecter."
+    },
+    "retry": "Reessayer",
+    "flash": {
+      "linked": "Compte {{provider}} connecte.",
+      "removed": "Compte {{provider}} deconnecte.",
+      "error": "Echec de la connexion OAuth."
+    }
   },
   "oauth": {
     "connectedAccounts": "Comptes connectés",
@@ -151,7 +212,14 @@
     "cancel": "Annuler",
     "etsyDesc": "Publiez des annonces sur votre boutique Etsy",
     "printifyDesc": "Créez des produits et gérez l'inventaire",
-    "stripeDesc": "Gérez la facturation et les abonnements"
+    "stripeDesc": "Gérez la facturation et les abonnements",
+    "title": "Connexion OAuth",
+    "preparing": "Preparation de la connexion...",
+    "success": "{{provider}} lie avec succes.",
+    "redirect": "Redirection vers les parametres...",
+    "error": "Le rappel OAuth a echoue.",
+    "missingParams": "Parametres OAuth manquants.",
+    "return": "Retour aux parametres"
   },
   "search": {
     "title": "Rechercher",
@@ -172,5 +240,12 @@
     "success": "Créé",
     "error": "Erreur"
   },
-  "loading": "Chargement..."
+  "loading": "Chargement...",
+  "quota": {
+    "plan": "Forfait {{plan}}",
+    "unlimited": "{{plan}} - Illimite",
+    "summary": "{{used}} / {{limit}}",
+    "remaining": "{{count}} credits restants",
+    "ariaProgress": "Utilisation du quota {{percentage}} pour cent"
+  }
 }

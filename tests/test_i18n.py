@@ -1,7 +1,7 @@
 """Translation key verification tests.
 
 Owner: Unit-Tester (per DEVELOPMENT_PLAN.md Task 1.1)
-Reference: FC ยง7 (Internationalisation)
+Reference: FC ง7 (Internationalisation)
 
 Ensures all locale files have identical key sets to prevent
 missing translations at runtime.
@@ -11,7 +11,8 @@ from pathlib import Path
 
 import pytest
 
-LOCALES_DIR = Path('client/locales')
+ROOT = Path(__file__).resolve().parents[1]
+LOCALES_DIR = ROOT / 'client' / 'locales'
 EN_FILE = LOCALES_DIR / 'en' / 'common.json'
 ES_FILE = LOCALES_DIR / 'es' / 'common.json'
 FR_FILE = LOCALES_DIR / 'fr' / 'common.json'
@@ -35,7 +36,7 @@ def flatten(d, prefix=''):
 
 
 def load_keys(filepath: Path) -> set:
-    with filepath.open() as f:
+    with filepath.open(encoding='utf-8') as f:
         data = json.load(f)
     return set(flatten(data))
 
@@ -64,12 +65,10 @@ def test_translation_keys_match(locale, filepath, en_keys):
 
 
 def test_en_has_minimum_key_count(en_keys):
-    # Ensure we have a reasonable number of translation keys
     assert len(en_keys) >= 100, f"EN only has {len(en_keys)} keys, expected >=100"
 
 
 def test_four_locales_configured():
-    """Verify all 4 required locales have files."""
     for locale in ['en', 'es', 'fr', 'de']:
         locale_file = LOCALES_DIR / locale / 'common.json'
         assert locale_file.exists(), f"Missing locale: {locale}"

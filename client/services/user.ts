@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { resolveApiUrl } from './apiBase';
+﻿import axios from 'axios';
+import { getAuthHeaders, resolveApiUrl } from './apiBase';
 
 export interface UserProfile {
   plan: string;
@@ -18,7 +18,7 @@ const dispatchEvent = (name: string) => {
 
 export async function fetchCurrentUser(): Promise<UserProfile> {
   const res = await axios.get<UserProfile>(resolveApiUrl('/api/user/me'), {
-    headers: { 'X-User-Id': '1' },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -27,7 +27,7 @@ export async function incrementQuota(count: number): Promise<UserProfile> {
   const res = await axios.post<UserProfile>(
     resolveApiUrl('/api/user/me'),
     { count },
-    { headers: { 'X-User-Id': '1' } }
+    { headers: getAuthHeaders() }
   );
   dispatchEvent(quotaRefreshEvent);
   return res.data;
