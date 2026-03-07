@@ -41,7 +41,7 @@ jobs:
           NODE_PATH: ${{ github.workspace }}/client/node_modules
         run: |
           if npm exec --prefix client playwright -- --version > /dev/null 2>&1; then
-            npm exec --prefix client playwright -- install --with-deps
+            npm exec --prefix client playwright -- install chromium
             npm exec --prefix client playwright -- test
           else
             echo 'Playwright not available, skipping'
