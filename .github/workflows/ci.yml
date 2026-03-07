@@ -31,7 +31,7 @@ jobs:
       - name: Install Node deps
         run: npm ci --prefix client
       - name: Frontend type-check
-        run: npx tsc --noEmit --project client/tsconfig.json
+        run: npm exec --prefix client tsc -- --noEmit --project client/tsconfig.json
       - name: Node tests
         run: npm test --prefix client
       - name: Frontend build
