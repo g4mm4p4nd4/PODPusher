@@ -39,6 +39,7 @@ except ImportError:  # pragma: no cover
 
 from ..common.database import get_session
 from ..models import TrendSignal
+from .circuit_breaker import scraper_circuit_breaker
 from .sources import PLATFORM_CONFIG, SourceConfig, SelectorSet
 
 USER_AGENTS = [
@@ -304,24 +305,37 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
     aggregated: List[Dict[str, Any]] = []
     sources_succeeded: List[str] = []
     sources_failed: Dict[str, str] = {}
+    allowed_source_names: List[str] = []
 
     try:
         async with async_playwright() as pw:
             source_names = list(PLATFORM_CONFIG.keys())
-            tasks = [_scrape_source(pw, name, PLATFORM_CONFIG[name]) for name in source_names]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-        for name, result in zip(source_names, results):
+            tasks = []
+            for name in source_names:
+                if not scraper_circuit_breaker.allow_request(name):
+                    sources_failed[name] = "Circuit breaker open"
+                    _log("warning", "trend_ingestion.scrape_skipped_circuit_open", source=name)
+                    continue
+                allowed_source_names.append(name)
+                tasks.append(_scrape_source(pw, name, PLATFORM_CONFIG[name]))
+            results = await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+        for name, result in zip(allowed_source_names, results):
             if isinstance(result, Exception):
+                scraper_circuit_breaker.record_failure(name)
                 sources_failed[name] = str(result)
                 SCRAPE_FAILURES.labels(mode="live").inc()
                 _log("warning", "trend_ingestion.scrape_failed", source=name, error=str(result))
                 continue
             if result:
+                scraper_circuit_breaker.record_success(name)
                 aggregated.extend(result)
                 sources_succeeded.append(name)
             else:
+                scraper_circuit_breaker.record_failure(name)
                 sources_failed[name] = "No trend items collected"
     except Exception as exc:
+        for name in allowed_source_names:
+            scraper_circuit_breaker.record_failure(name)
         sources_failed["playwright"] = str(exc)
         SCRAPE_FAILURES.labels(mode="live").inc()
         _log("warning", "trend_ingestion.playwright_failed", error=str(exc))

@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 *.db
+*.db-journal
+*.sqlite-journal
 .pytest_cache/
 client/node_modules/
 client/.next/
@@ -9,4 +11,5 @@ client/.next/
 .tmp/
 .pydeps/
 .codex-venv/
+.codex-tools/
 *.tsbuildinfo
