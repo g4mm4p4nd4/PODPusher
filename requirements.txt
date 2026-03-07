@@ -12,6 +12,7 @@ python-multipart
 flake8
 black
 aiosqlite
+stripe
 APScheduler
 Pillow
 playwright
