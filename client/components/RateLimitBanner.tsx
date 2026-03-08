@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import { getRateLimitState, onRateLimitChange, RateLimitState } from '../services/httpClient';
 
 /**
@@ -7,8 +8,12 @@ import { getRateLimitState, onRateLimitChange, RateLimitState } from '../service
  * Owner: Frontend-Coder (per DEVELOPMENT_PLAN.md Task 2.2.3)
  */
 export default function RateLimitBanner() {
-  const [state, setState] = useState<RateLimitState>(getRateLimitState());
-  const [countdown, setCountdown] = useState(0);
+  const { t } = useTranslation('common');
+  const [state, setState] = useState<RateLimitState>(() => getRateLimitState());
+  const [countdown, setCountdown] = useState(() => {
+    const initial = getRateLimitState();
+    return initial.isLimited ? initial.retryAfter : 0;
+  });
 
   useEffect(() => {
     const unsubscribe = onRateLimitChange((newState) => {
@@ -42,7 +47,7 @@ export default function RateLimitBanner() {
       role="alert"
       data-testid="rate-limit-banner"
     >
-      Too many requests. Please wait {countdown}s before trying again.
+      {t('rateLimit.banner', { seconds: countdown })}
     </div>
   );
 }

@@ -132,6 +132,33 @@ async def test_notification_endpoints_reject_invalid_bearer_session():
 
 
 @pytest.mark.asyncio
+async def test_notification_endpoints_reject_payload_user_id_override():
+    await init_db()
+    transport = _transport()
+    schedule_time = datetime.utcnow() + timedelta(minutes=5)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        create_resp = await client.post(
+            "/",
+            json={"message": "hello", "type": "info", "user_id": 99},
+            headers={"X-User-Id": "1"},
+        )
+        assert create_resp.status_code == 422
+
+        scheduled_resp = await client.post(
+            "/scheduled",
+            json={
+                "message": "Launch teaser",
+                "type": "launch",
+                "scheduled_for": schedule_time.isoformat(),
+                "user_id": 99,
+            },
+            headers={"X-User-Id": "1"},
+        )
+        assert scheduled_resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_scheduler_jobs(monkeypatch):
     await init_db()
     async with get_session() as session:

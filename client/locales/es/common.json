@@ -286,5 +286,8 @@
     "summary": "{{used}} / {{limit}}",
     "remaining": "{{count}} creditos disponibles",
     "ariaProgress": "Uso de cuota {{percentage}} por ciento"
+  },
+  "rateLimit": {
+    "banner": "Demasiadas solicitudes. Espera {{seconds}} s antes de intentarlo de nuevo."
   }
 }

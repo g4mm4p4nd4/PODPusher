@@ -286,5 +286,8 @@
     "summary": "{{used}} / {{limit}}",
     "remaining": "{{count}} credits left",
     "ariaProgress": "Quota usage {{percentage}} percent"
+  },
+  "rateLimit": {
+    "banner": "Too many requests. Please wait {{seconds}}s before trying again."
   }
 }

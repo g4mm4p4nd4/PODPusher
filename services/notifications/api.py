@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from ..auth.service import resolve_session_token
 from .service import (
@@ -29,17 +29,17 @@ register_observability(app, service_name="notifications")
 
 
 class NotificationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     message: str
     type: str = "info"
-    user_id: int | None = None
 
 
 class ScheduledNotificationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     message: str
     type: str = "info"
     scheduled_for: datetime
     metadata: Dict[str, Any] | None = None
-    user_id: Optional[int] = None
 
 
 class ScheduledNotificationResponse(BaseModel):
@@ -102,7 +102,7 @@ async def create_notification_endpoint(
     request: Request,
     payload: NotificationCreate,
 ):
-    user_id = await _resolve_request_user_id(request, fallback=payload.user_id)
+    user_id = await _resolve_request_user_id(request)
     return await create_notification(user_id, payload.message, payload.type)
 
 
@@ -129,7 +129,7 @@ async def create_scheduled_endpoint(
     request: Request,
     payload: ScheduledNotificationCreate,
 ):
-    user_id = await _resolve_request_user_id(request, fallback=payload.user_id)
+    user_id = await _resolve_request_user_id(request)
     record = await schedule_notification(
         user_id,
         payload.message,
