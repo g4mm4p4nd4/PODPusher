@@ -1,98 +1,57 @@
-﻿# Status and Outstanding Tasks
+# PODPusher Status
 
-This file tracks the remaining work required to bring PODPusher to production readiness.
+Last updated: March 8, 2026 (America/New_York)
+Maintainer: PODPusher Coordinator (`podpusher-delivery`)
 
-> **See Also:** [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for full development roadmap and [TASKS.md](./TASKS.md) for granular task breakdown.
+This file tracks current delivery state and detached-worktree triage outcomes. Long-form historical completion logs are intentionally omitted; active execution state is authoritative.
 
-## Current Sprint: MVP Completion
+## Delivery Snapshot
 
-**Target:** Production-ready MVP
-**Completion:** ~100% Phase 0 + Phase 1 + Phase 2 (Phase 3 remaining)
+- Execution model: four-lane board (`backend`, `frontend`, `platform-qa`, `integrations`).
+- Rule: exactly one active slice per lane, no parallel slice expansion.
+- Current lane order: `backend -> frontend -> platform-qa -> integrations`.
 
-## Phase Status Summary
+## Lane Assignments
 
-| Phase | Status | Completion |
-|-------|--------|------------|
-| Phase 0: Critical MVP Blockers | **COMPLETE** | 100% |
-| Phase 1: Core Experience Polish | **COMPLETE** | 100% |
-| Phase 2: Enhanced Reliability | **COMPLETE** | 100% |
-| Phase 3: Launch Preparation | Not Started | 0% |
+| Lane | State | Active Slice | Dependency Gate | Verification |
+| --- | --- | --- | --- | --- |
+| `backend` | `READY` | Lock auth-derived identity handling across protected paths (`auth`, `quota`, `rate_limit`, gateway headers). | None | `python -m pytest -q tests/test_auth.py tests/test_gateway.py tests/test_quota.py tests/test_rate_limit_middleware.py` |
+| `frontend` | `BLOCKED` | Remove remaining default internal-user fallback in shared transport and settings/oauth flows. | Start only after backend contract is frozen for this cycle. | `npm --prefix client test -- --runInBand __tests__/SocialSettings.test.tsx __tests__/oauthCallback.test.tsx __tests__/settingsPage.test.tsx`; `npm --prefix client run typecheck` |
+| `platform-qa` | `BLOCKED` | Keep workflow/test/doc smoke contract aligned and capture `staging-smoke-junit` artifact evidence. | Requires external secrets owner and workflow dispatch operator. | `python -m pytest -q -s tests/test_staging_smoke_workflow_contract.py tests/test_ci_workflow_contract.py` |
+| `integrations` | `BLOCKED` | Execute one credential-backed non-stub smoke run and verify trend->idea->image->listing evidence. | Requires Platform-QA alignment plus external secrets/dispatch ownership. | `python -m pytest -q -s tests/test_staging_pipeline_smoke.py tests/test_integration_service.py tests/test_integration_api.py`; then Actions run evidence |
 
-## Pending PRs
+## Variance Resolution Note
 
-- **Image Review & Tagging PR** - from the `feat/image-review-merge` branch via Codex. Review and merge once complete.
-## Current Focus
+This cycle consolidated planner/status detached variance from worktrees:
+`0550`, `9b4d`, `94f0`, `72c3`, `1897`, `8696`, `5188`, `4808`.
 
-1. **Bootstraps & CI Hardening** - Replace the empty Alembic baseline, align runtime env/docs with the Etsy OAuth contract, and keep frontend type-check and build validation in CI.
-2. **Real Trend Pipeline Validation** - Validate one non-stub trend -> idea -> image -> listing flow in staging when credentials are available.
-3. **Docs & Multi-User Cleanup** - Remove merge artifacts, finish the remaining i18n rollout, and reduce lingering internal-user assumptions.
+Consolidation rules applied:
+- Preferred latest concrete lane ownership + boundaries + verification commands.
+- For conflicting lane states, used conservative state (`BLOCKED` over `READY`).
+- Preserved explicit external blockers (secrets ownership, dispatch authority, missing local Stripe dependency).
+- Removed stale/no-op planner-only text.
 
-## Recent Integration Work
+## Staging Flash-Stop Review Outcome
 
-- **Gateway and Client Recovery (March 6, 2026)** - Restored the shared frontend API-base helper, routed authenticated client calls through it, mounted analytics and user routes in the gateway, and fixed gateway lifespan wiring.
-- **Mainline Consolidation Sweep (March 6, 2026)** - Folded detached worktree output back into the main workspace for live trend dashboard flows, analytics keyword aggregation, and OAuth API error mapping.
-- **Trend Ingestion Hardening** - Added refresh telemetry, RSS fallback handling, live-trend recency and source filters, and focused backend/frontend coverage.
-- **Analytics Truthfulness** - Replaced mock analytics keyword output with database-backed aggregation from TrendSignal plus Trend fallback queries.
+- Reviewed variance set: `bf81`, `7a5b` plus comparison set `379d`, `df50`, `781e`, `f083`.
+- Decision: keep current smoke preflight policy unchanged for now.
+- Rationale:
+  - `BILLING_STUB_MODE` is outside the exercised trend->listing smoke path.
+  - `STRIPE_SECRET_KEY` is not required by the current smoke execution path and would increase false-blocking risk.
+  - Current smoke objective remains stable: verify non-stub live trend/ideation/image/integration flow.
 
-## Verification Notes
+## Detached Worktree Triage Procedure (Mandatory Same Run)
 
-- Passed: targeted backend pytest coverage for analytics, auth, gateway, and trend ingestion slices before reconciliation.
-- Passed: frontend TypeScript check in client/ before reconciliation.
-- Passed: focused frontend Jest coverage for homepage live trends, trend service transport, and user quota UI before reconciliation.
-- Pending: full CI-equivalent validation on the reconciled branch.
+For each newly observed in-scope detached worktree:
+1. Classify by changed-file domain.
+2. Route by type:
+   - docs-only (`roadmap`/`status`) -> roadmap/status consolidation queue.
+   - staging smoke test/doc variance -> flash-stop review queue.
+   - product code/test variance -> focused semantic diff and merge-candidate queue.
+3. Merge safe duplicate-only content into `main` when value is confirmed.
+4. Remove duplicate-only worktree metadata and report any locked leftover directories.
 
-## Critical Blockers (P0) - RESOLVED
+## External Blockers Requiring Human Ownership
 
-1. ~~**OAuth UI Integration**~~ - COMPLETE. OAuthConnect component, ProviderContext, settings page integration, token refresh, E2E tests all implemented.
-2. ~~**Stripe Billing Integration**~~ - COMPLETE. Webhook handling (5 event types), customer portal, tier-specific quota enforcement, comprehensive test suite.
-
-## Outstanding Tasks (P1) - RESOLVED
-
-1. ~~**Localization & Internationalization (i18n)**~~ - COMPLETE. All 4 locales (EN, ES, FR, DE) with full key parity. ICU currency formatting utility. Extraction script. Expanded E2E tests for all locales.
-2. ~~**Live Trend Signals Ingestion**~~ - COMPLETE. All 5 platforms (TikTok, Instagram, Twitter, Pinterest, Etsy) configured. Circuit breaker pattern. Prometheus scrape metrics. Auth-protected refresh endpoint. Scraper status endpoint.
-3. ~~**Settings Page Completion**~~ - COMPLETE. Notification channel toggles (email/push), language selector, currency preference, timezone selector, TikTok handle, quota usage breakdown, upgrade CTA linked to Stripe portal.
-
-## Remaining Work (P2 - Phase 3+)
-
-1. ~~**Error Handling Standardization**~~ - COMPLETE. Unified APIError model, provider error mapping (Printify/Etsy/OpenAI), frontend ErrorBoundary, request ID tracking.
-2. ~~**Rate Limiting**~~ - COMPLETE. Per-user/per-IP token bucket, external API rate limiting, frontend 429 handling with retry-after countdown.
-3. ~~**Performance Optimization**~~ - COMPLETE. Caching layer (Redis/in-memory), DB indexing, Timescale continuous aggregates migration, slow query profiling, image lazy loading, frontend ErrorBoundary.
-4. **Security Audit** - Input validation, auth review, secrets scan, vulnerability scan, STRIDE threat model.
-5. **Documentation** - User docs, developer docs, provider guides, release notes.
-6. **Load Testing** - k6 test suite, Grafana dashboards, SLO alerts.
-
-## Completed
-
-- Documentation Refresh - Internal docs now cover observability and database operations; architecture overview added in `docs/architecture.md`.
-- Database Migrations - Alembic baseline created with scheduled notification migration, CLI helper, and CI upgrade check.
-- Observability Rollout - Structured logging, `/healthz`, and `/metrics` endpoints registered across gateway, auth, notifications, trend scraper, and trend ingestion services.
-- Notification & Scheduling System - Scheduled notifications API, recurring digests, and quota reset automation wired to APScheduler.
-- A/B Testing Support - Flexible engine with experiment types, weighted traffic and scheduling.
-- Real Integrations - Printify and Etsy clients implemented with stub fallbacks.
-- Stub Removal - Placeholder logic eliminated and integrations call real APIs when keys are present.
-- Listing Composer Enhancements - Drag-and-drop fields, improved tag suggestions, draft saving, multi-language input.
-- Analytics Enhancements - Replaced mocked analytics with real metrics collected from the database and user interactions.
-- Social Media Generator - Rule-based captions and images with localisation and dashboard UI.
-- Bulk Product Creation - CSV/JSON bulk upload endpoint and UI implemented.
-- Testing & QA - Expanded unit, integration, and Playwright end-to-end test coverage with CI integration.
-- **OAuth UI Integration (Phase 0.1)** - OAuthConnect component with status badges, ProviderContext with expiry tracking, settings page integration, generate page gating, token refresh rotation, E2E tests.
-- **Stripe Billing Integration (Phase 0.2)** - Full billing service (api, service, webhooks, plans), 5 webhook event handlers, portal endpoint, tier-specific quota enforcement, comprehensive test suite (468 lines).
-- **i18n Expansion (Phase 1.1)** - 4 locales (EN, ES, FR, DE) with 170+ keys each. `scripts/i18n_extract.ts` extraction script. `client/services/currency.ts` ICU formatting utility. Updated `next-i18next.config.js`. Expanded E2E locale tests.
-- **Live Trend Scrapers (Phase 1.2)** - All 5 platforms configured (TikTok, Instagram, Twitter, Pinterest, Etsy). Circuit breaker (`services/trend_ingestion/circuit_breaker.py`). Prometheus scrape metrics. Auth on refresh endpoint. Scraper status endpoint. Comprehensive test coverage.
-- **Settings Page Polish (Phase 1.3)** - Notification toggles (email/push). Language/currency/timezone selectors. TikTok handle input. Quota usage breakdown by resource type. Upgrade CTA to Stripe portal. Backend preferences API extended with 5 new fields. Handle format validation (frontend regex + backend Pydantic).
-- **Currency Formatting E2E Tests (Phase 1.1.6)** - 6 Playwright E2E tests exercising USD/EUR/GBP/CAD formatting across EN/ES/FR/DE locales. Currency selector persistence test.
-- **Grafana Scraper Health Dashboard (Phase 1.2.7)** - `grafana/dashboards/scraper-health.json` with 8 panels: success/failure rates, failure gauge, duration quantiles, keyword extraction, cumulative stats, circuit breaker events, average duration by platform. Platform template variable.
-- **Prometheus Alert Rules (Phase 1.2.7)** - `prometheus/alerts/scraper.yml` with 6 alert rules: high failure rate (>=5%), critical failure rate (>=25%), circuit breaker open, no scrape activity, slow duration (p95>20s), low keyword extraction.
-- **Scraper Outage Runbook (Phase 1.2.7)** - `docs/runbooks/scraper-outage.md` covering circuit breaker states, diagnosis steps, manual refresh, circuit breaker reset, proxy rotation troubleshooting, selector updates, environment variables, escalation protocol.
-- **RTL Support** - Deferred (internal tool only, no Arabic/Hebrew locale needed).
-- **Error Handling Standardization (Phase 2.1)** - `services/common/errors.py` with APIError model, ErrorCode enum, request ID middleware. `services/common/provider_errors.py` with Printify/Etsy/OpenAI error mapping (20+ error codes). Integration service updated with try/catch and user-friendly messages. Frontend `ErrorBoundary.tsx` with "Try Again" action. `client/services/httpClient.ts` with standardized error classes. 29 tests covering all error scenarios.
-- **Rate Limiting (Phase 2.2)** - `services/common/rate_limit.py` with per-user (plan-tier) and per-IP token bucket middleware. `services/common/api_limiter.py` with async token buckets for Printify (5 req/s), Etsy (10 req/s), OpenAI (3 req/s). Gateway integrated. Frontend `RateLimitBanner.tsx` with countdown UI. `httpClient.ts` with retry-after awareness.
-- **Performance Optimization (Phase 2.3)** - `services/common/cache.py` with Redis/in-memory LRU cache (TTL support). Gateway /trends and /api/trends/live endpoints cached. Database model indexes added to 6 models (Trend, TrendSignal, Product, Notification, AnalyticsEvent fields). `grafana/dashboards/api-latency.json` with 6 panels. `prometheus/alerts/performance.yml` with 6 alert rules. 75 total tests passing.
-- **Timescale Continuous Aggregates (TD-01)** - `alembic/versions/0003_timescale_trend_aggregates.py` migration with PostgreSQL/SQLite detection. Creates hypertable on `trendsignal`, hourly/daily continuous aggregates, refresh policies (30min/6h), 90-day retention policy. Composite indexes on both backends.
-- **Slow Query Profiling (Phase 2.3.2)** - `services/common/database.py` rewritten with SQLAlchemy event listeners for `before_cursor_execute`/`after_cursor_execute`. Configurable threshold via `SLOW_QUERY_THRESHOLD_MS` env var (default 200ms). PostgreSQL connection pooling (pool_size=10, max_overflow=20, pool_pre_ping=True).
-- **Image Lazy Loading (Phase 2.3.3)** - Added `loading="lazy"` and `decoding="async"` to `<img>` tags in `ImageCard.tsx`, `search.tsx`, and `SocialMediaGenerator.tsx`. `ImageCard` wrapped with `React.memo()` for render optimization.
-
-## Instructions to Agents
-
-Please refer to the appended section in `agents.md` for specific instructions on how each agent should tackle these tasks.
-
+- Confirm owner to populate staging secrets in GitHub Actions.
+- Confirm owner to run first credential-backed `Staging Pipeline Smoke` dispatch.

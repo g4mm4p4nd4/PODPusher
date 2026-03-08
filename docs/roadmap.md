@@ -1,64 +1,39 @@
-﻿# PODPusher Delivery Roadmap
+# PODPusher Delivery Roadmap
 
-Last updated: March 6, 2026
+Last updated: March 8, 2026 (America/New_York)
+Owner: PODPusher Coordinator (`podpusher-delivery`)
 
-## Project Stage
+## Coordination Objective
 
-PODPusher is currently a late Phase 0 prototype with selected Phase 1 features present. The core architecture exists, and the main workspace now includes the previously detached automation output for gateway/client transport, live trend dashboard flows, analytics aggregation, and OAuth API hardening. Internal rollout readiness still depends on trustworthy bootstraps, CI coverage, and one credential-backed end-to-end validation path.
+Run a four-lane board with exactly one active slice per lane and explicit dependency gates:
 
-## Verified Findings
+1. `backend`
+2. `frontend`
+3. `platform-qa`
+4. `integrations`
 
-### P0 Flow Restoration
+Ordering rationale:
+- Backend auth/identity behavior must stay stable before frontend removes any remaining fallback assumptions.
+- Platform-QA workflow contract must stay aligned before integrations claims credential-backed smoke evidence.
+- Integrations and Platform-QA both depend on external staging secret ownership and a manual workflow dispatch owner.
 
-- Resolved in code: restored the missing shared client API base module via `client/services/apiBase.ts`.
-- Resolved in code: wired shared authenticated headers into the frontend paths that were failing in practice, including OAuth, `/generate`, quota, and notifications.
-- Resolved in code: exposed `/api/user/*` and `/api/analytics` through the gateway.
-- Resolved in code: fixed the invalid gateway lifespan declaration by converting it to an async lifespan function.
-- Verified locally: targeted backend pytest now passes for the analytics, auth, gateway, and trend-ingestion slices.
+## Four-Lane Ready Board
 
-### P1 Internal Rollout Readiness
+| Lane | State | Ready Slice | Explicit File Boundaries | Dependency Gate | Verification Checks |
+| --- | --- | --- | --- | --- | --- |
+| `backend` | `READY` | Enforce auth-derived identity behavior across protected paths and keep invalid-header handling explicit. | `services/common/auth.py`; `services/common/quotas.py`; `services/common/rate_limit.py`; `services/gateway/api.py`; `tests/test_auth.py`; `tests/test_gateway.py`; `tests/test_quota.py`; `tests/test_rate_limit_middleware.py` | None | `python -m pytest -q tests/test_auth.py tests/test_gateway.py tests/test_quota.py tests/test_rate_limit_middleware.py` |
+| `frontend` | `BLOCKED` | Remove remaining default internal-user fallback behavior in shared transport and settings/oauth callsites. | `client/services/apiBase.ts`; `client/services/oauth.ts`; `client/components/SocialSettings.tsx`; `client/pages/settings.tsx`; `client/__tests__/SocialSettings.test.tsx`; `client/__tests__/oauthCallback.test.tsx`; `client/__tests__/settingsPage.test.tsx` | Wait for backend contract freeze to avoid mixed auth semantics. | `npm --prefix client test -- --runInBand __tests__/SocialSettings.test.tsx __tests__/oauthCallback.test.tsx __tests__/settingsPage.test.tsx`; `npm --prefix client run typecheck` |
+| `platform-qa` | `BLOCKED` | Keep staging smoke workflow contract and artifact expectations aligned with live smoke behavior. | `.github/workflows/staging-smoke.yml`; `tests/test_staging_smoke_workflow_contract.py`; `tests/test_ci_workflow_contract.py`; `docs/platform_qa_staging_smoke.md` | Requires staging secrets owner and manual/authorized workflow dispatch owner. | `python -m pytest -q -s tests/test_staging_smoke_workflow_contract.py tests/test_ci_workflow_contract.py` |
+| `integrations` | `BLOCKED` | Produce one credential-backed non-stub trend->idea->image->listing smoke evidence run. | `tests/test_staging_pipeline_smoke.py`; `tests/test_integration_service.py`; `tests/test_integration_api.py`; `docs/platform_qa_staging_smoke.md`; `.github/workflows/staging-smoke.yml` | Depends on Platform-QA contract alignment and external staging secrets/dispatch ownership. | `python -m pytest -q -s tests/test_staging_pipeline_smoke.py tests/test_integration_service.py tests/test_integration_api.py`; then manual/CI dispatch of `Staging Pipeline Smoke` with `staging-smoke-junit` artifact |
 
-- Resolved in code: replaced static analytics keyword output with aggregated `TrendSignal` data and `Trend` fallback queries.
-- Resolved in code: live trend refresh now returns telemetry, exposes `/api/trends/live/status`, and supports category/source/recency/limit filters.
-- Resolved in code: homepage now consumes live trend APIs with refresh, loading/error/empty states, and focused test coverage.
-- Pending: replace the empty Alembic baseline with an authoritative clean-bootstrap migration and strengthen migration assertions beyond one table/index.
-- Pending: align `.env.example`, Docker, and docs with the Etsy OAuth credential model actually required by the integration code.
-- Pending: add frontend build and type-check coverage to CI so compile failures are caught before merge.
-- Pending: validate one non-stub trend -> idea -> image -> listing staging path when credentials are available.
+## Active External Blockers
 
-### P2 Cleanup
+- Staging smoke still requires confirmed ownership for repository secrets: `OPENAI_API_KEY`, `ETSY_CLIENT_ID`, `ETSY_ACCESS_TOKEN`, `ETSY_SHOP_ID`, `PRINTIFY_API_KEY`, `PRINTIFY_SHOP_ID`.
+- A human/authorized operator is still required for first `workflow_dispatch` execution evidence.
+- Some local environments still cannot run full billing collections due missing `stripe` dependency.
 
-- Pending: remove unresolved merge artifacts from `README.md` and `docs/internal_docs.md`.
-- Pending: remove remaining hardcoded internal-user assumptions where they still block multi-user internal testing.
-- Pending: finish the remaining i18n rollout across less-covered frontend flows.
-- Pending: keep detached automation worktrees from accumulating by sweeping/merging them on an hourly cadence.
+## Cross-Lane Conflict Risks
 
-## Ordered Milestones
-
-1. **Buildable and callable UI**
-   - Status: restored and verified with focused frontend Jest plus TypeScript checks.
-2. **Trustworthy bootstraps and CI**
-   - Scope: Alembic baseline, env/runtime contract alignment, frontend build plus type-check in CI.
-3. **Real trend-to-listing path**
-   - Scope: credential-backed live ingestion, OpenAI path validation, and Printify/Etsy staging smoke coverage.
-4. **Cleanup and rollout polish**
-   - Scope: docs cleanup, multi-user follow-through, i18n completion, and automation/worktree hygiene.
-
-## Current Slice
-
-Complete the remaining internal-rollout prerequisites for Milestone 2:
-
-- Make the baseline migration authoritative for a clean database bootstrap.
-- Update runtime configuration docs and Docker envs to use the real Etsy OAuth contract.
-- Extend CI to run frontend type-check and build, not just Jest.
-
-## Verification Snapshot
-
-- Passed: `python -m pytest tests/test_analytics.py tests/test_auth.py tests/test_gateway.py tests/test_trend_ingestion_api.py tests/test_trend_ingestion_service.py tests/test_trend_ingestion_utils.py`
-- Passed: `npx tsc --noEmit --project client/tsconfig.json`
-- Passed: `npm test --prefix client -- --runInBand __tests__/index.test.tsx __tests__/trendsService.test.ts __tests__/UserQuota.test.tsx`
-- Not run: `next build`
-
-## Next Slice
-
-Implement the migration and CI hardening work, then re-run validation in an environment with the frontend production build enabled and credential-backed staging access for Etsy, Printify, Stripe, and OpenAI.
+- Parallel backend/frontend edits in auth identity paths can reintroduce inconsistent fallback behavior.
+- Parallel integrations/platform-qa edits can drift smoke workflow, docs, and test contract expectations.
+- Detached worktree planner updates can silently diverge from mainline docs unless consolidated each sweep.
