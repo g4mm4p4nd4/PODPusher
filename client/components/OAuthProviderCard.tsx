@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { useTranslation } from 'next-i18next';
 
 interface OAuthProviderCardProps {

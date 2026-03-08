@@ -25,6 +25,13 @@ SEARCH_DATA: Dict[str, int] = {
 TrendInput = Union[str, Dict]
 
 
+def _classify_idea_source(text: str) -> str:
+    """Classify where an idea description likely came from."""
+    if text.strip().startswith("Idea brief:"):
+        return "stub"
+    return "openai"
+
+
 async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
     """Generate product ideas for the supplied trend signals."""
 
@@ -52,9 +59,11 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
         for item in normalized
     ]
 
+    used_fallback = False
     try:
         ideas_text = await asyncio.gather(*[openai.generate_brief(prompt) for prompt in prompts])
     except Exception:
+        used_fallback = True
         fallback_products = ["t-shirt", "mug", "sticker", "tote bag"]
         ideas_text = []
         for idx, item in enumerate(normalized):
@@ -75,6 +84,7 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
             session.add(idea)
             await session.commit()
             await session.refresh(idea)
+            source = "fallback" if used_fallback else _classify_idea_source(idea.description)
             ideas.append(
                 {
                     "id": idea.id,
@@ -82,6 +92,7 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
                     "description": idea.description,
                     "term": item['term'],
                     "category": item['category'],
+                    "generation_source": source,
                 }
             )
     return ideas

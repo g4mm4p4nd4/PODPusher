@@ -166,8 +166,33 @@
     "emailNotifications": "Notificaciones por email",
     "pushNotifications": "Notificaciones push",
     "defaultLanguage": "Idioma predeterminado",
+    "languages": {
+      "en": "Ingles",
+      "es": "Espanol",
+      "fr": "Frances",
+      "de": "Aleman"
+    },
     "currency": "Moneda",
+    "currencies": {
+      "USD": "USD ($)",
+      "EUR": "EUR (€)",
+      "GBP": "GBP (£)",
+      "CAD": "CAD ($)",
+      "AUD": "AUD ($)"
+    },
     "timezone": "Zona horaria",
+    "timezones": {
+      "utc": "UTC",
+      "americaNewYork": "Este (EE. UU.)",
+      "americaChicago": "Centro (EE. UU.)",
+      "americaDenver": "Montana (EE. UU.)",
+      "americaLosAngeles": "Pacifico (EE. UU.)",
+      "europeLondon": "Londres",
+      "europeParis": "Paris / Berlin",
+      "asiaTokyo": "Tokio",
+      "australiaSydney": "Sidney"
+    },
+    "oauthConnectionsAria": "Conexiones OAuth",
     "upgrade": "Mejorar plan",
     "creditsLeft": "{{count}} créditos restantes",
     "usageBreakdown": "Desglose de uso",

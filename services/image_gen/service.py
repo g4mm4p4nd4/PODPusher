@@ -7,6 +7,13 @@ from ..common.database import get_session
 from ..models import Idea, Product, Trend
 
 
+def _classify_image_source(url: str) -> str:
+    """Classify where an image URL likely came from."""
+    if url.strip() == "http://example.com/image.png":
+        return "stub"
+    return "openai"
+
+
 async def generate_images(ideas: List[Union[Dict, str]]) -> List[Dict]:
     normalized: List[Dict] = []
     for idea in ideas:
@@ -27,9 +34,11 @@ async def generate_images(ideas: List[Union[Dict, str]]) -> List[Dict]:
 
     prompts = [item["description"] for item in normalized]
 
+    used_fallback = False
     try:
         urls = await asyncio.gather(*[openai.generate_image(prompt) for prompt in prompts])
     except Exception:
+        used_fallback = True
         urls = ["http://example.com/image.png" for _ in normalized]
 
     products: List[Dict] = []
@@ -51,10 +60,12 @@ async def generate_images(ideas: List[Union[Dict, str]]) -> List[Dict]:
             session.add(product)
             await session.commit()
             await session.refresh(product)
+            source = "fallback" if used_fallback else _classify_image_source(product.image_url)
             products.append({
                 "id": product.id,
                 "idea_id": idea_id,
                 "image_url": product.image_url,
                 "category": item.get("category"),
+                "generation_source": source,
             })
     return products

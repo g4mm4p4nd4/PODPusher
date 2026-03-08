@@ -50,10 +50,8 @@ async def test_staging_trend_to_listing_smoke():
     images = await generate_images(ideas[:1])
     assert images and images[0].get("image_url"), "No images returned from image stage"
 
-    products = create_sku(images[:1])
+    products = create_sku(images[:1], require_live=True)
     assert products and products[0].get("sku"), "No SKU returned from Printify stage"
-    assert not str(products[0]["sku"]).startswith("stub-"), "Printify call fell back to stub"
 
-    listing = publish_listing(products[0])
+    listing = publish_listing(products[0], require_live=True)
     assert listing.get("listing_id"), "No listing ID returned from Etsy stage"
-    assert not str(listing["listing_id"]).startswith("stub"), "Etsy call fell back to stub"

@@ -24,9 +24,11 @@ async def test_full_pipeline(monkeypatch):
     ideas = await generate_ideas(trends)
     assert ideas
     assert all("id" in idea and "trend_id" in idea for idea in ideas)
+    assert all("generation_source" in idea for idea in ideas)
     images = await generate_images(ideas)
     assert images
     assert all("idea_id" in image for image in images)
+    assert all("generation_source" in image for image in images)
     products = create_sku(images)
     assert all("sku" in p for p in products)
     listing = publish_listing(products[0])

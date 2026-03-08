@@ -317,10 +317,10 @@ export default function SocialSettings() {
               value={prefs.preferred_language}
               onChange={(e) => setPrefs({ ...prefs, preferred_language: e.target.value })}
             >
-              <option value="en">English</option>
-              <option value="es">Espa&#241;ol</option>
-              <option value="fr">Fran&#231;ais</option>
-              <option value="de">Deutsch</option>
+              <option value="en">{t('settings.languages.en')}</option>
+              <option value="es">{t('settings.languages.es')}</option>
+              <option value="fr">{t('settings.languages.fr')}</option>
+              <option value="de">{t('settings.languages.de')}</option>
             </select>
           </div>
           <div>
@@ -332,11 +332,11 @@ export default function SocialSettings() {
               value={prefs.preferred_currency}
               onChange={(e) => setPrefs({ ...prefs, preferred_currency: e.target.value })}
             >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (&euro;)</option>
-              <option value="GBP">GBP (&pound;)</option>
-              <option value="CAD">CAD ($)</option>
-              <option value="AUD">AUD ($)</option>
+              <option value="USD">{t('settings.currencies.USD')}</option>
+              <option value="EUR">{t('settings.currencies.EUR')}</option>
+              <option value="GBP">{t('settings.currencies.GBP')}</option>
+              <option value="CAD">{t('settings.currencies.CAD')}</option>
+              <option value="AUD">{t('settings.currencies.AUD')}</option>
             </select>
           </div>
           <div>
@@ -348,15 +348,15 @@ export default function SocialSettings() {
               value={prefs.timezone}
               onChange={(e) => setPrefs({ ...prefs, timezone: e.target.value })}
             >
-              <option value="UTC">UTC</option>
-              <option value="America/New_York">Eastern (US)</option>
-              <option value="America/Chicago">Central (US)</option>
-              <option value="America/Denver">Mountain (US)</option>
-              <option value="America/Los_Angeles">Pacific (US)</option>
-              <option value="Europe/London">London</option>
-              <option value="Europe/Paris">Paris / Berlin</option>
-              <option value="Asia/Tokyo">Tokyo</option>
-              <option value="Australia/Sydney">Sydney</option>
+              <option value="UTC">{t('settings.timezones.utc')}</option>
+              <option value="America/New_York">{t('settings.timezones.americaNewYork')}</option>
+              <option value="America/Chicago">{t('settings.timezones.americaChicago')}</option>
+              <option value="America/Denver">{t('settings.timezones.americaDenver')}</option>
+              <option value="America/Los_Angeles">{t('settings.timezones.americaLosAngeles')}</option>
+              <option value="Europe/London">{t('settings.timezones.europeLondon')}</option>
+              <option value="Europe/Paris">{t('settings.timezones.europeParis')}</option>
+              <option value="Asia/Tokyo">{t('settings.timezones.asiaTokyo')}</option>
+              <option value="Australia/Sydney">{t('settings.timezones.australiaSydney')}</option>
             </select>
           </div>
         </fieldset>
@@ -366,7 +366,7 @@ export default function SocialSettings() {
         </button>
       </form>
 
-      <section aria-label="OAuth connections" className="space-y-3">
+      <section aria-label={t('settings.oauthConnectionsAria')} className="space-y-3">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">{t('settings.oauthTitle')}</h2>
           {oauthLoading && <span className="text-sm text-gray-500">{t('loading')}</span>}
