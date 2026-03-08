@@ -2,7 +2,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from services.integration.api import app as integration_app
-from services.integration.service import IntegrationCredentialError, IntegrationPayloadError
+from services.integration.service import (
+    IntegrationCredentialError,
+    IntegrationPayloadError,
+    IntegrationUpstreamError,
+)
 
 
 @pytest.mark.asyncio
@@ -112,6 +116,29 @@ async def test_listing_endpoint_maps_service_payload_error(monkeypatch):
         )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_listing_endpoint_maps_service_upstream_error(monkeypatch):
+    async def fake_load_oauth_credentials(_user_id, _provider):
+        return {"access_token": "etsy-token", "account_id": "shop-7"}
+
+    def fake_publish_listing(_product, credential=None, require_live=False):
+        raise IntegrationUpstreamError("Etsy API request failed with status 503: unavailable")
+
+    monkeypatch.setattr("services.integration.api.load_oauth_credentials", fake_load_oauth_credentials)
+    monkeypatch.setattr("services.integration.api.publish_listing", fake_publish_listing)
+
+    transport = ASGITransport(app=integration_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/listing",
+            headers={"X-User-Id": "7"},
+            json={"title": "Launch"},
+        )
+
+    assert response.status_code == 502
+    assert "status 503" in response.json()["detail"]
 
 
 @pytest.mark.asyncio

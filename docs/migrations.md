@@ -21,6 +21,10 @@ is required.
 
 ## Baseline
 
+`0001_baseline` is the authoritative clean-bootstrap schema for core tables and
+critical indexes. Follow-up migrations add scheduling, Timescale rollups, and
+user preference columns.
+
 Existing environments should be stamped to the baseline revision once to align
 state without rewriting tables:
 
@@ -30,7 +34,8 @@ alembic upgrade head
 ```
 
 After stamping, new deployments can continue using `alembic upgrade head` to
-pick up the scheduled notifications schema (`0002_add_scheduled_notifications`).
+pick up later revisions and reach the merged head
+`0005_merge_trend_and_user_pref_heads`.
 
 ## CI / Automation
 
@@ -38,3 +43,6 @@ The FastAPI services still support the existing `init_db()` helper for tests,
 which recreates tables from SQLModel metadata. Production deployments should
 run `alembic upgrade head` during release pipelines to ensure schema
 consistency before workers start.
+
+`tests/test_migrations.py` validates repeatable upgrades on a clean SQLite
+bootstrap and asserts expected tables/indexes at the merged head.

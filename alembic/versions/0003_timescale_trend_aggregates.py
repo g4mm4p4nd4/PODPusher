@@ -13,6 +13,7 @@ Owner: Data-Seeder (per DEVELOPMENT_PLAN.md Technical Debt TD-01)
 from __future__ import annotations
 
 from alembic import op
+from sqlalchemy import inspect
 
 
 revision = "0003_timescale_trend_aggregates"
@@ -26,23 +27,35 @@ def _is_postgresql() -> bool:
     return op.get_bind().dialect.name == "postgresql"
 
 
+def _has_index(table_name: str, index_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    if not inspector.has_table(table_name):
+        return False
+    return any(index.get("name") == index_name for index in inspector.get_indexes(table_name))
+
+
 def upgrade() -> None:
     # Add indexes that work on all backends
-    with op.batch_alter_table("trendsignal") as batch_op:
-        batch_op.create_index(
-            "ix_trendsignal_source_keyword",
-            ["source", "keyword"],
-        )
-        batch_op.create_index(
-            "ix_trendsignal_category_timestamp",
-            ["category", "timestamp"],
-        )
+    if not _has_index("trendsignal", "ix_trendsignal_source_keyword"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            batch_op.create_index(
+                "ix_trendsignal_source_keyword",
+                ["source", "keyword"],
+            )
+    if not _has_index("trendsignal", "ix_trendsignal_category_timestamp"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            batch_op.create_index(
+                "ix_trendsignal_category_timestamp",
+                ["category", "timestamp"],
+            )
 
-    with op.batch_alter_table("trend") as batch_op:
-        batch_op.create_index(
-            "ix_trend_category_created",
-            ["category", "created_at"],
-        )
+    if not _has_index("trend", "ix_trend_category_created"):
+        with op.batch_alter_table("trend") as batch_op:
+            batch_op.create_index(
+                "ix_trend_category_created",
+                ["category", "created_at"],
+            )
 
     # TimescaleDB-specific operations (PostgreSQL only)
     if not _is_postgresql():
@@ -130,9 +143,13 @@ def downgrade() -> None:
         op.execute("DROP MATERIALIZED VIEW IF EXISTS trend_daily CASCADE")
         op.execute("DROP MATERIALIZED VIEW IF EXISTS trend_hourly CASCADE")
 
-    with op.batch_alter_table("trend") as batch_op:
-        batch_op.drop_index("ix_trend_category_created")
+    if _has_index("trend", "ix_trend_category_created"):
+        with op.batch_alter_table("trend") as batch_op:
+            batch_op.drop_index("ix_trend_category_created")
 
-    with op.batch_alter_table("trendsignal") as batch_op:
-        batch_op.drop_index("ix_trendsignal_category_timestamp")
-        batch_op.drop_index("ix_trendsignal_source_keyword")
+    if _has_index("trendsignal", "ix_trendsignal_category_timestamp"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            batch_op.drop_index("ix_trendsignal_category_timestamp")
+    if _has_index("trendsignal", "ix_trendsignal_source_keyword"):
+        with op.batch_alter_table("trendsignal") as batch_op:
+            batch_op.drop_index("ix_trendsignal_source_keyword")

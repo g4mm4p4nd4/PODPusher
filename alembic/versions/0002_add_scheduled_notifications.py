@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision = "0002_add_scheduled_notifications"
@@ -10,29 +11,46 @@ branch_labels = None
 depends_on = None
 
 
+def _has_table(table_name: str) -> bool:
+    bind = op.get_bind()
+    return inspect(bind).has_table(table_name)
+
+
+def _has_index(table_name: str, index_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    if not inspector.has_table(table_name):
+        return False
+    return any(index.get("name") == index_name for index in inspector.get_indexes(table_name))
+
+
 def upgrade() -> None:
-    op.create_table(
-        "schedulednotification",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("message", sa.String(), nullable=False),
-        sa.Column("type", sa.String(), nullable=False),
-        sa.Column("scheduled_for", sa.DateTime(), nullable=False),
-        sa.Column("status", sa.String(), nullable=False),
-        sa.Column("context", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("dispatched_at", sa.DateTime(), nullable=True),
-    )
-    op.create_index(
-        "ix_schedulednotification_scheduled_for",
-        "schedulednotification",
-        ["scheduled_for"],
-    )
+    if not _has_table("schedulednotification"):
+        op.create_table(
+            "schedulednotification",
+            sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
+            sa.Column("user_id", sa.Integer(), nullable=False),
+            sa.Column("message", sa.String(), nullable=False),
+            sa.Column("type", sa.String(), nullable=False),
+            sa.Column("scheduled_for", sa.DateTime(), nullable=False),
+            sa.Column("status", sa.String(), nullable=False),
+            sa.Column("context", sa.JSON(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("dispatched_at", sa.DateTime(), nullable=True),
+        )
+    if not _has_index("schedulednotification", "ix_schedulednotification_scheduled_for"):
+        op.create_index(
+            "ix_schedulednotification_scheduled_for",
+            "schedulednotification",
+            ["scheduled_for"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_schedulednotification_scheduled_for",
-        table_name="schedulednotification",
-    )
-    op.drop_table("schedulednotification")
+    if _has_index("schedulednotification", "ix_schedulednotification_scheduled_for"):
+        op.drop_index(
+            "ix_schedulednotification_scheduled_for",
+            table_name="schedulednotification",
+        )
+    if _has_table("schedulednotification"):
+        op.drop_table("schedulednotification")

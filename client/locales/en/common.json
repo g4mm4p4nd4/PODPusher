@@ -93,7 +93,11 @@
     "suggest": "Suggest Tags",
     "publish": "Publish",
     "save": "Save Draft",
-    "language": "Language"
+    "language": "Language",
+    "languages": {
+      "en": "English",
+      "es": "Spanish"
+    }
   },
   "analytics": {
     "title": "Analytics Dashboard",

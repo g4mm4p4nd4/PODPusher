@@ -104,3 +104,25 @@ def test_create_sku_maps_payload_and_upstream_errors(monkeypatch):
     monkeypatch.setattr(service, "get_printify_client", lambda *_: upstream_error)
     with pytest.raises(service.IntegrationUpstreamError):
         service.create_sku([{"title": "Test"}], credential={"access_token": "x", "account_id": "y"})
+
+
+def test_create_sku_maps_runtime_upstream_error(monkeypatch):
+    def upstream_runtime(_products):
+        raise RuntimeError("Printify API request failed with status 429: rate limit")
+
+    monkeypatch.setattr(service, "get_printify_client", lambda *_: upstream_runtime)
+    with pytest.raises(service.IntegrationUpstreamError, match="status 429"):
+        service.create_sku([{"title": "Test"}], credential={"access_token": "x", "account_id": "y"})
+
+
+def test_publish_listing_maps_runtime_upstream_error(monkeypatch):
+    def upstream_runtime(_product):
+        raise RuntimeError("Etsy API transport error: ConnectTimeout")
+
+    monkeypatch.setattr(service, "get_etsy_client", lambda *_: upstream_runtime)
+    with pytest.raises(service.IntegrationUpstreamError, match="ConnectTimeout"):
+        service.publish_listing(
+            {"title": "Test"},
+            credential={"access_token": "x", "account_id": "y"},
+            require_live=False,
+        )

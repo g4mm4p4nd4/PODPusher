@@ -90,6 +90,8 @@ def create_sku(
         created = client(products)
     except ValueError as exc:
         raise IntegrationPayloadError(str(exc)) from exc
+    except RuntimeError as exc:
+        raise IntegrationUpstreamError(str(exc)) from exc
     except httpx.HTTPError as exc:
         raise IntegrationUpstreamError("Printify request failed") from exc
     if require_live and any(str(item.get("sku", "")).startswith("stub-sku-") for item in created):
@@ -111,6 +113,8 @@ def publish_listing(
         listing = client(product)
     except ValueError as exc:
         raise IntegrationPayloadError(str(exc)) from exc
+    except RuntimeError as exc:
+        raise IntegrationUpstreamError(str(exc)) from exc
     except httpx.HTTPError as exc:
         raise IntegrationUpstreamError("Etsy request failed") from exc
     if require_live and str(listing.get("etsy_url", "")).startswith("https://etsy.example/"):

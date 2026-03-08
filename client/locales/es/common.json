@@ -93,7 +93,11 @@
     "suggest": "Sugerir etiquetas",
     "publish": "Publicar",
     "save": "Guardar borrador",
-    "language": "Idioma"
+    "language": "Idioma",
+    "languages": {
+      "en": "Ingles",
+      "es": "Espanol"
+    }
   },
   "analytics": {
     "title": "Panel de Analítica",

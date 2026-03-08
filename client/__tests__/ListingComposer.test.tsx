@@ -89,3 +89,10 @@ test('blocks publishing when limits are exceeded', () => {
   fireEvent.click(publishButton);
   expect(onPublish).not.toHaveBeenCalled();
 });
+
+test('renders localized language options', () => {
+  render(<ListingComposer onPublish={onPublish} />);
+
+  expect(screen.getByRole('option', { name: 'languages.en' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'languages.es' })).toBeInTheDocument();
+});

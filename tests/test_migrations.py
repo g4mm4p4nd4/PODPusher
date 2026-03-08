@@ -12,6 +12,53 @@ except ImportError:  # pragma: no cover - Alembic not installed
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_DB = ROOT / 'alembic_validation.db'
+EXPECTED_HEAD = "0005_merge_trend_and_user_pref_heads"
+EXPECTED_TABLES = {
+    "abtest",
+    "abvariant",
+    "analyticsevent",
+    "idea",
+    "listing",
+    "listingdraft",
+    "notification",
+    "oauthcredential",
+    "oauthstate",
+    "product",
+    "schedulednotification",
+    "trend",
+    "trendsignal",
+    "user",
+    "usersession",
+}
+EXPECTED_INDEXES = {
+    "analyticsevent": {
+        "ix_analyticsevent_created_at",
+        "ix_analyticsevent_event_type",
+        "ix_analyticsevent_user_id",
+    },
+    "notification": {
+        "ix_notification_created_at",
+        "ix_notification_user_id",
+    },
+    "product": {
+        "ix_product_created_at",
+        "ix_product_idea_id",
+        "ix_product_sku",
+    },
+    "schedulednotification": {"ix_schedulednotification_scheduled_for"},
+    "trend": {
+        "ix_trend_category",
+        "ix_trend_created_at",
+        "ix_trend_term",
+    },
+    "trendsignal": {
+        "ix_trendsignal_category",
+        "ix_trendsignal_keyword",
+        "ix_trendsignal_source",
+        "ix_trendsignal_timestamp",
+    },
+    "usersession": {"ix_usersession_token_hash"},
+}
 
 
 def _run_upgrade(db_url: str) -> None:
@@ -41,12 +88,21 @@ def test_alembic_upgrade_repeatability():
         conn = sqlite3.connect(MIGRATION_DB)
         try:
             cur = conn.cursor()
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='schedulednotification'")
-            row = cur.fetchone()
-            assert row and row[0] == 'schedulednotification'
-            cur.execute("PRAGMA index_list('schedulednotification')")
-            indexes = [name for _, name, *_ in cur.fetchall()]
-            assert 'ix_schedulednotification_scheduled_for' in indexes
+            cur.execute("SELECT version_num FROM alembic_version")
+            versions = {row[0] for row in cur.fetchall()}
+            assert versions == {EXPECTED_HEAD}
+
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = {row[0] for row in cur.fetchall()}
+            assert EXPECTED_TABLES.issubset(tables)
+
+            for table_name, expected_indexes in EXPECTED_INDEXES.items():
+                cur.execute(f"PRAGMA index_list('{table_name}')")
+                indexes = {row[1] for row in cur.fetchall()}
+                assert expected_indexes.issubset(indexes), (
+                    f"Missing indexes for {table_name}: "
+                    f"{sorted(expected_indexes - indexes)}"
+                )
         finally:
             conn.close()
     finally:
