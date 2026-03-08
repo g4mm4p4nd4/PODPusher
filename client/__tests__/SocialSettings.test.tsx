@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 import SocialSettings from '../components/SocialSettings';
@@ -40,6 +40,7 @@ const translationTable: Record<string, string> = {
   'settings.oauthConnectionsAria': 'OAuth Connections Region',
   'settings.oauthTitle': 'Integrations',
   'settings.save': 'Save',
+  'settings.invalidHandle': 'Invalid handle format',
   'settings.providers.etsy': 'Etsy',
   'settings.providers.unknown': 'Connected account',
   'settings.status.disconnected': 'Not connected',
@@ -148,4 +149,13 @@ test('uses translated unknown provider label when provider key is not mapped', a
 
   expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.getByText('Connected account')).toBeInTheDocument();
+});
+
+test('shows translated invalid handle message for malformed social handles', async () => {
+  render(<SocialSettings />);
+
+  const instagramInput = await screen.findByPlaceholderText('Instagram handle');
+  fireEvent.change(instagramInput, { target: { value: 'not valid handle!' } });
+
+  expect(screen.getByText('Invalid handle format')).toBeInTheDocument();
 });

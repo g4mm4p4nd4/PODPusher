@@ -13,7 +13,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
   if (status.isExpired) {
     return (
       <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-        {t('oauth.expired', 'Expired')}
+        {t('oauth.expired')}
       </span>
     );
   }
@@ -21,7 +21,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
   if (status.isExpiringSoon) {
     return (
       <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-        {t('oauth.expiringSoon', 'Expiring Soon')}
+        {t('oauth.expiringSoon')}
       </span>
     );
   }
@@ -29,14 +29,14 @@ function StatusBadge({ status }: StatusBadgeProps) {
   if (status.connected) {
     return (
       <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-        {t('oauth.connected', 'Connected')}
+        {t('oauth.connected')}
       </span>
     );
   }
 
   return (
     <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-      {t('oauth.notConnected', 'Not Connected')}
+      {t('oauth.notConnected')}
     </span>
   );
 }
@@ -141,12 +141,12 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
             )}
             {status.connected && status.accountName && (
               <p className="text-sm text-gray-600">
-                {t('oauth.connectedAs', 'Connected as')} {status.accountName}
+                {t('oauth.connectedAs')} {status.accountName}
               </p>
             )}
             {status.isExpiringSoon && status.expiresAt && (
               <p className="text-sm text-yellow-600">
-                {t('oauth.expiresOn', 'Expires')}: {formatExpiryDate(status.expiresAt)}
+                {t('oauth.expiresOn')}: {formatExpiryDate(status.expiresAt)}
               </p>
             )}
           </div>
@@ -166,7 +166,7 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
             disabled={loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? t('oauth.connecting', 'Connecting...') : t('oauth.connect', 'Connect')}
+            {loading ? t('oauth.connecting') : t('oauth.connect')}
           </button>
         )}
 
@@ -179,7 +179,7 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
                 disabled={loading}
                 className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
               >
-                {t('oauth.refresh', 'Refresh Connection')}
+                {t('oauth.refresh')}
               </button>
             )}
             {!showDisconnectConfirm ? (
@@ -189,18 +189,18 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
                 disabled={loading}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
-                {t('oauth.disconnect', 'Disconnect')}
+                {t('oauth.disconnect')}
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">{t('oauth.confirmDisconnect', 'Are you sure?')}</span>
+                <span className="text-sm text-gray-600">{t('oauth.confirmDisconnect')}</span>
                 <button
                   type="button"
                   onClick={handleDisconnect}
                   disabled={loading}
                   className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50"
                 >
-                  {t('oauth.yes', 'Yes')}
+                  {t('oauth.yes')}
                 </button>
                 <button
                   type="button"
@@ -208,7 +208,7 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
                   disabled={loading}
                   className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50"
                 >
-                  {t('oauth.cancel', 'Cancel')}
+                  {t('oauth.cancel')}
                 </button>
               </div>
             )}
@@ -228,15 +228,15 @@ export default function OAuthConnect({ onConnectionChange }: OAuthConnectProps) 
   const { loading, error } = useProviders();
 
   const providerDescriptions: Record<ProviderName, string> = {
-    etsy: t('oauth.etsyDesc', 'Publish listings to your Etsy shop'),
-    printify: t('oauth.printifyDesc', 'Create products and manage inventory'),
-    stripe: t('oauth.stripeDesc', 'Manage billing and subscriptions'),
+    etsy: t('oauth.etsyDesc'),
+    printify: t('oauth.printifyDesc'),
+    stripe: t('oauth.stripeDesc'),
   };
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">{t('oauth.connectedAccounts', 'Connected Accounts')}</h2>
+        <h2 className="text-xl font-semibold">{t('oauth.connectedAccounts')}</h2>
         <div className="animate-pulse space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 bg-gray-200 rounded-lg" />
@@ -249,7 +249,7 @@ export default function OAuthConnect({ onConnectionChange }: OAuthConnectProps) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">{t('oauth.connectedAccounts', 'Connected Accounts')}</h2>
+        <h2 className="text-xl font-semibold">{t('oauth.connectedAccounts')}</h2>
       </div>
 
       {error && (

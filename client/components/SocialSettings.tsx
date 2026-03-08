@@ -153,7 +153,7 @@ export default function SocialSettings() {
   const updateHandle = (network: string, value: string) => {
     setPrefs({ ...prefs, social_handles: { ...prefs.social_handles, [network]: value } });
     if (value && !isValidHandle(value)) {
-      setHandleErrors((prev) => ({ ...prev, [network]: t('settings.invalidHandle', 'Invalid handle format') }));
+      setHandleErrors((prev) => ({ ...prev, [network]: t('settings.invalidHandle') }));
     } else {
       setHandleErrors((prev) => {
         const next = { ...prev };

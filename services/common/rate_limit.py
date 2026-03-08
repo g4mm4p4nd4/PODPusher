@@ -17,6 +17,7 @@ from typing import Callable
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from .auth import optional_user_id
 
 # ---------------------------------------------------------------------------
 # Plan-tier rate limit configuration (requests per minute)
@@ -118,8 +119,8 @@ def register_rate_limiting(app: FastAPI) -> None:
             return await call_next(request)
 
         # Determine rate limit key and limit
-        user_id = request.headers.get("X-User-Id")
-        if user_id:
+        user_id = await optional_user_id(request)
+        if user_id is not None:
             # Per-user rate limiting based on plan tier
             plan = getattr(request.state, "plan", None) or "free"
             limit = PLAN_RATE_LIMITS.get(plan, PLAN_RATE_LIMITS["free"])

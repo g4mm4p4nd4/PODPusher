@@ -180,9 +180,25 @@ async def quota_middleware(request: Request, call_next):
     if request.url.path != "/images" or request.method.upper() != "POST":
         return await call_next(request)
 
-    user_id = request.headers.get("X-User-Id")
-    if not user_id:
+    user_id: int | None = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        prefix, _, token = auth_header.partition(" ")
+        if prefix.lower() == "bearer" and token:
+            # Import lazily to avoid circular import (auth service imports quotas).
+            from ..auth.service import resolve_session_token
+
+            user_id = await resolve_session_token(token)
+    user_header = request.headers.get("X-User-Id")
+    if user_id is None and user_header:
+        try:
+            user_id = int(user_header)
+        except ValueError:
+            return JSONResponse({"detail": "Invalid X-User-Id header"}, status_code=400)
+    if user_id is None and user_header is None:
         return JSONResponse({"detail": "Missing X-User-Id"}, status_code=400)
+    if user_id is None:
+        return JSONResponse({"detail": "Authentication required"}, status_code=401)
 
     body_bytes = await request.body()
     try:
@@ -192,7 +208,7 @@ async def quota_middleware(request: Request, call_next):
         count = 1
     request._body = body_bytes
 
-    allowed, details = await check_quota(int(user_id), "images", count)
+    allowed, details = await check_quota(user_id, "images", count)
 
     if not allowed:
         return JSONResponse(
@@ -210,6 +226,6 @@ async def quota_middleware(request: Request, call_next):
     response = await call_next(request)
 
     if response.status_code < 400:
-        await increment_quota(int(user_id), "images", count)
+        await increment_quota(user_id, "images", count)
 
     return response
