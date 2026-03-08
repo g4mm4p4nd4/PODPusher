@@ -11,6 +11,7 @@ The test is credential-gated:
 
 - Skips unless `POD_STAGING_SMOKE=1`
 - Fails fast if required credentials are missing
+- Requires trend stage outputs with `trend_source == "live"` (fails on fallback trend seeds)
 - Calls integration service with `require_live=True` for Printify and Etsy stages
 - Workflow preflight exits early with a missing-secret list before running pytest
 - Workflow emits `staging-smoke-junit.xml` and uploads it as `staging-smoke-junit` artifact on every run

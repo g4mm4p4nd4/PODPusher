@@ -28,7 +28,7 @@ def _missing_required_env() -> list[str]:
 
 
 @pytest.mark.asyncio
-async def test_staging_trend_to_listing_smoke():
+async def test_staging_trend_to_listing_smoke(monkeypatch):
     if not _staging_enabled():
         pytest.skip("Set POD_STAGING_SMOKE=1 to run credential-backed staging smoke")
 
@@ -36,13 +36,16 @@ async def test_staging_trend_to_listing_smoke():
     if missing:
         pytest.fail(f"Missing required staging credentials: {', '.join(missing)}")
 
-    os.environ["OPENAI_USE_STUB"] = "0"
+    monkeypatch.setenv("OPENAI_USE_STUB", "0")
     category = os.getenv("POD_STAGING_CATEGORY", "general")
 
     await init_db()
 
     trends = await fetch_trends(category=category)
     assert trends, "No trends returned from trend stage"
+    assert all(
+        item.get("trend_source") == "live" for item in trends
+    ), "Trend stage returned fallback data (expected live trends)"
 
     ideas = await generate_ideas(trends[:1])
     assert ideas, "No ideas returned from ideation stage"

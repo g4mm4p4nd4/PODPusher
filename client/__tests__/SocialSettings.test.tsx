@@ -41,6 +41,7 @@ const translationTable: Record<string, string> = {
   'settings.oauthTitle': 'Integrations',
   'settings.save': 'Save',
   'settings.providers.etsy': 'Etsy',
+  'settings.providers.unknown': 'Connected account',
   'settings.status.disconnected': 'Not connected',
   'settings.connect': 'Connect',
 };
@@ -127,4 +128,24 @@ test('renders translated settings option labels and translated oauth region aria
   expect(screen.getByRole('option', { name: 'TZ Sydney' })).toBeInTheDocument();
 
   expect(screen.getByRole('region', { name: 'OAuth Connections Region' })).toBeInTheDocument();
+});
+
+test('uses translated unknown provider label when provider key is not mapped', async () => {
+  mockedListOAuthProviders.mockReset();
+  mockedListOAuthProviders.mockResolvedValue([
+    {
+      provider: 'custom-provider',
+      auth_url: '',
+      token_url: '',
+      scope: [],
+      use_pkce: true,
+    },
+  ]);
+
+  render(<SocialSettings />);
+
+  await waitFor(() => expect(mockedListOAuthProviders).toHaveBeenCalled());
+
+  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+  expect(screen.getByText('Connected account')).toBeInTheDocument();
 });

@@ -204,7 +204,8 @@
     "providers": {
       "etsy": "Etsy",
       "printify": "Printify",
-      "stripe": "Stripe"
+      "stripe": "Stripe",
+      "unknown": "Connected account"
     },
     "status": {
       "connected": "Connected",

@@ -47,6 +47,12 @@ const DEFAULT_PREFS: Preferences = {
   timezone: 'UTC',
 };
 
+const PROVIDER_TRANSLATION_KEYS: Record<string, string> = {
+  etsy: 'settings.providers.etsy',
+  printify: 'settings.providers.printify',
+  stripe: 'settings.providers.stripe',
+};
+
 /** Validates a social media handle: optional @, then 1-30 alphanumeric/underscore/dot chars. */
 const HANDLE_REGEX = /^@?[a-zA-Z0-9_.]{1,30}$/;
 
@@ -66,10 +72,7 @@ export default function SocialSettings() {
   const [handleErrors, setHandleErrors] = useState<Record<string, string>>({});
 
   const formatProvider = useCallback(
-    (provider: string) =>
-      t(`settings.providers.${provider}`, {
-        defaultValue: provider.charAt(0).toUpperCase() + provider.slice(1),
-      }),
+    (provider: string) => t(PROVIDER_TRANSLATION_KEYS[provider] ?? 'settings.providers.unknown'),
     [t],
   );
 

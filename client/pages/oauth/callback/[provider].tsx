@@ -1,11 +1,18 @@
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
+import React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { completeOAuthCallback } from '../../../services/oauth';
 import { getCommonServerSideProps } from '../../../utils/translationProps';
 
 type Status = 'preparing' | 'working' | 'success' | 'error';
+
+const PROVIDER_TRANSLATION_KEYS: Record<string, string> = {
+  etsy: 'settings.providers.etsy',
+  printify: 'settings.providers.printify',
+  stripe: 'settings.providers.stripe',
+};
 
 export default function OAuthCallbackPage() {
   const router = useRouter();
@@ -20,9 +27,7 @@ export default function OAuthCallbackPage() {
     if (typeof providerSlug !== 'string') {
       return '';
     }
-    return t(`settings.providers.${providerSlug}`, {
-      defaultValue: providerSlug.charAt(0).toUpperCase() + providerSlug.slice(1),
-    });
+    return t(PROVIDER_TRANSLATION_KEYS[providerSlug] ?? 'settings.providers.unknown');
   }, [providerSlug, t]);
 
   useEffect(() => {

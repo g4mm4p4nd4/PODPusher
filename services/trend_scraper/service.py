@@ -223,6 +223,7 @@ FALLBACK_DESIGN_INSPIRATIONS = {
 
 async def fetch_trends(category: str | None = None) -> List[dict]:
     terms = []
+    source = "fallback"
     try:
         pytrends = TrendReq()
         if category:
@@ -235,6 +236,8 @@ async def fetch_trends(category: str | None = None) -> List[dict]:
             terms = result[0].tolist()
     except Exception:
         pass
+    if terms:
+        source = "live"
     if not terms:
         if category:
             terms = FALLBACK_TRENDS.get(category.lower(), [])[:10]
@@ -251,7 +254,14 @@ async def fetch_trends(category: str | None = None) -> List[dict]:
             session.add(trend)
             await session.commit()
             await session.refresh(trend)
-            trends.append({"id": trend.id, "term": trend.term, "category": trend.category})
+            trends.append(
+                {
+                    "id": trend.id,
+                    "term": trend.term,
+                    "category": trend.category,
+                    "trend_source": source,
+                }
+            )
     return trends
 
 
