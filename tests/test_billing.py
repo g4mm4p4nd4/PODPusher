@@ -128,6 +128,49 @@ class TestBillingService:
             assert result["monthly_listings"] == 50
             assert result["monthly_images"] == 100
 
+    @pytest.mark.asyncio
+    async def test_get_or_create_customer_falls_back_to_list_when_search_unavailable(
+        self,
+        monkeypatch,
+    ):
+        from services.billing import service
+
+        service.STUB_MODE = False
+
+        class DummyCustomer:
+            def __init__(self, cid: str, metadata: dict[str, str] | None = None):
+                self.id = cid
+                self.metadata = metadata or {}
+
+        class DummyCollection:
+            def __init__(self, data):
+                self.data = data
+
+        def fake_search(**_kwargs):
+            raise RuntimeError("search not available")
+
+        def fake_list(**_kwargs):
+            return DummyCollection([DummyCustomer("cus_existing", {"user_id": "123"})])
+
+        def fake_create(**_kwargs):
+            raise AssertionError("Customer.create should not be called")
+
+        monkeypatch.setattr(service.stripe.error, "InvalidRequestError", RuntimeError)
+        monkeypatch.setattr(service.stripe.Customer, "search", fake_search)
+        monkeypatch.setattr(service.stripe.Customer, "list", fake_list)
+        monkeypatch.setattr(service.stripe.Customer, "create", fake_create)
+
+        customer_id = await service.get_or_create_customer(123, "test@example.com")
+        assert customer_id == "cus_existing"
+
+    @pytest.mark.asyncio
+    async def test_handle_subscription_deleted_requires_customer(self):
+        from services.billing import service
+
+        service.STUB_MODE = False
+        with pytest.raises(service.BillingError, match="Missing customer"):
+            await service.handle_subscription_deleted({"id": "sub_123"})
+
 
 class TestBillingWebhooks:
     """Test billing webhook handlers."""

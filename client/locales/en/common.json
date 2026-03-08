@@ -222,6 +222,8 @@
     "success": "Linked {{provider}} successfully.",
     "redirect": "Redirecting you to settings...",
     "error": "OAuth callback failed.",
+    "connectStartError": "Failed to start connection.",
+    "disconnectError": "Failed to disconnect.",
     "missingParams": "Missing OAuth parameters.",
     "return": "Return to settings"
   },

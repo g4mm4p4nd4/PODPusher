@@ -222,6 +222,8 @@
     "success": "Cuenta de {{provider}} vinculada correctamente.",
     "redirect": "Redirigiendo a la configuracion...",
     "error": "La devolucion de OAuth fallo.",
+    "connectStartError": "No se pudo iniciar la conexion.",
+    "disconnectError": "No se pudo desconectar.",
     "missingParams": "Faltan parametros de OAuth.",
     "return": "Volver a la configuracion"
   },

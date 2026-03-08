@@ -71,9 +71,10 @@ def _ensure_live_credential(
         raise IntegrationCredentialError(
             f"{provider.value} credential missing access token"
         )
-    if not credential.get("account_id"):
+    required_shop_env = "PRINTIFY_SHOP_ID" if provider == OAuthProvider.PRINTIFY else "ETSY_SHOP_ID"
+    if not credential.get("account_id") and not os.getenv(required_shop_env):
         raise IntegrationCredentialError(
-            f"{provider.value} credential missing account ID"
+            f"{provider.value} credential missing account ID (or {required_shop_env})"
         )
     return credential
 
@@ -94,8 +95,13 @@ def create_sku(
         raise IntegrationUpstreamError(str(exc)) from exc
     except httpx.HTTPError as exc:
         raise IntegrationUpstreamError("Printify request failed") from exc
-    if require_live and any(str(item.get("sku", "")).startswith("stub-sku-") for item in created):
-        raise IntegrationCredentialError("Printify live credentials are not configured")
+    if require_live:
+        for item in created:
+            sku = str(item.get("sku", "")).strip()
+            if not sku or sku.startswith("stub-sku-"):
+                raise IntegrationCredentialError(
+                    "Printify live credentials are not configured"
+                )
     return created
 
 
@@ -117,6 +123,11 @@ def publish_listing(
         raise IntegrationUpstreamError(str(exc)) from exc
     except httpx.HTTPError as exc:
         raise IntegrationUpstreamError("Etsy request failed") from exc
-    if require_live and str(listing.get("etsy_url", "")).startswith("https://etsy.example/"):
-        raise IntegrationCredentialError("Etsy live credentials are not configured")
+    if require_live:
+        listing_id = str(listing.get("listing_id", "")).strip()
+        listing_url = str(listing.get("etsy_url") or listing.get("listing_url") or "").strip()
+        if not listing_id or listing_id.startswith("stub"):
+            raise IntegrationCredentialError("Etsy live credentials are not configured")
+        if not listing_url or listing_url.startswith("https://etsy.example/"):
+            raise IntegrationCredentialError("Etsy live credentials are not configured")
     return listing

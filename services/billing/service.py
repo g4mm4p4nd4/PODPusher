@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+import logging
 from datetime import datetime
 from typing import Optional
 
 import stripe
 
 from .plans import PlanTier, get_plan_limits, get_tier_from_stripe_product
+
+logger = logging.getLogger(__name__)
 
 # Initialize Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -22,6 +25,11 @@ class BillingError(Exception):
     pass
 
 
+def _format_stripe_error(prefix: str, exc: Exception) -> str:
+    detail = getattr(exc, "user_message", None) or str(exc) or exc.__class__.__name__
+    return f"{prefix}: {exc.__class__.__name__}: {detail}"
+
+
 async def get_or_create_customer(user_id: int, email: str) -> str:
     """Get or create a Stripe customer for a user.
 
@@ -30,15 +38,34 @@ async def get_or_create_customer(user_id: int, email: str) -> str:
     if STUB_MODE:
         return f"cus_stub_{user_id}"
 
-    # In a real implementation, we would store the mapping in the database
-    # For now, search by metadata
     try:
+        # Preferred path: metadata search by internal user ID.
         customers = stripe.Customer.search(
             query=f"metadata['user_id']:'{user_id}'"
         )
         if customers.data:
             return customers.data[0].id
+    except stripe.error.InvalidRequestError as e:
+        # Fallback for Stripe accounts where search is not enabled.
+        logger.warning("Stripe customer search unavailable; falling back to list: %s", e)
+        try:
+            listed_customers = stripe.Customer.list(email=email, limit=10)
+        except stripe.error.StripeError as list_exc:
+            raise BillingError(
+                _format_stripe_error("Failed to lookup customer", list_exc)
+            ) from list_exc
 
+        for customer in listed_customers.data:
+            metadata = getattr(customer, "metadata", {}) or {}
+            if str(metadata.get("user_id", "")) == str(user_id):
+                return customer.id
+
+        if len(listed_customers.data) == 1:
+            return listed_customers.data[0].id
+    except stripe.error.StripeError as e:
+        raise BillingError(_format_stripe_error("Failed to lookup customer", e)) from e
+
+    try:
         # Create new customer
         customer = stripe.Customer.create(
             email=email,
@@ -46,7 +73,7 @@ async def get_or_create_customer(user_id: int, email: str) -> str:
         )
         return customer.id
     except stripe.error.StripeError as e:
-        raise BillingError(f"Failed to get/create customer: {e}")
+        raise BillingError(_format_stripe_error("Failed to create customer", e)) from e
 
 
 async def create_portal_session(customer_id: str, return_url: str) -> str:
@@ -64,7 +91,9 @@ async def create_portal_session(customer_id: str, return_url: str) -> str:
         )
         return session.url
     except stripe.error.StripeError as e:
-        raise BillingError(f"Failed to create portal session: {e}")
+        raise BillingError(
+            _format_stripe_error("Failed to create portal session", e)
+        ) from e
 
 
 async def get_subscription_for_customer(customer_id: str) -> Optional[dict]:
@@ -97,7 +126,7 @@ async def get_subscription_for_customer(customer_id: str) -> Optional[dict]:
             "plan_tier": plan_tier.value,
         }
     except stripe.error.StripeError as e:
-        raise BillingError(f"Failed to get subscription: {e}")
+        raise BillingError(_format_stripe_error("Failed to get subscription", e)) from e
 
 
 async def get_user_plan_tier(user_id: int) -> PlanTier:
@@ -126,8 +155,11 @@ async def get_user_plan_tier(user_id: int) -> PlanTier:
             return PlanTier(subscription["plan_tier"])
 
         return PlanTier.FREE
+    except stripe.error.StripeError as exc:
+        logger.warning("Falling back to free tier for user %s due to Stripe error: %s", user_id, exc)
+        return PlanTier.FREE
     except Exception:
-        # Default to free tier on any error
+        # Default to free tier on any unexpected error.
         return PlanTier.FREE
 
 
@@ -174,7 +206,9 @@ async def handle_subscription_created(subscription: dict) -> dict:
             customer = stripe.Customer.retrieve(customer_id)
             user_id = int(customer.metadata.get("user_id", 0))
         except stripe.error.StripeError as e:
-            raise BillingError(f"Failed to retrieve customer: {e}")
+            raise BillingError(
+                _format_stripe_error("Failed to retrieve customer", e)
+            ) from e
 
     if not user_id:
         raise BillingError("No user_id found in customer metadata")
@@ -190,6 +224,8 @@ async def handle_subscription_updated(subscription: dict) -> dict:
 async def handle_subscription_deleted(subscription: dict) -> dict:
     """Handle a subscription being cancelled."""
     customer_id = subscription.get("customer")
+    if not customer_id:
+        raise BillingError("Missing customer in subscription")
 
     if STUB_MODE:
         user_id = 1
@@ -198,7 +234,9 @@ async def handle_subscription_deleted(subscription: dict) -> dict:
             customer = stripe.Customer.retrieve(customer_id)
             user_id = int(customer.metadata.get("user_id", 0))
         except stripe.error.StripeError as e:
-            raise BillingError(f"Failed to retrieve customer: {e}")
+            raise BillingError(
+                _format_stripe_error("Failed to retrieve customer", e)
+            ) from e
 
     if not user_id:
         raise BillingError("No user_id found in customer metadata")

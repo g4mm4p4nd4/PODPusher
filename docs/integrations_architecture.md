@@ -9,6 +9,13 @@ Service-level errors are normalized to explicit HTTP contracts:
 - `422`: invalid product/listing payload
 - `502`: provider upstream or transport failures
 
+Billing integration uses Stripe-backed customer and portal operations with
+explicit fallback/normalization behavior:
+
+- Customer lookup first uses Stripe metadata search by `user_id`
+- If Stripe search is unavailable, billing falls back to customer list lookup by email
+- Stripe SDK failures are surfaced as normalized `BillingError` messages with operation context
+
 ```mermaid
 flowchart TD
     A["Integration API (/sku, /listing)"] --> B["Load OAuthCredential"]

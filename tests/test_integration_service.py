@@ -80,9 +80,81 @@ def test_create_sku_require_live_requires_oauth_credential():
         service.create_sku([{"title": "Test"}], credential=None, require_live=True)
 
 
+def test_create_sku_require_live_accepts_env_shop_id(monkeypatch):
+    monkeypatch.setenv("PRINTIFY_SHOP_ID", "shop-env")
+    monkeypatch.setattr(
+        service,
+        "get_printify_client",
+        lambda *_: (lambda products: [{**products[0], "sku": "sku-live-1"}]),
+    )
+    result = service.create_sku(
+        [{"title": "Test"}],
+        credential={"access_token": "token", "account_id": None},
+        require_live=True,
+    )
+    assert result[0]["sku"] == "sku-live-1"
+
+
+def test_create_sku_require_live_rejects_missing_sku(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "get_printify_client",
+        lambda *_: (lambda products: [{**products[0], "sku": ""}]),
+    )
+    with pytest.raises(service.IntegrationCredentialError, match="live credentials"):
+        service.create_sku(
+            [{"title": "Test"}],
+            credential={"access_token": "token", "account_id": "shop-1"},
+            require_live=True,
+        )
+
+
 def test_publish_listing_require_live_requires_etsy_client_id(monkeypatch):
     monkeypatch.delenv("ETSY_CLIENT_ID", raising=False)
     with pytest.raises(service.IntegrationCredentialError):
+        service.publish_listing(
+            {"title": "Test"},
+            credential={"access_token": "token", "account_id": "shop-1"},
+            require_live=True,
+        )
+
+
+def test_publish_listing_require_live_accepts_env_shop_id(monkeypatch):
+    monkeypatch.setenv("ETSY_CLIENT_ID", "cid")
+    monkeypatch.setenv("ETSY_SHOP_ID", "shop-env")
+    monkeypatch.setattr(
+        service,
+        "get_etsy_client",
+        lambda *_: (
+            lambda product: {
+                **product,
+                "listing_id": "123",
+                "etsy_url": "https://www.etsy.com/listing/123",
+            }
+        ),
+    )
+    listing = service.publish_listing(
+        {"title": "Test"},
+        credential={"access_token": "token", "account_id": None},
+        require_live=True,
+    )
+    assert listing["listing_id"] == "123"
+
+
+def test_publish_listing_require_live_rejects_missing_listing_id(monkeypatch):
+    monkeypatch.setenv("ETSY_CLIENT_ID", "cid")
+    monkeypatch.setattr(
+        service,
+        "get_etsy_client",
+        lambda *_: (
+            lambda product: {
+                **product,
+                "listing_id": "",
+                "etsy_url": "https://www.etsy.com/listing/123",
+            }
+        ),
+    )
+    with pytest.raises(service.IntegrationCredentialError, match="live credentials"):
         service.publish_listing(
             {"title": "Test"},
             credential={"access_token": "token", "account_id": "shop-1"},

@@ -91,7 +91,7 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
         window.location.href = response.authorization_url;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start connection';
+      const message = err instanceof Error ? err.message : t('oauth.connectStartError');
       setError(message);
     } finally {
       setLoading(false);
@@ -107,7 +107,7 @@ export function OAuthConnectCard({ provider, description, onConnectionChange }: 
       setShowDisconnectConfirm(false);
       onConnectionChange?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to disconnect';
+      const message = err instanceof Error ? err.message : t('oauth.disconnectError');
       setError(message);
     } finally {
       setLoading(false);
