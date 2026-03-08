@@ -132,6 +132,19 @@ async def test_notification_endpoints_reject_invalid_bearer_session():
 
 
 @pytest.mark.asyncio
+async def test_notification_endpoints_reject_malformed_authorization_header():
+    await init_db()
+    transport = _transport()
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/",
+            headers={"Authorization": "Token invalid", "X-User-Id": "1"},
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Authentication required"
+
+
+@pytest.mark.asyncio
 async def test_notification_endpoints_reject_payload_user_id_override():
     await init_db()
     transport = _transport()

@@ -37,5 +37,6 @@ User-scoped endpoints accept either:
 - `Authorization: Bearer <session-token>` (preferred)
 - `X-User-Id: <numeric-id>` (fallback for internal tooling)
 
+If neither auth mechanism is supplied, APIs return `401 Authentication required`.
 If a bearer token is present but invalid, APIs return `401 Authentication required`. If `X-User-Id` is used and invalid, APIs return `400 Invalid X-User-Id header`.
 Creation payloads do not accept `user_id`; the authenticated request identity is always used.
