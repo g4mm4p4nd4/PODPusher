@@ -28,6 +28,19 @@ The test is credential-gated:
 - `PRINTIFY_API_KEY`
 - `PRINTIFY_SHOP_ID`
 
+## Flash-Stop Variance Decision (March 8, 2026)
+
+Reviewed detached variance set: `bf81`, `7a5b`, `379d`, `df50`, `781e`, `f083`.
+
+Decision for current smoke scope:
+- Keep stub-toggle fail-fast to `OPENAI_USE_STUB` only.
+- Do not require `STRIPE_SECRET_KEY` for this smoke path yet.
+
+Rationale:
+- This smoke validates trend -> idea -> image -> Printify -> Etsy behavior; billing execution is out of path.
+- Adding billing-specific preflight checks would increase false blocking risk without improving this test's signal quality.
+- The current credential set is sufficient for the exercised live integration chain.
+
 ## Local Dry Run
 
 Without credentials (expected skip):
