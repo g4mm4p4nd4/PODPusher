@@ -6,6 +6,7 @@ import os
 import logging
 from datetime import datetime
 from typing import Optional
+import re
 
 import stripe
 
@@ -28,6 +29,50 @@ class BillingError(Exception):
 def _format_stripe_error(prefix: str, exc: Exception) -> str:
     detail = getattr(exc, "user_message", None) or str(exc) or exc.__class__.__name__
     return f"{prefix}: {exc.__class__.__name__}: {detail}"
+
+
+def _coerce_user_id(raw_user_id: object) -> int:
+    try:
+        user_id = int(raw_user_id)
+    except (TypeError, ValueError):
+        return 0
+    return user_id if user_id > 0 else 0
+
+
+def _user_id_from_metadata(payload: dict | None) -> int:
+    if not isinstance(payload, dict):
+        return 0
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        return 0
+    return _coerce_user_id(metadata.get("user_id"))
+
+
+def _user_id_from_stub_customer(customer_id: str | None) -> int:
+    if not customer_id:
+        return 0
+    match = re.fullmatch(r"cus_stub_(\d+)", str(customer_id))
+    if not match:
+        return 0
+    return _coerce_user_id(match.group(1))
+
+
+def _resolve_user_id_for_subscription_event(payload: dict, customer_id: str | None) -> int:
+    user_id = _user_id_from_metadata(payload)
+    if user_id:
+        return user_id
+
+    if STUB_MODE:
+        return _user_id_from_stub_customer(customer_id)
+
+    try:
+        customer = stripe.Customer.retrieve(customer_id)
+    except stripe.error.StripeError as exc:
+        raise BillingError(
+            _format_stripe_error("Failed to retrieve customer", exc)
+        ) from exc
+
+    return _user_id_from_metadata({"metadata": getattr(customer, "metadata", {})})
 
 
 async def get_or_create_customer(user_id: int, email: str) -> str:
@@ -198,17 +243,7 @@ async def handle_subscription_created(subscription: dict) -> dict:
     if not customer_id or not product_id:
         raise BillingError("Missing customer or product in subscription")
 
-    # Get user_id from customer metadata
-    if STUB_MODE:
-        user_id = 1
-    else:
-        try:
-            customer = stripe.Customer.retrieve(customer_id)
-            user_id = int(customer.metadata.get("user_id", 0))
-        except stripe.error.StripeError as e:
-            raise BillingError(
-                _format_stripe_error("Failed to retrieve customer", e)
-            ) from e
+    user_id = _resolve_user_id_for_subscription_event(subscription, customer_id)
 
     if not user_id:
         raise BillingError("No user_id found in customer metadata")
@@ -227,16 +262,7 @@ async def handle_subscription_deleted(subscription: dict) -> dict:
     if not customer_id:
         raise BillingError("Missing customer in subscription")
 
-    if STUB_MODE:
-        user_id = 1
-    else:
-        try:
-            customer = stripe.Customer.retrieve(customer_id)
-            user_id = int(customer.metadata.get("user_id", 0))
-        except stripe.error.StripeError as e:
-            raise BillingError(
-                _format_stripe_error("Failed to retrieve customer", e)
-            ) from e
+    user_id = _resolve_user_id_for_subscription_event(subscription, customer_id)
 
     if not user_id:
         raise BillingError("No user_id found in customer metadata")

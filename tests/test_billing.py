@@ -171,6 +171,43 @@ class TestBillingService:
         with pytest.raises(service.BillingError, match="Missing customer"):
             await service.handle_subscription_deleted({"id": "sub_123"})
 
+    @pytest.mark.asyncio
+    async def test_handle_subscription_created_stub_uses_customer_id_suffix(self):
+        from services.billing import service
+
+        service.STUB_MODE = True
+        result = await service.handle_subscription_created(
+            {
+                "id": "sub_123",
+                "customer": "cus_stub_77",
+                "items": {"data": [{"price": {"product": "unknown"}}]},
+            }
+        )
+        assert result["plan_tier"] == "free"
+
+    @pytest.mark.asyncio
+    async def test_handle_subscription_created_stub_uses_metadata_user_id(self):
+        from services.billing import service
+
+        service.STUB_MODE = True
+        result = await service.handle_subscription_created(
+            {
+                "id": "sub_123",
+                "customer": "cus_not_parseable",
+                "metadata": {"user_id": "88"},
+                "items": {"data": [{"price": {"product": "unknown"}}]},
+            }
+        )
+        assert result["plan_tier"] == "free"
+
+    @pytest.mark.asyncio
+    async def test_handle_subscription_deleted_stub_requires_resolvable_user_id(self):
+        from services.billing import service
+
+        service.STUB_MODE = True
+        with pytest.raises(service.BillingError, match="No user_id found"):
+            await service.handle_subscription_deleted({"customer": "cus_stub_0"})
+
 
 class TestBillingWebhooks:
     """Test billing webhook handlers."""
