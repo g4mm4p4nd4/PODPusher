@@ -33,5 +33,8 @@ Notifications are stored in the database and surfaced via the `/api/notification
 
 Scheduler intervals are configurable via `NOTIFY_DISPATCH_INTERVAL_MINUTES` and `NOTIFY_LAUNCH_DIGEST_HOUR` environment variables.
 
-All user-scoped endpoints require a numeric X-User-Id header and return 400 when it is missing or invalid.
+User-scoped endpoints accept either:
+- `Authorization: Bearer <session-token>` (preferred)
+- `X-User-Id: <numeric-id>` (fallback for internal tooling)
 
+If a bearer token is present but invalid, APIs return `401 Authentication required`. If `X-User-Id` is used and invalid, APIs return `400 Invalid X-User-Id header`.

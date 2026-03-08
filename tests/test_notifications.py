@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
+from services.auth.service import create_session
 from services.common.database import get_session, init_db
 from services.models import Notification, ScheduledNotification, User
 from services.notifications.api import app as notif_app
@@ -86,6 +87,48 @@ async def test_invalid_user_header_returns_400():
         read_resp = await client.put("/1/read", headers={"X-User-Id": "abc"})
         assert read_resp.status_code == 400
         assert read_resp.json()["detail"] == "Invalid X-User-Id header"
+
+
+@pytest.mark.asyncio
+async def test_notification_endpoints_accept_bearer_session():
+    await init_db()
+    token, _ = await create_session(21)
+    transport = _transport()
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        create_resp = await client.post(
+            "/",
+            json={"message": "bearer hello", "type": "info"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert create_resp.status_code == 200
+        notification_id = create_resp.json()["id"]
+
+        list_resp = await client.get(
+            "/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert list_resp.status_code == 200
+        assert any(item["id"] == notification_id for item in list_resp.json())
+
+        mark_resp = await client.put(
+            f"/{notification_id}/read",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert mark_resp.status_code == 200
+        assert mark_resp.json()["read_status"] is True
+
+
+@pytest.mark.asyncio
+async def test_notification_endpoints_reject_invalid_bearer_session():
+    await init_db()
+    transport = _transport()
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Authentication required"
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 
 export interface ReviewProduct {
   id: number;
@@ -30,6 +31,7 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
   errorMessage,
   isPending = false,
 }) => {
+  const { t } = useTranslation('common');
   const [pending, setPending] = useState(false);
   const [tagInput, setTagInput] = useState('');
 
@@ -147,12 +149,12 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
             className="text-sm text-blue-600 hover:underline disabled:text-gray-400"
             disabled={effectivePending || product.rating == null}
           >
-            Clear
+            {t('review.clear')}
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2" role="group" aria-label="rating">
+      <div className="flex items-center gap-2" role="group" aria-label={t('review.rating')}>
         {STAR_VALUES.map(value => {
           const active = (product.rating ?? 0) >= value;
           return (
@@ -160,7 +162,7 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
               key={value}
               type="button"
               className={`text-2xl ${active ? 'text-yellow-400' : 'text-gray-300'} disabled:text-gray-200`}
-              aria-label={`Set rating to ${value}`}
+              aria-label={t('review.setRating', { count: value })}
               aria-pressed={active}
               data-testid={`star-${product.id}-${value}`}
               onClick={() => handleStarClick(value)}
@@ -173,7 +175,7 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
       </div>
 
       <div className="space-y-2">
-        <div className="flex flex-wrap gap-2" aria-label="tags">
+        <div className="flex flex-wrap gap-2" aria-label={t('review.tags')}>
           {currentTags.map(tag => (
             <span
               key={tag}
@@ -185,7 +187,7 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
                 className="ml-2 text-xs text-red-500 hover:underline disabled:text-gray-300"
                 onClick={() => removeTag(tag)}
                 disabled={effectivePending}
-                aria-label={`Remove tag ${tag}`}
+                aria-label={t('review.removeTag', { tag })}
               >
                 ×
               </button>
@@ -198,17 +200,17 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
             value={tagInput}
             onChange={event => setTagInput(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Add tag"
+            placeholder={t('review.addTagPlaceholder')}
             className="flex-1 border rounded px-3 py-2"
             disabled={effectivePending}
-            aria-label="Add tag input"
+            aria-label={t('review.addTagInput')}
           />
           <button
             type="submit"
             className="px-3 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300"
             disabled={effectivePending}
           >
-            Add
+            {t('review.add')}
           </button>
         </form>
       </div>
@@ -221,7 +223,7 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(({
           disabled={effectivePending}
           data-testid={`flag-toggle-${product.id}`}
         />
-        <span className="text-sm">Flag for review</span>
+        <span className="text-sm">{t('review.flagForReview')}</span>
       </label>
 
       {errorMessage ? (

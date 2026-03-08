@@ -8,7 +8,15 @@ document.body.setAttribute('id', 'root');
 
 jest.mock('next-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { count?: number; tag?: string }) => {
+      if (key === 'review.setRating') {
+        return `review.setRating.${options?.count ?? ''}`;
+      }
+      if (key === 'review.removeTag') {
+        return `review.removeTag.${options?.tag ?? ''}`;
+      }
+      return key;
+    },
   }),
 }));
 
@@ -89,7 +97,7 @@ test('updates rating when a star is clicked', async () => {
 test('adds a new tag through the input field', async () => {
   await renderWithProduct({ tags: ['existing'] });
 
-  const input = screen.getByLabelText('Add tag input');
+  const input = screen.getByLabelText('review.addTagInput');
   fireEvent.change(input, { target: { value: 'new-tag' } });
   fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
@@ -177,4 +185,16 @@ test('rolls back state and shows error message when update fails', async () => {
   await waitFor(() => expect(mockedAxios.put).toHaveBeenCalled());
   await waitFor(() => expect(screen.getByTestId('star-1-2')).toHaveAttribute('aria-pressed', 'true'));
   expect(screen.getByRole('alert')).toHaveTextContent('Update failed');
+});
+
+test('uses translated fallback when update fails with non-axios error', async () => {
+  await renderWithProduct({ rating: 3 });
+
+  mockedAxios.put.mockRejectedValue(new Error('Unexpected failure'));
+
+  const star = screen.getByTestId('star-1-1');
+  fireEvent.click(star);
+
+  await waitFor(() => expect(mockedAxios.put).toHaveBeenCalled());
+  expect(screen.getByRole('alert')).toHaveTextContent('review.updateError');
 });
