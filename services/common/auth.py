@@ -11,14 +11,30 @@ from .database import get_session
 from .quotas import ensure_quota_state
 
 
-async def require_user_id(request: Request) -> int:
+async def _resolve_bearer_user_id(request: Request) -> tuple[bool, Optional[int]]:
+    """Resolve a bearer token user id.
+
+    Returns a tuple of (authorization_header_present, resolved_user_id).
+    """
     auth_header = request.headers.get("Authorization")
-    if auth_header:
-        prefix, _, token = auth_header.partition(" ")
-        if prefix.lower() == "bearer" and token:
-            user_id = await auth_service.resolve_session_token(token)
-            if user_id is not None:
-                return user_id
+    if not auth_header:
+        return False, None
+
+    prefix, _, token = auth_header.partition(" ")
+    if prefix.lower() != "bearer" or not token:
+        return True, None
+
+    user_id = await auth_service.resolve_session_token(token)
+    return True, user_id
+
+
+async def require_user_id(request: Request) -> int:
+    auth_present, bearer_user_id = await _resolve_bearer_user_id(request)
+    if auth_present:
+        if bearer_user_id is not None:
+            return bearer_user_id
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+
     user_header = request.headers.get("X-User-Id")
     if user_header:
         try:
@@ -32,13 +48,10 @@ async def require_user_id(request: Request) -> int:
 
 
 async def optional_user_id(request: Request) -> Optional[int]:
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        prefix, _, token = auth_header.partition(" ")
-        if prefix.lower() == "bearer" and token:
-            user_id = await auth_service.resolve_session_token(token)
-            if user_id is not None:
-                return user_id
+    auth_present, bearer_user_id = await _resolve_bearer_user_id(request)
+    if auth_present:
+        return bearer_user_id
+
     user_header = request.headers.get("X-User-Id")
     if user_header:
         try:

@@ -15,7 +15,7 @@ The test is credential-gated:
 - Requires trend stage outputs with `trend_source == "live"` (fails on fallback trend seeds)
 - Requires ideation and image stages to return `generation_source == "openai"`
 - Requires image URLs, Printify SKUs, and Etsy listing identifiers/URLs to be non-stub values
-- Calls integration service with `require_live=True` for Printify and Etsy stages
+- Calls integration service with `require_live=True` and explicit env-backed OAuth credential payloads for Printify and Etsy stages
 - Workflow preflight exits early with a missing-secret list before running pytest
 - Workflow emits `staging-smoke-junit.xml` and uploads it as `staging-smoke-junit` artifact on every run
 

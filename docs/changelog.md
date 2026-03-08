@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hardened common auth resolution so invalid/malformed `Authorization` headers no longer fall back to `X-User-Id`, with focused dependency tests for `require_user_id` and `optional_user_id`.
+- Localized `ErrorBoundary` copy via i18n keys (`errorBoundary.*`) and added focused component coverage for translated fallback and retry recovery behavior.
+- Updated staging smoke to pass explicit env-backed Printify/Etsy credential payloads to live integration calls.
 - Added internationalization with English and Spanish translations.
 - New language switcher allows changing locale in the dashboard.
 - Replaced analytics mock keyword feed with live aggregation from trend ingestion data (`TrendSignal`) plus `Trend` fallback, with validated query bounds and expanded backend tests.

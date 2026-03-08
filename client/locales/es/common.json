@@ -110,6 +110,12 @@
     "empty": "No encontramos datos de palabras clave en tendencia en este momento.",
     "error": "Hubo un problema al cargar las analíticas. Intenta de nuevo."
   },
+  "errorBoundary": {
+    "title": "Algo salio mal",
+    "message": "Ocurrio un error inesperado. Intenta de nuevo.",
+    "details": "Detalles del error",
+    "retry": "Intentar de nuevo"
+  },
   "notifications": {
     "title": "Notificaciones",
     "markRead": "Marcar como leído"

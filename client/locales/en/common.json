@@ -110,6 +110,12 @@
     "empty": "We couldn't find any trending keyword data right now.",
     "error": "Something went wrong while loading analytics. Please try again."
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try again.",
+    "details": "Error details",
+    "retry": "Try Again"
+  },
   "notifications": {
     "title": "Notifications",
     "markRead": "Mark as read"

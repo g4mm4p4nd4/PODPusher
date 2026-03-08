@@ -37,6 +37,18 @@ def _enabled_stub_toggles() -> list[str]:
     return enabled
 
 
+def _build_staging_credentials() -> tuple[dict[str, str], dict[str, str]]:
+    printify_credential = {
+        "access_token": os.environ["PRINTIFY_API_KEY"],
+        "account_id": os.environ["PRINTIFY_SHOP_ID"],
+    }
+    etsy_credential = {
+        "access_token": os.environ["ETSY_ACCESS_TOKEN"],
+        "account_id": os.environ["ETSY_SHOP_ID"],
+    }
+    return printify_credential, etsy_credential
+
+
 @pytest.mark.asyncio
 async def test_staging_trend_to_listing_smoke():
     if not _staging_enabled():
@@ -78,13 +90,15 @@ async def test_staging_trend_to_listing_smoke():
         item.get("image_url") != "http://example.com/image.png" for item in images
     ), "Image stage returned stub image URLs"
 
-    products = create_sku(images[:1], require_live=True)
+    printify_credential, etsy_credential = _build_staging_credentials()
+
+    products = create_sku(images[:1], credential=printify_credential, require_live=True)
     assert products and products[0].get("sku"), "No SKU returned from Printify stage"
     assert all(
         not str(item.get("sku", "")).startswith("stub-sku-") for item in products
     ), "Printify stage returned stub SKUs"
 
-    listing = publish_listing(products[0], require_live=True)
+    listing = publish_listing(products[0], credential=etsy_credential, require_live=True)
     listing_id = str(listing.get("listing_id", "")).strip()
     listing_url = str(listing.get("etsy_url") or listing.get("listing_url") or "").strip()
     assert listing_id, "No listing ID returned from Etsy stage"
