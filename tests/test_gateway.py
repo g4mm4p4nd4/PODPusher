@@ -1,7 +1,24 @@
 import pytest
+import sys
+import types
 from httpx import ASGITransport, AsyncClient
 
 from services.common.database import init_db
+
+if "stripe" not in sys.modules:
+    sys.modules["stripe"] = types.SimpleNamespace(
+        api_key=None,
+        Customer=types.SimpleNamespace(search=lambda **_: types.SimpleNamespace(data=[])),
+        Subscription=types.SimpleNamespace(list=lambda **_: types.SimpleNamespace(data=[])),
+        billing_portal=types.SimpleNamespace(
+            Session=types.SimpleNamespace(create=lambda **_: types.SimpleNamespace(url="https://stub"))
+        ),
+        error=types.SimpleNamespace(
+            StripeError=Exception,
+            InvalidRequestError=Exception,
+        ),
+    )
+
 from services.gateway.api import app as gateway_app
 
 
@@ -73,3 +90,21 @@ async def test_gateway_exposes_user_and_analytics_routes():
     assert user_resp.json()["plan"] == "free"
     assert analytics_resp.status_code == 200
     assert isinstance(analytics_resp.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_generate_rejects_invalid_bearer_even_with_user_header():
+    await init_db()
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/generate",
+            headers={
+                "Authorization": "Bearer invalid-token",
+                "X-User-Id": "9",
+            },
+        )
+    assert resp.status_code == 401
+    body = resp.json()
+    assert body["code"] == "UNAUTHORIZED"
+    assert body["message"] == "Authentication required"

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from .database import get_session
@@ -180,25 +180,12 @@ async def quota_middleware(request: Request, call_next):
     if request.url.path != "/images" or request.method.upper() != "POST":
         return await call_next(request)
 
-    user_id: int | None = None
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        prefix, _, token = auth_header.partition(" ")
-        if prefix.lower() == "bearer" and token:
-            # Import lazily to avoid circular import (auth service imports quotas).
-            from ..auth.service import resolve_session_token
+    try:
+        from .auth import require_user_id
 
-            user_id = await resolve_session_token(token)
-    user_header = request.headers.get("X-User-Id")
-    if user_id is None and user_header:
-        try:
-            user_id = int(user_header)
-        except ValueError:
-            return JSONResponse({"detail": "Invalid X-User-Id header"}, status_code=400)
-    if user_id is None and user_header is None:
-        return JSONResponse({"detail": "Missing X-User-Id"}, status_code=400)
-    if user_id is None:
-        return JSONResponse({"detail": "Authentication required"}, status_code=401)
+        user_id = await require_user_id(request)
+    except HTTPException as exc:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
     body_bytes = await request.body()
     try:

@@ -84,3 +84,33 @@ async def test_quota_rejects_invalid_user_header():
         )
     assert resp.status_code == 400
     assert resp.json()["detail"] == "Invalid X-User-Id header"
+
+
+@pytest.mark.asyncio
+async def test_quota_rejects_missing_auth_identity():
+    await init_db()
+    transport = ASGITransport(app=image_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/images",
+            json={"ideas": ["idea"]},
+        )
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Authentication required"
+
+
+@pytest.mark.asyncio
+async def test_quota_rejects_invalid_bearer_even_with_user_header():
+    await init_db()
+    transport = ASGITransport(app=image_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/images",
+            json={"ideas": ["idea"]},
+            headers={
+                "Authorization": "Bearer invalid-token",
+                "X-User-Id": "44",
+            },
+        )
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Authentication required"
