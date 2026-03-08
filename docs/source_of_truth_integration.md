@@ -7,6 +7,20 @@ system of record for the repository. The goal is not just to move commits
 upstream, but to prove that local changes still behave correctly when replayed on
 top of the current remote baseline.
 
+## Continuous mainline automation
+
+PODPusher also operates a continuous local-main flow for Codex automations:
+
+1. lane automations produce scoped commits in worktrees
+2. `podpusher-mainline-sweep` folds those commits into local `main`
+3. `origin-reconcile` fetches `origin`, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`
+
+This mode exists to keep GitHub synchronized without squash merges. Commit
+storytelling must remain intact: prefer preserving original commits with
+`git merge --no-ff`, and only create a consolidation commit when detached work
+cannot be merged as a named branch. Consolidation commits must identify their
+source worktree or commit SHAs in the message.
+
 ## First Principles
 
 1. `origin/main` is the source of truth. Local branches are proposed deltas.
@@ -93,14 +107,7 @@ then proof of runtime behavior.
 Validation should go from cheapest to most system-wide:
 
 ```bash
-flake8
-python scripts/verify_translations.py
-npx tsc --noEmit --project client/tsconfig.json
-alembic upgrade head
-pytest
-npm test --prefix client -- --runInBand
-npm run build --prefix client
-npm exec --prefix client playwright -- test
+./scripts/codex_wsl_tasks.sh mainline-verify
 ```
 
 Project-specific additions can be inserted, but the rule is stable:
@@ -163,10 +170,14 @@ An automation for this workflow should have the following shape.
 ### Guardrails
 
 - stop on dirty worktree
-- never push directly to `main`
+- never force-push `main`
 - never force-push without explicit approval
 - never auto-resolve semantic conflicts without rerunning tests
 - persist logs for each failed step
+
+In continuous mainline mode, a direct `git push origin main` is allowed only as a
+fast-forward of a validated local `main` after the validation ladder above passes.
+Squash merges and history rewrites remain disallowed.
 
 ### Failure Policy
 

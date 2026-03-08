@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added a fail-closed `./scripts/codex_wsl_tasks.sh mainline-verify` command so `origin-reconcile` can validate backend, frontend, build, migrations, and Playwright gates before pushing `main`.
+- Documented the continuous local-main automation flow and updated the WSL migration helper to preserve commit traceability during mainline folding.
+- Removed stale merge separator artifacts from the primary docs runbooks.
 - Removed notifications payload `user_id` overrides and now enforce authenticated-request ownership for immediate and scheduled notification creation.
 - Hardened common auth resolution so invalid/malformed `Authorization` headers no longer fall back to `X-User-Id`, with focused dependency tests for `require_user_id` and `optional_user_id`.
 - Localized `ErrorBoundary` copy via i18n keys (`errorBoundary.*`) and added focused component coverage for translated fallback and retry recovery behavior.

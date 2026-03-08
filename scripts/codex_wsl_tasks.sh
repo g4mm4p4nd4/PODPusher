@@ -14,6 +14,7 @@ Commands:
   backend-test    Run pytest from the repo root
   frontend-test   Run the frontend Jest suite
   frontend-build  Run the frontend production build
+  mainline-verify Run the full mainline validation ladder without installing deps
   compose-config  Render docker compose config
   compose-up      Run docker compose up with any extra args
   worker          Start the local Celery worker
@@ -118,6 +119,28 @@ ensure_frontend_deps() {
   fi
 }
 
+require_existing_python_env() {
+  require_cmd python3
+  ensure_dirs
+
+  if [[ ! -x "$CODEX_WSL_VENV_DIR/bin/python" ]]; then
+    echo "Missing Python venv at $CODEX_WSL_VENV_DIR. Prepare the repo-local toolchain before running mainline verification." >&2
+    exit 1
+  fi
+
+  activate_python_env
+}
+
+require_existing_frontend_deps() {
+  require_cmd npm
+  ensure_dirs
+
+  if [[ ! -d "$CODEX_WSL_REPO_ROOT/client/node_modules" ]]; then
+    echo "Missing frontend dependencies at $CODEX_WSL_REPO_ROOT/client/node_modules. Prepare the repo-local toolchain before running mainline verification." >&2
+    exit 1
+  fi
+}
+
 bootstrap() {
   ensure_wsl
   ensure_python_env
@@ -146,6 +169,33 @@ frontend_build() {
   bootstrap
   cd "$CODEX_WSL_REPO_ROOT/client"
   npm run build -- "$@"
+}
+
+mainline_verify() {
+  ensure_wsl
+  require_existing_python_env
+  require_existing_frontend_deps
+  cd "$CODEX_WSL_REPO_ROOT"
+
+  mkdir -p "$CODEX_WSL_REPO_ROOT/.tmp/pytest"
+  export TMPDIR="$CODEX_WSL_REPO_ROOT/.tmp"
+
+  "$CODEX_WSL_VENV_DIR/bin/python" -m flake8
+  "$CODEX_WSL_VENV_DIR/bin/python" scripts/verify_translations.py
+  DATABASE_URL=sqlite+aiosqlite:///./ci_migration.db \
+    "$CODEX_WSL_VENV_DIR/bin/python" -m alembic upgrade head
+  "$CODEX_WSL_VENV_DIR/bin/python" -m pytest tests -q -s \
+    --basetemp "$CODEX_WSL_REPO_ROOT/.tmp/pytest"
+  npm exec --prefix client tsc -- --noEmit --project client/tsconfig.json
+  npm test --prefix client -- --runInBand
+  npm run build --prefix client
+
+  if npm exec --prefix client playwright -- --version >/dev/null 2>&1; then
+    NODE_PATH="$CODEX_WSL_REPO_ROOT/client/node_modules" \
+      npm exec --prefix client playwright -- test
+  else
+    echo "Playwright not available, skipping" >&2
+  fi
 }
 
 docker_compose_cmd() {
@@ -235,6 +285,9 @@ main() {
       ;;
     frontend-build)
       frontend_build "$@"
+      ;;
+    mainline-verify)
+      mainline_verify "$@"
       ;;
     compose-config)
       compose_config "$@"

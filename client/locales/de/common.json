@@ -41,6 +41,7 @@
     "placeholder": "Trendbegriff eingeben",
     "button": "Generieren",
     "generating": "Wird generiert...",
+    "error": "Generierung fehlgeschlagen",
     "connectionRequired": "Verbindung erforderlich",
     "connectProviders": "Zum Generieren und Veröffentlichen verbinden Sie bitte folgende Konten: {{providers}}",
     "goToSettings": "Zu den Einstellungen",
@@ -93,7 +94,11 @@
     "suggest": "Schlagwörter vorschlagen",
     "publish": "Veröffentlichen",
     "save": "Entwurf speichern",
-    "language": "Sprache"
+    "language": "Sprache",
+    "languages": {
+      "en": "Englisch",
+      "es": "Spanisch"
+    }
   },
   "analytics": {
     "title": "Analytik-Dashboard",
@@ -104,6 +109,12 @@
     "loading": "Analytik wird geladen...",
     "empty": "Derzeit keine Trend-Schlüsselwort-Daten gefunden.",
     "error": "Beim Laden der Analytik ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "errorBoundary": {
+    "title": "Etwas ist schiefgelaufen",
+    "message": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "details": "Fehlerdetails",
+    "retry": "Erneut versuchen"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -162,8 +173,33 @@
     "emailNotifications": "E-Mail-Benachrichtigungen",
     "pushNotifications": "Push-Benachrichtigungen",
     "defaultLanguage": "Standardsprache",
+    "languages": {
+      "en": "Englisch",
+      "es": "Spanisch",
+      "fr": "Franzoesisch",
+      "de": "Deutsch"
+    },
     "currency": "Währung",
+    "currencies": {
+      "USD": "USD ($)",
+      "EUR": "EUR (EUR)",
+      "GBP": "GBP (GBP)",
+      "CAD": "CAD ($)",
+      "AUD": "AUD ($)"
+    },
     "timezone": "Zeitzone",
+    "timezones": {
+      "utc": "UTC",
+      "americaNewYork": "Ostkueste (USA)",
+      "americaChicago": "Zentral (USA)",
+      "americaDenver": "Mountain (USA)",
+      "americaLosAngeles": "Pazifik (USA)",
+      "europeLondon": "London",
+      "europeParis": "Paris / Berlin",
+      "asiaTokyo": "Tokio",
+      "australiaSydney": "Sydney"
+    },
+    "oauthConnectionsAria": "OAuth-Verbindungen",
     "upgrade": "Upgrade",
     "creditsLeft": "{{count}} Credits übrig",
     "usageBreakdown": "Nutzungsübersicht",
@@ -174,7 +210,8 @@
     "providers": {
       "etsy": "Etsy",
       "printify": "Printify",
-      "stripe": "Stripe"
+      "stripe": "Stripe",
+      "unknown": "Verbundenes Konto"
     },
     "status": {
       "connected": "Verbunden",
@@ -218,6 +255,8 @@
     "success": "{{provider}} erfolgreich verknuepft.",
     "redirect": "Weiterleitung zu den Einstellungen...",
     "error": "OAuth-Rueckgabe fehlgeschlagen.",
+    "connectStartError": "Verbindung konnte nicht gestartet werden.",
+    "disconnectError": "Trennen fehlgeschlagen.",
     "missingParams": "Fehlende OAuth-Parameter.",
     "return": "Zu den Einstellungen zurueck"
   },
@@ -247,5 +286,8 @@
     "summary": "{{used}} / {{limit}}",
     "remaining": "{{count}} Credits uebrig",
     "ariaProgress": "Kontingentnutzung {{percentage}} Prozent"
+  },
+  "rateLimit": {
+    "banner": "Zu viele Anfragen. Bitte warten Sie {{seconds}}s und versuchen Sie es dann erneut."
   }
 }

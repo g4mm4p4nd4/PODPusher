@@ -11,16 +11,28 @@ from pathlib import Path
 
 ORIGIN_RECONCILE_PROMPT = (
     "Reconcile local main with origin/main in this repo. Inspect git status and "
-    "history, fetch origin, and use direct git and gh commands from a WSL shell as "
-    "the starting path. If the repo needs credentials, check GitHub auth with `gh "
-    "auth status` and stop without forcing credentials if auth is missing. If fetch "
-    "or merge introduces conflicts or failing checks, repair them manually, "
-    "preserving all substantive content from both sides in markdown and docs "
-    "conflicts. Run the CI verification steps from .github/workflows/ci.yml using "
-    "bash-native commands, fix any regressions introduced by the merge, and only "
-    "fast-forward local main and push to origin/main if every check passes. Always "
-    "open an inbox item summarizing fetch state, conflicts resolved, checks run, "
-    "push status, and any blockers."
+    "history, fetch origin, and use direct git commands from a WSL shell. If "
+    "origin/main moved, integrate those commits without rewriting history and keep "
+    "all substantive content from both sides. Before any push, run "
+    "`./scripts/codex_wsl_tasks.sh mainline-verify` from the repo root. If "
+    "verification fails or the repo-local toolchains are missing, do not push; "
+    "open an inbox item with the exact failing step or missing dependency. Only "
+    "fast-forward push local main to origin/main when verification passes and the "
+    "working tree is clean. Always summarize fetch state, commit range considered, "
+    "checks run, push status, and blockers."
+)
+ORIGIN_RECONCILE_RRULE = "FREQ=HOURLY;INTERVAL=1;BYMINUTE=55"
+MAINLINE_SWEEP_PROMPT = (
+    "Review Git worktrees and the main workspace for detached Codex changes. "
+    "Preserve commit traceability: prefer merging the source branch or worktree "
+    "into main with `git merge --no-ff` so original commits remain visible. Only "
+    "create a consolidation commit when the source changes are detached or cannot "
+    "be merged as a branch; when that happens, cite the source worktree or commit "
+    "SHAs in the commit message. After each fold, run focused verification for the "
+    "touched files, stop if the main workspace is dirty for unrelated reasons, and "
+    "never rewrite remote history. Do not push to origin; leave remote sync to the "
+    "origin-reconcile automation. Open an inbox item summarizing what merged, any "
+    "consolidation commits created, verification run, and cleanup status."
 )
 
 
@@ -94,6 +106,13 @@ def update_global_state(path: Path) -> tuple[bool, str]:
 def update_origin_reconcile(path: Path) -> tuple[bool, str]:
     original = path.read_text(encoding="utf-8")
     updated = replace_basic_string_field(original, "prompt", ORIGIN_RECONCILE_PROMPT)
+    updated = replace_basic_string_field(updated, "rrule", ORIGIN_RECONCILE_RRULE)
+    return updated != original, updated
+
+
+def update_mainline_sweep(path: Path) -> tuple[bool, str]:
+    original = path.read_text(encoding="utf-8")
+    updated = replace_basic_string_field(original, "prompt", MAINLINE_SWEEP_PROMPT)
     return updated != original, updated
 
 
@@ -104,6 +123,9 @@ def main() -> int:
     global_state_path = codex_home / ".codex-global-state.json"
     origin_reconcile_path = (
         codex_home / "automations" / "origin-reconcile" / "automation.toml"
+    )
+    mainline_sweep_path = (
+        codex_home / "automations" / "podpusher-mainline-sweep" / "automation.toml"
     )
 
     planned_changes: list[tuple[Path, str]] = []
@@ -121,6 +143,13 @@ def main() -> int:
             planned_changes.append((origin_reconcile_path, serialized))
     else:
         print(f"Missing file: {origin_reconcile_path}", file=sys.stderr)
+
+    if mainline_sweep_path.exists():
+        changed, serialized = update_mainline_sweep(mainline_sweep_path)
+        if changed:
+            planned_changes.append((mainline_sweep_path, serialized))
+    else:
+        print(f"Missing file: {mainline_sweep_path}", file=sys.stderr)
 
     if not planned_changes:
         print("No Codex WSL migration changes are required.")

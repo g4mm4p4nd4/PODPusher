@@ -167,8 +167,8 @@ resumed, and listings can be composed in multiple languages.
 
 The tag suggestion endpoint now ranks suggestions using historical sales and
 search frequency data for improved relevance.
-=======
-# Analytics Service
+
+## Analytics Service
 
 ## Architecture
 The analytics module records user interactions and exposes aggregated metrics for the dashboard.

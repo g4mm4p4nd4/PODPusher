@@ -126,7 +126,7 @@ curl "http://localhost:8000/api/search?q=dog&category=apparel&tag=funny&rating_m
 ## Listing Composer
 
 Create Etsy listings with optimised metadata. Navigate to `/listings` in the dashboard and enter a title and description. Character counters show how many characters remain for each field. Click **Suggest Tags** to fetch recommended tags from the backend via the `/suggest-tags` endpoint. Select up to 13 tags before publishing your listing.
-=======
+
 ## A/B Testing
 
 Create experiments using the `/ab_tests` API. Post a JSON payload with a test

@@ -41,6 +41,7 @@
     "placeholder": "Entrez un terme tendance",
     "button": "Générer",
     "generating": "Génération en cours...",
+    "error": "Echec de la generation",
     "connectionRequired": "Connexion requise",
     "connectProviders": "Pour générer et publier, veuillez connecter les comptes suivants : {{providers}}",
     "goToSettings": "Aller aux Paramètres",
@@ -93,7 +94,11 @@
     "suggest": "Suggérer des étiquettes",
     "publish": "Publier",
     "save": "Enregistrer le brouillon",
-    "language": "Langue"
+    "language": "Langue",
+    "languages": {
+      "en": "Anglais",
+      "es": "Espagnol"
+    }
   },
   "analytics": {
     "title": "Tableau de bord analytique",
@@ -104,6 +109,12 @@
     "loading": "Chargement des analytiques...",
     "empty": "Aucune donnée de mots-clés tendance trouvée pour le moment.",
     "error": "Une erreur est survenue lors du chargement des analytiques. Veuillez réessayer."
+  },
+  "errorBoundary": {
+    "title": "Un problème est survenu",
+    "message": "Une erreur inattendue est survenue. Veuillez reessayer.",
+    "details": "Details de l'erreur",
+    "retry": "Reessayer"
   },
   "notifications": {
     "title": "Notifications",
@@ -162,8 +173,33 @@
     "emailNotifications": "Notifications par email",
     "pushNotifications": "Notifications push",
     "defaultLanguage": "Langue par défaut",
+    "languages": {
+      "en": "Anglais",
+      "es": "Espagnol",
+      "fr": "Francais",
+      "de": "Allemand"
+    },
     "currency": "Devise",
+    "currencies": {
+      "USD": "USD ($)",
+      "EUR": "EUR (EUR)",
+      "GBP": "GBP (GBP)",
+      "CAD": "CAD ($)",
+      "AUD": "AUD ($)"
+    },
     "timezone": "Fuseau horaire",
+    "timezones": {
+      "utc": "UTC",
+      "americaNewYork": "Est (USA)",
+      "americaChicago": "Centre (USA)",
+      "americaDenver": "Montagnes (USA)",
+      "americaLosAngeles": "Pacifique (USA)",
+      "europeLondon": "Londres",
+      "europeParis": "Paris / Berlin",
+      "asiaTokyo": "Tokyo",
+      "australiaSydney": "Sydney"
+    },
+    "oauthConnectionsAria": "Connexions OAuth",
     "upgrade": "Passer au niveau supérieur",
     "creditsLeft": "{{count}} crédits restants",
     "usageBreakdown": "Détail de l'utilisation",
@@ -174,7 +210,8 @@
     "providers": {
       "etsy": "Etsy",
       "printify": "Printify",
-      "stripe": "Stripe"
+      "stripe": "Stripe",
+      "unknown": "Compte connecte"
     },
     "status": {
       "connected": "Connecte",
@@ -218,6 +255,8 @@
     "success": "{{provider}} lie avec succes.",
     "redirect": "Redirection vers les parametres...",
     "error": "Le rappel OAuth a echoue.",
+    "connectStartError": "Impossible de demarrer la connexion.",
+    "disconnectError": "Impossible de deconnecter.",
     "missingParams": "Parametres OAuth manquants.",
     "return": "Retour aux parametres"
   },
@@ -247,5 +286,8 @@
     "summary": "{{used}} / {{limit}}",
     "remaining": "{{count}} credits restants",
     "ariaProgress": "Utilisation du quota {{percentage}} pour cent"
+  },
+  "rateLimit": {
+    "banner": "Trop de requetes. Veuillez attendre {{seconds}}s avant de reessayer."
   }
 }
