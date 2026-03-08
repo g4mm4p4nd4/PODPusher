@@ -1,6 +1,7 @@
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import React from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { useProviders } from '../contexts/ProviderContext';
@@ -36,16 +37,12 @@ function ConnectionWarning() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         <div className="flex-1">
-          <h3 className="font-medium text-yellow-800">{t('generate.connectionRequired', 'Connection Required')}</h3>
+          <h3 className="font-medium text-yellow-800">{t('generate.connectionRequired')}</h3>
           <p className="mt-1 text-sm text-yellow-700">
-            {t(
-              'generate.connectProviders',
-              'To generate and publish listings, please connect the following accounts: {{providers}}',
-              { providers: missingProviders.join(', ') }
-            )}
+            {t('generate.connectProviders', { providers: missingProviders.join(', ') })}
           </p>
           <Link href="/settings" className="mt-2 inline-block text-sm font-medium text-yellow-800 underline hover:text-yellow-900">
-            {t('generate.goToSettings', 'Go to Settings')}
+            {t('generate.goToSettings')}
           </Link>
         </div>
       </div>
@@ -78,7 +75,7 @@ export default function Generate() {
       const res = await axios.post(resolveApiUrl('/generate'), { term }, { headers: getAuthHeaders() });
       setResult(res.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Generation failed';
+      const message = err instanceof Error ? err.message : t('generate.error');
       setError(message);
       console.error(err);
     } finally {
@@ -130,7 +127,7 @@ export default function Generate() {
           disabled={!canGenerate || loading || !term.trim()}
           className="rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-blue-700"
         >
-          {loading ? t('generate.generating', 'Generating...') : t('generate.button')}
+          {loading ? t('generate.generating') : t('generate.button')}
         </button>
       </form>
 

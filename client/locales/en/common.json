@@ -41,6 +41,7 @@
     "placeholder": "Enter trend term",
     "button": "Generate",
     "generating": "Generating...",
+    "error": "Generation failed",
     "connectionRequired": "Connection Required",
     "connectProviders": "To generate and publish listings, please connect the following accounts: {{providers}}",
     "goToSettings": "Go to Settings",

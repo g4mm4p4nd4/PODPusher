@@ -41,6 +41,7 @@
     "placeholder": "Introduce un término",
     "button": "Generar",
     "generating": "Generando...",
+    "error": "La generacion fallo",
     "connectionRequired": "Conexión requerida",
     "connectProviders": "Para generar y publicar, conecta las siguientes cuentas: {{providers}}",
     "goToSettings": "Ir a Configuración",
