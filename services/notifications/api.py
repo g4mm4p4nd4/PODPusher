@@ -2,10 +2,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
-from ..common.auth import require_user_id
+from ..auth.service import resolve_session_token
 from .service import (
     cancel_scheduled_notification,
     create_notification,
@@ -54,6 +54,34 @@ class ScheduledNotificationResponse(BaseModel):
     dispatched_at: Optional[datetime] = None
 
 
+def _parse_user_id(value: str | None, missing_detail: str = "Missing X-User-Id header") -> int:
+    if value is None:
+        raise HTTPException(status_code=400, detail=missing_detail)
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid X-User-Id header") from exc
+
+
+async def _resolve_request_user_id(
+    request: Request,
+    fallback: int | None = None,
+    missing_detail: str = "Missing X-User-Id header",
+) -> int:
+    if fallback is not None:
+        return fallback
+
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        prefix, _, token = auth_header.partition(" ")
+        if prefix.lower() == "bearer" and token:
+            user_id = await resolve_session_token(token)
+            if user_id is not None:
+                return user_id
+            raise HTTPException(status_code=401, detail="Authentication required")
+    return _parse_user_id(request.headers.get("X-User-Id"), missing_detail=missing_detail)
+
+
 def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
     payload = {
         **data,
@@ -65,23 +93,25 @@ def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
 
 
 @app.get("/")
-async def get_notifications(user_id: int = Depends(require_user_id)):
-    return await list_notifications(user_id)
+async def get_notifications(request: Request):
+    return await list_notifications(await _resolve_request_user_id(request))
 
 
 @app.post("/")
 async def create_notification_endpoint(
+    request: Request,
     payload: NotificationCreate,
-    user_id: int = Depends(require_user_id),
 ):
+    user_id = await _resolve_request_user_id(request)
     return await create_notification(user_id, payload.message, payload.type)
 
 
 @app.put("/{notification_id}/read")
 async def mark_read_endpoint(
+    request: Request,
     notification_id: int,
-    user_id: int = Depends(require_user_id),
 ):
+    user_id = await _resolve_request_user_id(request)
     notif = await mark_read_for_user(notification_id, user_id)
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -89,16 +119,17 @@ async def mark_read_endpoint(
 
 
 @app.get("/scheduled", response_model=list[ScheduledNotificationResponse])
-async def list_scheduled_endpoint(user_id: int = Depends(require_user_id)):
-    items = await list_scheduled_notifications(user_id)
+async def list_scheduled_endpoint(request: Request):
+    items = await list_scheduled_notifications(await _resolve_request_user_id(request))
     return [_scheduled_response(item) for item in items]
 
 
 @app.post("/scheduled", response_model=ScheduledNotificationResponse)
 async def create_scheduled_endpoint(
+    request: Request,
     payload: ScheduledNotificationCreate,
-    user_id: int = Depends(require_user_id),
 ):
+    user_id = await _resolve_request_user_id(request)
     record = await schedule_notification(
         user_id,
         payload.message,
@@ -111,9 +142,10 @@ async def create_scheduled_endpoint(
 
 @app.delete("/scheduled/{job_id}", response_model=ScheduledNotificationResponse)
 async def cancel_scheduled_endpoint(
+    request: Request,
     job_id: int,
-    user_id: int = Depends(require_user_id),
 ):
+    user_id = await _resolve_request_user_id(request)
     record = await cancel_scheduled_notification(job_id, user_id)
     if not record:
         raise HTTPException(status_code=404, detail="Scheduled notification not found")

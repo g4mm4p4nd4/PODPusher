@@ -1,9 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Standardized notifications API auth on shared `require_user_id`, so malformed `Authorization` headers no longer fall back to `X-User-Id`.
-- Enforced notifications ownership on create/schedule payloads by forbidding `user_id` overrides and requiring authenticated request identity.
-- Localized `RateLimitBanner` copy via i18n keys (`rateLimit.banner`) with focused component coverage.
+- Removed notifications payload `user_id` overrides and now enforce authenticated-request ownership for immediate and scheduled notification creation.
 - Hardened common auth resolution so invalid/malformed `Authorization` headers no longer fall back to `X-User-Id`, with focused dependency tests for `require_user_id` and `optional_user_id`.
 - Localized `ErrorBoundary` copy via i18n keys (`errorBoundary.*`) and added focused component coverage for translated fallback and retry recovery behavior.
 - Updated staging smoke to pass explicit env-backed Printify/Etsy credential payloads to live integration calls.
