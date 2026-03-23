@@ -289,5 +289,11 @@
   },
   "rateLimit": {
     "banner": "Too many requests. Please wait {{seconds}}s before trying again."
+  },
+  "publish": {
+    "price": "Price",
+    "tags": "Tags",
+    "publishNow": "Publish Now",
+    "schedule": "Schedule"
   }
 }
