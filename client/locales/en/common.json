@@ -9,6 +9,7 @@
     "analytics": "Analytics",
     "listings": "Listings",
     "abTests": "A/B Tests",
+    "schedule": "Schedule",
     "notifications": "Notifications",
     "socialGenerator": "Social Generator",
     "settings": "Settings",
@@ -118,7 +119,32 @@
   },
   "notifications": {
     "title": "Notifications",
-    "markRead": "Mark as read"
+    "markRead": "Mark as read",
+    "empty": "No notifications yet",
+    "loadError": "Could not load notifications right now. Try again.",
+    "processing": "Working...",
+    "updateError": "Unable to update notification. Please try again."
+  },
+  "schedule": {
+    "title": "Schedule Notification",
+    "message": "Message",
+    "type": "Type",
+    "delivery": "Delivery Method",
+    "when": "When",
+    "submit": "Schedule",
+    "messageRequired": "Please provide a message",
+    "whenRequired": "Please select a date and time",
+    "submitError": "Could not schedule notification. Please try again.",
+    "types": {
+      "scheduled_post": "Scheduled Post",
+      "quota_reset": "Quota Reset",
+      "trending_product": "Trending Product"
+    },
+    "deliveryMethods": {
+      "in_app": "In App",
+      "email": "Email",
+      "push": "Push"
+    }
   },
   "ab": {
     "title": "A/B Tests",
