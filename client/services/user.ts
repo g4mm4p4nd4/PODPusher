@@ -48,8 +48,11 @@ export function triggerQuotaRefresh(): void {
 export async function createBillingPortalSession(returnUrl = '/settings'): Promise<string> {
   const res = await axios.post<BillingPortalResponse>(
     resolveApiUrl('/api/billing/portal'),
-    { return_url: returnUrl },
-    { headers: { 'X-User-Id': '1' } }
+    null,
+    {
+      headers: { 'X-User-Id': '1' },
+      params: { return_url: returnUrl },
+    }
   );
   return res.data.portal_url;
 }
