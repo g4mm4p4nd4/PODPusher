@@ -9,6 +9,7 @@
     "analytics": "Analytique",
     "listings": "Annonces",
     "abTests": "Tests A/B",
+    "schedule": "Planifier",
     "notifications": "Notifications",
     "socialGenerator": "Générateur Social",
     "settings": "Paramètres",
@@ -118,7 +119,32 @@
   },
   "notifications": {
     "title": "Notifications",
-    "markRead": "Marquer comme lu"
+    "markRead": "Marquer comme lu",
+    "empty": "Aucune notification pour le moment",
+    "loadError": "Impossible de charger les notifications. Veuillez réessayer.",
+    "processing": "Traitement en cours...",
+    "updateError": "Impossible de mettre à jour la notification. Veuillez réessayer."
+  },
+  "schedule": {
+    "title": "Planifier une notification",
+    "message": "Message",
+    "type": "Type",
+    "delivery": "Méthode de livraison",
+    "when": "Quand",
+    "submit": "Planifier",
+    "messageRequired": "Veuillez fournir un message.",
+    "whenRequired": "Veuillez sélectionner une date et une heure.",
+    "submitError": "Impossible de planifier la notification. Veuillez réessayer.",
+    "types": {
+      "scheduled_post": "Publication planifiée",
+      "quota_reset": "Réinitialisation du quota",
+      "trending_product": "Produit tendance"
+    },
+    "deliveryMethods": {
+      "in_app": "Dans l'application",
+      "email": "Email",
+      "push": "Push"
+    }
   },
   "ab": {
     "title": "Tests A/B",
