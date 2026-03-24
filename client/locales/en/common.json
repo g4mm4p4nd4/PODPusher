@@ -52,6 +52,9 @@
       "description": "Description",
       "price": "Price",
       "tags": "Tags",
+      "select": "Select",
+      "publish": "Publish",
+      "publishReady": "Ready to publish {{title}} at {{price}}.",
       "listing": "Listing Preview",
       "viewListing": "View listing",
       "missingIntegrations": "Connect {{providers}} to publish automatically.",
@@ -60,6 +63,12 @@
       "unknown": "Unknown",
       "untitled": "Untitled"
     }
+  },
+  "publish": {
+    "price": "Price",
+    "tags": "Tags",
+    "publishNow": "Publish now",
+    "schedule": "Schedule"
   },
   "suggestions": {
     "title": "Product Suggestions",
@@ -289,11 +298,5 @@
   },
   "rateLimit": {
     "banner": "Too many requests. Please wait {{seconds}}s before trying again."
-  },
-  "publish": {
-    "price": "Price",
-    "tags": "Tags",
-    "publishNow": "Publish Now",
-    "schedule": "Schedule"
   }
 }

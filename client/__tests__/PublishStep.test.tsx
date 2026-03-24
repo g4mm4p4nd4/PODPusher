@@ -9,7 +9,7 @@ jest.mock('next-i18next', () => ({
 
 test('publishes with price and tags', () => {
   const onPublish = jest.fn();
-  render(<PublishStep product={{ mockups: ['img'] }} onPublish={onPublish} />);
+  render(<PublishStep product={{ image_url: 'img' }} onPublish={onPublish} />);
   const price = screen.getByRole('spinbutton');
   fireEvent.change(price, { target: { value: '20' } });
   const tags = screen.getByRole('textbox');

@@ -52,6 +52,9 @@
       "description": "Description",
       "price": "Prix",
       "tags": "Etiquettes",
+      "select": "Selectionner",
+      "publish": "Publier",
+      "publishReady": "Pret a publier {{title}} a {{price}}.",
       "listing": "Apercu de l annonce",
       "viewListing": "Voir l annonce",
       "missingIntegrations": "Connectez {{providers}} pour publier automatiquement.",
@@ -60,6 +63,12 @@
       "unknown": "Inconnu",
       "untitled": "Sans titre"
     }
+  },
+  "publish": {
+    "price": "Prix",
+    "tags": "Etiquettes",
+    "publishNow": "Publier maintenant",
+    "schedule": "Planifier"
   },
   "suggestions": {
     "title": "Suggestions de produits",
