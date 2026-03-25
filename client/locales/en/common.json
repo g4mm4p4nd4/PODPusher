@@ -12,7 +12,8 @@
     "notifications": "Notifications",
     "socialGenerator": "Social Generator",
     "settings": "Settings",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "images": "Images"
   },
   "index": {
     "trending": "Trending Keywords",
@@ -298,5 +299,11 @@
   },
   "rateLimit": {
     "banner": "Too many requests. Please wait {{seconds}}s before trying again."
+  },
+  "images": {
+    "title": "Images",
+    "delete": "Delete",
+    "select": "Select",
+    "regenerate": "Regenerate"
   }
 }

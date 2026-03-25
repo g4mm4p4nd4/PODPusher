@@ -12,7 +12,8 @@
     "notifications": "Notificaciones",
     "socialGenerator": "Generador Social",
     "settings": "Configuración",
-    "searchPlaceholder": "Buscar..."
+    "searchPlaceholder": "Buscar...",
+    "images": "Imágenes"
   },
   "index": {
     "trending": "Palabras clave en tendencia",
@@ -298,5 +299,11 @@
   },
   "rateLimit": {
     "banner": "Demasiadas solicitudes. Espera {{seconds}} s antes de intentarlo de nuevo."
+  },
+  "images": {
+    "title": "Imágenes",
+    "delete": "Eliminar",
+    "select": "Seleccionar",
+    "regenerate": "Regenerar"
   }
 }
