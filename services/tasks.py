@@ -1,6 +1,9 @@
-import os
 import asyncio
+import os
+from typing import Any, Callable
+
 from celery import Celery
+
 from .trend_scraper.service import fetch_trends
 from .ideation.service import generate_ideas
 from .image_gen.service import generate_images
@@ -13,6 +16,15 @@ celery_app = Celery("worker", broker=CELERY_BROKER_URL, backend=CELERY_BROKER_UR
 celery_app.conf.beat_schedule = {
     "refresh_trends": {"task": "services.tasks.fetch_trends_task", "schedule": 21600}
 }
+
+
+def _execute_service(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    """Execute a possibly-async service and return its concrete result."""
+
+    result = func(*args, **kwargs)
+    if asyncio.iscoroutine(result):
+        return asyncio.run(result)
+    return result
 
 
 @celery_app.task
@@ -32,12 +44,12 @@ def generate_images_task(ideas):
 
 @celery_app.task
 def create_sku_task(images):
-    return create_sku(images)
+    return _execute_service(create_sku, images)
 
 
 @celery_app.task
 def publish_listing_task(product):
-    return publish_listing(product)
+    return _execute_service(publish_listing, product)
 
 
 @celery_app.task
