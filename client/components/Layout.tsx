@@ -14,10 +14,16 @@ export default function Layout({ children }: { children: ReactNode }) {
   const api = getApiBase();
   const router = useRouter();
 
+  type NotificationSummary = {
+    read_status: boolean;
+  };
+
   useEffect(() => {
     axios
       .get(`${api}/api/notifications`, { headers: getAuthHeaders() })
-      .then((res) => setUnread(res.data.filter((n: any) => !n.read_status).length))
+      .then((res) =>
+        setUnread(res.data.filter((n: NotificationSummary) => !n.read_status).length)
+      )
       .catch((err) => console.error(err));
   }, [api]);
 
@@ -53,6 +59,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             />
           </form>
           <LanguageSwitcher />
+          <Link href="/schedule" className="hover:underline">
+            {t('nav.schedule')}
+          </Link>
           <Link
             href="/notifications"
             aria-label={t('nav.notifications')}

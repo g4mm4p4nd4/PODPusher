@@ -9,6 +9,7 @@
     "analytics": "Analytik",
     "listings": "Angebote",
     "abTests": "A/B-Tests",
+    "schedule": "Planen",
     "notifications": "Benachrichtigungen",
     "socialGenerator": "Social-Generator",
     "settings": "Einstellungen",
@@ -127,7 +128,32 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
-    "markRead": "Als gelesen markieren"
+    "markRead": "Als gelesen markieren",
+    "empty": "Noch keine Benachrichtigungen",
+    "loadError": "Benachrichtigungen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "processing": "Wird verarbeitet...",
+    "updateError": "Benachrichtigung konnte nicht aktualisiert werden. Bitte erneut versuchen."
+  },
+  "schedule": {
+    "title": "Benachrichtigung planen",
+    "message": "Nachricht",
+    "type": "Typ",
+    "delivery": "Versandmethode",
+    "when": "Zeitpunkt",
+    "submit": "Planen",
+    "messageRequired": "Bitte geben Sie eine Nachricht ein.",
+    "whenRequired": "Bitte wählen Sie ein Datum und eine Uhrzeit.",
+    "submitError": "Die Benachrichtigung konnte nicht geplant werden. Bitte erneut versuchen.",
+    "types": {
+      "scheduled_post": "Geplante Veröffentlichung",
+      "quota_reset": "Quota zurücksetzen",
+      "trending_product": "Trendprodukt"
+    },
+    "deliveryMethods": {
+      "in_app": "In-App",
+      "email": "E-Mail",
+      "push": "Push"
+    }
   },
   "ab": {
     "title": "A/B-Tests",

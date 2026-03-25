@@ -4,6 +4,7 @@ import { useTranslation } from 'next-i18next';
 interface Props {
   product: {
     image_url?: string;
+    mockups?: string[];
   };
   onPublish: (data: { price: number; tags: string[] }) => void;
   onSchedule?: () => void;
@@ -26,6 +27,9 @@ export default function PublishStep({ product, onPublish, onSchedule }: Props) {
     <div>
       <div className="flex gap-2">
         {product.image_url && <img src={product.image_url} alt="mockup" className="w-24 h-24" />}
+        {(product.mockups || []).map(src => (
+          <img key={src} src={src} alt="mockup" className="w-24 h-24" />
+        ))}
       </div>
       <div className="mt-2">
         <label>{t('publish.price')}</label>
