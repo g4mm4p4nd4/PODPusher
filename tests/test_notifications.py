@@ -279,3 +279,47 @@ async def test_dispatch_due_notifications():
 
     scheduled = await list_scheduled_notifications(1)
     assert scheduled[0]["status"] == "sent"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_due_notifications_honors_delivery_method_metadata(monkeypatch):
+    await init_db()
+    email_calls: list[tuple[int, str, str]] = []
+    push_calls: list[tuple[int, str, str]] = []
+
+    monkeypatch.setattr(
+        "services.notifications.service.send_email",
+        lambda user_id, message, notif_type: email_calls.append((user_id, message, notif_type)),
+    )
+    monkeypatch.setattr(
+        "services.notifications.service.send_push",
+        lambda user_id, message, notif_type: push_calls.append((user_id, message, notif_type)),
+    )
+
+    due_time = datetime.utcnow() - timedelta(minutes=1)
+    await schedule_notification(
+        user_id=1,
+        message="Email me",
+        notif_type="launch",
+        scheduled_for=due_time,
+        metadata={"delivery_method": "email"},
+    )
+    await schedule_notification(
+        user_id=2,
+        message="Push me",
+        notif_type="launch",
+        scheduled_for=due_time,
+        metadata={"delivery_method": "push"},
+    )
+    await schedule_notification(
+        user_id=3,
+        message="In app only",
+        notif_type="launch",
+        scheduled_for=due_time,
+        metadata={"delivery_method": "in_app"},
+    )
+
+    await dispatch_due_notifications()
+
+    assert email_calls == [(1, "Email me", "launch")]
+    assert push_calls == [(2, "Push me", "launch")]
