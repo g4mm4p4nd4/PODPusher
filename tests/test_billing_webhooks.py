@@ -49,7 +49,8 @@ class TestWebhookEventProcessing:
             "data": {
                 "object": {
                     "id": "sub_123",
-                    "customer": "cus_123",
+                    "customer": "cus_stub_1",
+                    "metadata": {"user_id": "1"},
                     "items": {
                         "data": [{
                             "price": {"product": "prod_starter"},
@@ -74,7 +75,8 @@ class TestWebhookEventProcessing:
             "data": {
                 "object": {
                     "id": "sub_123",
-                    "customer": "cus_123",
+                    "customer": "cus_stub_1",
+                    "metadata": {"user_id": "1"},
                     "items": {
                         "data": [{
                             "price": {"product": "prod_professional"},
@@ -99,7 +101,8 @@ class TestWebhookEventProcessing:
             "data": {
                 "object": {
                     "id": "sub_123",
-                    "customer": "cus_123",
+                    "customer": "cus_stub_1",
+                    "metadata": {"user_id": "1"},
                 },
             },
         }
