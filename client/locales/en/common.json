@@ -12,7 +12,8 @@
     "notifications": "Notifications",
     "socialGenerator": "Social Generator",
     "settings": "Settings",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "images": "Images"
   },
   "index": {
     "trending": "Trending Keywords",
@@ -303,6 +304,25 @@
     "uploading": "Uploading...",
     "success": "Created",
     "error": "Error"
+  },
+  "images": {
+    "title": "Images",
+    "ideaId": "Idea ID",
+    "style": "Style",
+    "provider": "Provider",
+    "providers": {
+      "default": "Default",
+      "openai": "OpenAI",
+      "stub": "Stub"
+    },
+    "loading": "Loading images...",
+    "empty": "No generated images yet.",
+    "error": "Could not update images. Please try again.",
+    "source": "Source",
+    "delete": "Delete",
+    "select": "Select",
+    "selected": "Selected",
+    "regenerate": "Regenerate"
   },
   "loading": "Loading...",
   "quota": {

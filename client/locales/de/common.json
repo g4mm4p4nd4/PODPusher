@@ -12,7 +12,8 @@
     "notifications": "Benachrichtigungen",
     "socialGenerator": "Social-Generator",
     "settings": "Einstellungen",
-    "searchPlaceholder": "Suchen..."
+    "searchPlaceholder": "Suchen...",
+    "images": "Bilder"
   },
   "index": {
     "trending": "Trend-Schlüsselwörter",
@@ -303,6 +304,25 @@
     "uploading": "Wird hochgeladen...",
     "success": "Erstellt",
     "error": "Fehler"
+  },
+  "images": {
+    "title": "Bilder",
+    "ideaId": "Ideen-ID",
+    "style": "Stil",
+    "provider": "Anbieter",
+    "providers": {
+      "default": "Standard",
+      "openai": "OpenAI",
+      "stub": "Stub"
+    },
+    "loading": "Bilder werden geladen...",
+    "empty": "Noch keine generierten Bilder vorhanden.",
+    "error": "Bilder konnten nicht aktualisiert werden. Bitte erneut versuchen.",
+    "source": "Quelle",
+    "delete": "Loeschen",
+    "select": "Auswaehlen",
+    "selected": "Ausgewaehlt",
+    "regenerate": "Neu generieren"
   },
   "loading": "Wird geladen...",
   "quota": {

@@ -12,7 +12,8 @@
     "notifications": "Notificaciones",
     "socialGenerator": "Generador Social",
     "settings": "Configuración",
-    "searchPlaceholder": "Buscar..."
+    "searchPlaceholder": "Buscar...",
+    "images": "Imágenes"
   },
   "index": {
     "trending": "Palabras clave en tendencia",
@@ -303,6 +304,25 @@
     "uploading": "Subiendo...",
     "success": "Creado",
     "error": "Error"
+  },
+  "images": {
+    "title": "Imágenes",
+    "ideaId": "ID de idea",
+    "style": "Estilo",
+    "provider": "Proveedor",
+    "providers": {
+      "default": "Predeterminado",
+      "openai": "OpenAI",
+      "stub": "Simulado"
+    },
+    "loading": "Cargando imágenes...",
+    "empty": "Aún no hay imágenes generadas.",
+    "error": "No se pudieron actualizar las imágenes. Intenta de nuevo.",
+    "source": "Origen",
+    "delete": "Eliminar",
+    "select": "Seleccionar",
+    "selected": "Seleccionada",
+    "regenerate": "Regenerar"
   },
   "loading": "Cargando...",
   "quota": {

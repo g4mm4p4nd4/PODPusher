@@ -12,7 +12,8 @@
     "notifications": "Notifications",
     "socialGenerator": "Générateur Social",
     "settings": "Paramètres",
-    "searchPlaceholder": "Rechercher..."
+    "searchPlaceholder": "Rechercher...",
+    "images": "Images"
   },
   "index": {
     "trending": "Mots-clés tendance",
@@ -303,6 +304,25 @@
     "uploading": "Téléchargement en cours...",
     "success": "Créé",
     "error": "Erreur"
+  },
+  "images": {
+    "title": "Images",
+    "ideaId": "ID idee",
+    "style": "Style",
+    "provider": "Fournisseur",
+    "providers": {
+      "default": "Par defaut",
+      "openai": "OpenAI",
+      "stub": "Simule"
+    },
+    "loading": "Chargement des images...",
+    "empty": "Aucune image generee pour le moment.",
+    "error": "Impossible de mettre a jour les images. Veuillez reessayer.",
+    "source": "Source",
+    "delete": "Supprimer",
+    "select": "Selectionner",
+    "selected": "Selectionnee",
+    "regenerate": "Regenerer"
   },
   "loading": "Chargement...",
   "quota": {

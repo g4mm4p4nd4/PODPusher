@@ -3,7 +3,8 @@ import sys
 import types
 from httpx import ASGITransport, AsyncClient
 
-from services.common.database import init_db
+from services.common.database import get_session, init_db
+from services.models import Idea, Trend, User
 
 if "stripe" not in sys.modules:
     sys.modules["stripe"] = types.SimpleNamespace(
@@ -108,3 +109,78 @@ async def test_generate_rejects_invalid_bearer_even_with_user_header():
     body = resp.json()
     assert body["code"] == "UNAUTHORIZED"
     assert body["message"] == "Authentication required"
+
+
+async def _seed_image_idea(description: str = "cat shirt", category: str = "animals") -> int:
+    async with get_session() as session:
+        trend = Trend(term="cat", category=category)
+        session.add(trend)
+        await session.commit()
+        await session.refresh(trend)
+
+        idea = Idea(trend_id=trend.id, description=description)
+        session.add(idea)
+        await session.commit()
+        await session.refresh(idea)
+        return int(idea.id)
+
+
+@pytest.mark.asyncio
+async def test_gateway_image_generation_endpoints(monkeypatch):
+    await init_db()
+    idea_id = await _seed_image_idea()
+
+    async def fake_generate_image(_prompt: str) -> str:
+        return "https://example.com/generated.png"
+
+    monkeypatch.setattr("services.image_gen.service.openai.generate_image", fake_generate_image)
+
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        generate_resp = await client.post(
+            "/api/images/generate",
+            json={"idea_id": idea_id, "style": "editorial"},
+            headers={"X-User-Id": "55"},
+        )
+        assert generate_resp.status_code == 200
+        generated = generate_resp.json()
+        assert generated[0]["provider"] == "openai"
+        image_id = generated[0]["id"]
+
+        list_resp = await client.get(
+            "/api/images",
+            params={"idea_id": idea_id},
+            headers={"X-User-Id": "55"},
+        )
+        assert list_resp.status_code == 200
+        listed = list_resp.json()
+        assert listed[0]["id"] == image_id
+
+        delete_resp = await client.delete(
+            f"/api/images/{image_id}",
+            headers={"X-User-Id": "55"},
+        )
+        assert delete_resp.status_code == 200
+        assert delete_resp.json() == {"status": "deleted"}
+
+
+@pytest.mark.asyncio
+async def test_gateway_image_generation_respects_quota():
+    await init_db()
+    idea_id = await _seed_image_idea()
+
+    async with get_session() as session:
+        user = User(id=91, plan="free", quota_used=20, quota_limit=20)
+        session.add(user)
+        await session.commit()
+
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/images/generate",
+            json={"idea_id": idea_id, "style": "default"},
+            headers={"X-User-Id": "91"},
+        )
+
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "QUOTA_EXCEEDED"
