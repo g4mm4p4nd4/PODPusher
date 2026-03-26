@@ -1,10 +1,16 @@
 """Observability utilities (logging + metrics) for FastAPI apps."""
 from __future__ import annotations
 
+from contextlib import suppress
+from uuid import uuid4
 import time
 from typing import Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from sqlalchemy import text
+
+from .database import get_session
+from .logging import bind_request_context, clear_request_context, configure_logging
 try:
     from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 except ModuleNotFoundError:  # pragma: no cover - fallback when optional dependency missing
@@ -90,8 +96,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback when optional depende
         return "\n".join(lines).encode()
 from starlette.responses import Response
 
-from .logging import configure_logging
-
 REQUEST_COUNTER = Counter(
     "pod_request_total",
     "HTTP requests processed",
@@ -115,7 +119,11 @@ def register_observability(app: FastAPI, *, service_name: str) -> None:
 
     @app.middleware("http")
     async def _metrics_middleware(request: Request, call_next: Callable):
+        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+        user_id = await _resolve_user_id(request)
+        bind_request_context(request_id=request_id, user_id=user_id)
         start = time.perf_counter()
+        response = None
         try:
             response = await call_next(request)
         except Exception:
@@ -123,6 +131,7 @@ def register_observability(app: FastAPI, *, service_name: str) -> None:
             path_template = _path_template(request)
             REQUEST_COUNTER.labels(service_name, request.method, path_template, "500").inc()
             REQUEST_LATENCY.labels(service_name, request.method, path_template).observe(duration)
+            clear_request_context()
             raise
 
         duration = time.perf_counter() - start
@@ -132,11 +141,18 @@ def register_observability(app: FastAPI, *, service_name: str) -> None:
                 service_name, request.method, path_template, str(response.status_code)
             ).inc()
             REQUEST_LATENCY.labels(service_name, request.method, path_template).observe(duration)
+        clear_request_context()
         return response
 
     @app.get("/healthz", include_in_schema=False)
     async def _healthz():
         return {"status": "ok"}
+
+    @app.get("/ready", include_in_schema=False)
+    async def _ready():
+        if await _database_ready():
+            return {"status": "ready"}
+        raise HTTPException(status_code=503, detail="not ready")
 
     @app.get("/metrics", include_in_schema=False)
     async def _metrics():
@@ -151,7 +167,39 @@ def _path_template(request: Request) -> str:
     return request.url.path
 
 
+async def _resolve_user_id(request: Request) -> int | None:
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        prefix, _, token = auth_header.partition(" ")
+        if prefix.lower() == "bearer" and token:
+            with suppress(Exception):
+                from ..auth.service import resolve_session_token
+
+                user_id = await resolve_session_token(token)
+                if user_id is not None:
+                    return user_id
+            return None
+
+    user_header = request.headers.get("X-User-Id")
+    if user_header is None:
+        return None
+
+    with suppress(ValueError):
+        return int(user_header)
+    return None
+
+
+async def _database_ready() -> bool:
+    try:
+        async with get_session() as session:
+            await session.exec(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
+
 __all__ = [
+    "_database_ready",
     "register_observability",
     "REQUEST_COUNTER",
     "REQUEST_LATENCY",

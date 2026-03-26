@@ -2,9 +2,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
+from ..common.observability import register_observability
 from .service import generate_post
 
 app = FastAPI()
+register_observability(app, service_name="social_generator")
 
 
 class SocialRequest(BaseModel):

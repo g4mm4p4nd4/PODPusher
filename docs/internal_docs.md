@@ -257,11 +257,11 @@ Alembic tracks schema changes under `alembic/`. Use `alembic upgrade head` to ap
 
 ## Observability
 
-All public FastAPI services call `register_observability` from `services/common/observability.py`. The helper exposes `/healthz`, `/metrics`, and structlog configuration. When Prometheus is unavailable it falls back to an in-process counter so smoke tests can still assert metrics presence.
+All public FastAPI services call `register_observability` from `services/common/observability.py`. The helper exposes `/healthz`, `/ready`, `/metrics`, and structlog configuration. Request logs are enriched with `request_id` and `user_id` contextvars for the duration of each request.
 
-- Gateway, auth, notifications, trend scraper, trend ingestion and analytics are already instrumented.
+- Gateway, auth, notifications, trend scraper, trend ingestion, analytics, ideation, integration, listing composer, search, social generator, user, and product are instrumented.
 - New services should call `register_observability(app, service_name=...)` immediately after instantiation.
-- CI verifies `/metrics` via `tests/test_observability.py`; update it when adding new services.
+- CI verifies `/ready` and `/metrics` via `tests/test_observability.py`; update it when adding new services.
 
 ## Database Operations
 

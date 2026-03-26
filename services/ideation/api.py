@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+from ..common.observability import register_observability
 from .service import generate_ideas, suggest_tags
 
 app = FastAPI()
+register_observability(app, service_name="ideation")
 
 
 class TrendList(BaseModel):

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from ..common.observability import register_observability
 from .service import search_products
 
 
@@ -22,6 +23,7 @@ class SearchResponse(BaseModel):
 
 
 app = FastAPI()
+register_observability(app, service_name="search")
 
 
 @app.get("/", response_model=SearchResponse)

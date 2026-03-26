@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 try:
     import structlog  # type: ignore[import]
@@ -41,3 +42,26 @@ def configure_logging(level: str | None = None) -> None:
         )
 
     _CONFIGURED = True
+
+
+def bind_request_context(*, request_id: str | None = None, user_id: int | str | None = None) -> None:
+    """Bind per-request context fields to structlog, if available."""
+    if structlog is None:
+        return
+
+    context: dict[str, Any] = {}
+    if request_id is not None:
+        context["request_id"] = request_id
+    if user_id is not None:
+        context["user_id"] = user_id
+
+    if context:
+        structlog.contextvars.bind_contextvars(**context)
+
+
+def clear_request_context() -> None:
+    """Clear any per-request structlog context."""
+    if structlog is None:
+        return
+
+    structlog.contextvars.clear_contextvars()
