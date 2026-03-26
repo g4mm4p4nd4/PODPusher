@@ -131,6 +131,23 @@ async def test_quota_rejects_invalid_bearer_even_with_user_header():
 
 
 @pytest.mark.asyncio
+async def test_quota_rejects_malformed_authorization_header():
+    await init_db()
+    transport = ASGITransport(app=image_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/images",
+            json={"ideas": ["idea"]},
+            headers={
+                "Authorization": "Token abc123",
+                "X-User-Id": "44",
+            },
+        )
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Invalid Authorization header"
+
+
+@pytest.mark.asyncio
 async def test_quota_enforcement_on_generate_endpoint():
     await init_db()
     idea_id = await _seed_idea()
