@@ -5,10 +5,12 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from ..common.localization import get_message
+from ..common.observability import register_observability
 from ..models import Product
 from .repository import fetch_latest_products, persist_product_update
 
 app = FastAPI()
+register_observability(app, service_name="product")
 
 
 class ProductResponse(BaseModel):

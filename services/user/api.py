@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 
 from ..common.auth import ensure_user_record, require_user_id
 from ..common.database import get_session
+from ..common.observability import register_observability
 from ..common.quotas import ensure_quota_state
 from ..models import User
 
@@ -126,4 +127,5 @@ async def set_preferences(
 
 
 app = FastAPI()
+register_observability(app, service_name="user")
 app.include_router(router)

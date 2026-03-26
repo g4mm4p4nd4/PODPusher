@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
 from services.common.auth import require_user_id
+from services.common.observability import register_observability
 from services.models import OAuthProvider
 
 from .service import (
@@ -14,6 +15,7 @@ from .service import (
 
 
 app = FastAPI()
+register_observability(app, service_name="integration")
 
 
 class ProductList(BaseModel):
