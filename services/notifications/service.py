@@ -15,6 +15,14 @@ from packages.integrations.notifications import send_email, send_push
 
 DISPATCH_INTERVAL_MINUTES = max(1, int(os.getenv("NOTIFY_DISPATCH_INTERVAL_MINUTES", "5")))
 LAUNCH_DIGEST_HOUR = int(os.getenv("NOTIFY_LAUNCH_DIGEST_HOUR", "13"))
+DELIVERY_METHOD_IN_APP = "in_app"
+DELIVERY_METHOD_EMAIL = "email"
+DELIVERY_METHOD_PUSH = "push"
+VALID_DELIVERY_METHODS = {
+    DELIVERY_METHOD_IN_APP,
+    DELIVERY_METHOD_EMAIL,
+    DELIVERY_METHOD_PUSH,
+}
 
 
 def _to_dict(notification: Notification) -> dict:
@@ -48,9 +56,19 @@ async def create_notification(user_id: int, message: str, notif_type: str = "inf
         session.add(record)
         await session.commit()
         await session.refresh(record)
-    send_email(user_id, message, notif_type)
-    send_push(user_id, message, notif_type)
     return _to_dict(record)
+
+
+def _resolve_delivery_method(metadata: Dict[str, Any] | None) -> str:
+    if not isinstance(metadata, dict):
+        return DELIVERY_METHOD_IN_APP
+    raw_value = metadata.get("delivery_method")
+    if not isinstance(raw_value, str):
+        return DELIVERY_METHOD_IN_APP
+    normalized = raw_value.strip().lower()
+    if normalized not in VALID_DELIVERY_METHODS:
+        return DELIVERY_METHOD_IN_APP
+    return normalized
 
 
 async def list_notifications(user_id: int) -> List[dict]:
@@ -138,7 +156,12 @@ async def dispatch_due_notifications() -> None:
         )
         jobs = result.all()
         for job in jobs:
+            delivery_method = _resolve_delivery_method(job.context)
             await create_notification(job.user_id, job.message, job.type)
+            if delivery_method == DELIVERY_METHOD_EMAIL:
+                send_email(job.user_id, job.message, job.type)
+            elif delivery_method == DELIVERY_METHOD_PUSH:
+                send_push(job.user_id, job.message, job.type)
             job.status = "sent"
             job.dispatched_at = now
             session.add(job)
