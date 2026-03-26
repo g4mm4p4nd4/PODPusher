@@ -26,6 +26,26 @@ icon = "run"
 command = "./scripts/codex_wsl_tasks.sh frontend-build"
 
 [[actions]]
+name = "Branch gate"
+icon = "tool"
+command = "./scripts/codex_wsl_tasks.sh branch-gate"
+
+[[actions]]
+name = "Mainline audit"
+icon = "tool"
+command = "./scripts/codex_wsl_tasks.sh mainline-audit"
+
+[[actions]]
+name = "Mainline sweep"
+icon = "run"
+command = "./scripts/codex_wsl_tasks.sh mainline-sweep --verify"
+
+[[actions]]
+name = "Origin reconcile"
+icon = "run"
+command = "./scripts/codex_wsl_tasks.sh origin-reconcile"
+
+[[actions]]
 name = "Compose up"
 icon = "debug"
 command = "./scripts/codex_wsl_tasks.sh compose-up"

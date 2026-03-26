@@ -31,6 +31,16 @@ Consolidation rules applied:
 - Preserved explicit external blockers (secrets ownership, dispatch authority, missing local Stripe dependency).
 - Removed stale/no-op planner-only text.
 
+## Mainline Convergence Snapshot
+
+- Source of truth baseline: `origin/main` at `309366f01dba70dfed3f065edcb9be2dce1392b8`.
+- Active newer-than-main merge candidate: `codex/frontend/recreate-pr70` at `945b76581b2b289792c1862ef47917860f4b32a3`.
+  - This bundle already contains the current `pr64`/`pr69`/`pr79`/`pr84` recreation work and should be folded as one tracked branch, not as separate follow-up merges.
+- Older unmerged replay lines that still require deliberate manual triage after the active bundle:
+  - `codex/reconcile-origin-20260306-124537` at `6668b839f6ae619d73f76b17dfe5344536d8cb3b`
+  - `codex/integrate-origin-main-20260306` at `304621bf9f4d2fe8565b4a0d02fb77dfc7191278`
+- Terminal rule: `origin-reconcile` may only report success when `mainline-audit` shows no newer-than-main branch/worktree drift outside `main`.
+
 ## Staging Flash-Stop Review Outcome
 
 - Reviewed variance set: `bf81`, `7a5b` plus comparison set `379d`, `df50`, `781e`, `f083`.
@@ -48,8 +58,12 @@ For each newly observed in-scope detached worktree:
    - docs-only (`roadmap`/`status`) -> roadmap/status consolidation queue.
    - staging smoke test/doc variance -> flash-stop review queue.
    - product code/test variance -> focused semantic diff and merge-candidate queue.
-3. Merge safe duplicate-only content into `main` when value is confirmed.
-4. Remove duplicate-only worktree metadata and report any locked leftover directories.
+3. End the same run in exactly one explicit state:
+   - merged into local `main` via `mainline-sweep`
+   - preserved on a named tracked branch with branch name and `HEAD` SHA reported
+   - blocked with branch name or detached `HEAD` SHA plus a concrete reason
+4. `origin-reconcile` may only no-op when `mainline-audit` reports no newer-than-main drift outside `main`.
+5. Remove worktree metadata only after reachability from `origin/main` or duplicate-only proof is confirmed, and report any locked leftover directories.
 
 ## External Blockers Requiring Human Ownership
 

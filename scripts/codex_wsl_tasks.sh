@@ -9,16 +9,20 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/codex_wsl_tasks.sh <command> [args...]
 
-Commands:
-  bootstrap       Create or refresh the Linux-native Python and Node toolchains
-  backend-test    Run pytest from the repo root
-  frontend-test   Run the frontend Jest suite
-  frontend-build  Run the frontend production build
-  mainline-verify Run the full mainline validation ladder without installing deps
-  compose-config  Render docker compose config
-  compose-up      Run docker compose up with any extra args
-  worker          Start the local Celery worker
-  install-cli     Install the Codex CLI locally into .codex-tools/codex-cli
+ Commands:
+   bootstrap       Create or refresh the Linux-native Python and Node toolchains
+   backend-test    Run pytest from the repo root
+   frontend-test   Run the frontend Jest suite
+   frontend-build  Run the frontend production build
+   branch-gate     Fail closed on dirty or drifted worktree baselines
+   mainline-audit  Report tracked branches/worktrees that are ahead of main
+   mainline-sweep  Fold active tracked branches into local main
+   mainline-verify Run the full mainline validation ladder without installing deps
+   origin-reconcile Verify local main and fast-forward push it to origin/main
+   compose-config  Render docker compose config
+   compose-up      Run docker compose up with any extra args
+   worker          Start the local Celery worker
+   install-cli     Install the Codex CLI locally into .codex-tools/codex-cli
   codex           Run the repo-local or global Codex CLI with shared CODEX_HOME
   print-env       Print the active WSL Codex environment
 EOF
@@ -171,6 +175,13 @@ frontend_build() {
   npm run build -- "$@"
 }
 
+run_mainline_tool() {
+  ensure_wsl
+  require_cmd python3
+  cd "$CODEX_WSL_REPO_ROOT"
+  python3 "$CODEX_WSL_REPO_ROOT/scripts/mainline_tools.py" "$@"
+}
+
 mainline_verify() {
   ensure_wsl
   require_existing_python_env
@@ -286,8 +297,20 @@ main() {
     frontend-build)
       frontend_build "$@"
       ;;
+    branch-gate)
+      run_mainline_tool branch-gate "$@"
+      ;;
+    mainline-audit)
+      run_mainline_tool mainline-audit "$@"
+      ;;
+    mainline-sweep)
+      run_mainline_tool mainline-sweep "$@"
+      ;;
     mainline-verify)
       mainline_verify "$@"
+      ;;
+    origin-reconcile)
+      run_mainline_tool origin-reconcile "$@"
       ;;
     compose-config)
       compose_config "$@"

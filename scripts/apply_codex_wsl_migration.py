@@ -10,29 +10,25 @@ from pathlib import Path
 
 
 ORIGIN_RECONCILE_PROMPT = (
-    "Reconcile local main with origin/main in this repo. Inspect git status and "
-    "history, fetch origin, and use direct git commands from a WSL shell. If "
-    "origin/main moved, integrate those commits without rewriting history and keep "
-    "all substantive content from both sides. Before any push, run "
-    "`./scripts/codex_wsl_tasks.sh mainline-verify` from the repo root. If "
-    "verification fails or the repo-local toolchains are missing, do not push; "
-    "open an inbox item with the exact failing step or missing dependency. Only "
-    "fast-forward push local main to origin/main when verification passes and the "
-    "working tree is clean. Always summarize fetch state, commit range considered, "
-    "checks run, push status, and blockers."
+    "Run `./scripts/codex_wsl_tasks.sh origin-reconcile` from the repo root. "
+    "This command fetches origin, refuses a no-op exit when newer-than-main "
+    "branch/worktree drift still exists, fast-forwards local main from origin/main "
+    "when possible, runs `./scripts/codex_wsl_tasks.sh mainline-verify` before any "
+    "push, and only fast-forward pushes local main to origin/main when verification "
+    "passes and the working tree is clean. If the command fails, open an inbox item "
+    "with the exact failing step, outstanding branch/worktree drift, checks run, "
+    "push status, and blockers."
 )
 ORIGIN_RECONCILE_RRULE = "FREQ=HOURLY;INTERVAL=1;BYMINUTE=55"
 MAINLINE_SWEEP_PROMPT = (
-    "Review Git worktrees and the main workspace for detached Codex changes. "
-    "Preserve commit traceability: prefer merging the source branch or worktree "
-    "into main with `git merge --no-ff` so original commits remain visible. Only "
-    "create a consolidation commit when the source changes are detached or cannot "
-    "be merged as a branch; when that happens, cite the source worktree or commit "
-    "SHAs in the commit message. After each fold, run focused verification for the "
-    "touched files, stop if the main workspace is dirty for unrelated reasons, and "
-    "never rewrite remote history. Do not push to origin; leave remote sync to the "
-    "origin-reconcile automation. Open an inbox item summarizing what merged, any "
-    "consolidation commits created, verification run, and cleanup status."
+    "Run `./scripts/codex_wsl_tasks.sh mainline-sweep --verify` from the repo "
+    "root. This command fetches origin, fast-forwards local main to origin/main "
+    "when possible, discovers newer-than-main tracked branches from active "
+    "worktrees, and folds the top-level candidates into local main with "
+    "`git merge --no-ff`. If the command fails, open an inbox item with the exact "
+    "branch or detached candidate that blocked the sweep, any dirty-worktree path, "
+    "verification run, and the remaining backlog. Do not push to origin; leave "
+    "remote sync to the origin-reconcile automation."
 )
 
 

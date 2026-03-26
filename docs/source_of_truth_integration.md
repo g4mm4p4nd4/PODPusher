@@ -11,9 +11,10 @@ top of the current remote baseline.
 
 PODPusher also operates a continuous local-main flow for Codex automations:
 
-1. lane automations produce scoped commits in worktrees
-2. `podpusher-mainline-sweep` folds those commits into local `main`
-3. `origin-reconcile` fetches `origin`, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`
+1. work-producing automations pass `./scripts/codex_wsl_tasks.sh branch-gate`, create or update a named branch, and report the branch plus `HEAD` SHA in the inbox handoff
+2. `./scripts/codex_wsl_tasks.sh mainline-audit` reports newer-than-main tracked branches and detached heads before any reconcile step can claim success
+3. `./scripts/codex_wsl_tasks.sh mainline-sweep --verify` folds top-level newer-than-main tracked branches into local `main`
+4. `./scripts/codex_wsl_tasks.sh origin-reconcile` fetches `origin`, refuses a no-op exit while newer-than-main drift still exists, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`
 
 This mode exists to keep GitHub synchronized without squash merges. Commit
 storytelling must remain intact: prefer preserving original commits with
@@ -32,6 +33,9 @@ source worktree or commit SHAs in the message.
    makes conflicts and regressions attributable.
 5. Automation must preserve user work. A dirty worktree is a stop condition, not
    something to "fix" automatically.
+6. An automation run is incomplete until the candidate delta is either reachable
+   from `origin/main` or explicitly blocked with a branch name, `HEAD` SHA, and
+   reason.
 
 ## Preconditions
 
@@ -43,6 +47,10 @@ source worktree or commit SHAs in the message.
 If `git status --porcelain` is not empty, stop and either commit the work or move
 it aside intentionally. Do not let automation stash or rewrite uncommitted work
 without an explicit human instruction.
+
+For continuous automation mode, also stop when `./scripts/codex_wsl_tasks.sh mainline-audit`
+reports newer-than-main tracked branches or detached heads that have not yet been
+folded into `main`.
 
 ## Integration Algorithm
 
@@ -58,6 +66,7 @@ This establishes the exact remote baseline being targeted.
 ### 2. Measure divergence
 
 ```bash
+./scripts/codex_wsl_tasks.sh mainline-audit
 git rev-list --left-right --count origin/main...HEAD
 git log --oneline --decorate origin/main..HEAD
 git log --oneline --decorate HEAD..origin/main
@@ -85,7 +94,17 @@ Why this shape:
 - It avoids treating a stale local base as authoritative
 
 For a private linear branch, `git rebase origin/main` is acceptable. For
-automation, explicit replay is easier to audit.
+manual recovery automation, explicit replay is easier to audit.
+
+In the normal continuous automation path, the repo-owned commands are:
+
+```bash
+./scripts/codex_wsl_tasks.sh mainline-sweep --verify
+./scripts/codex_wsl_tasks.sh origin-reconcile
+```
+
+Use `codex/integrate-<date>` only when `main` truly diverged from `origin/main`
+or when replay must be repaired commit-by-commit.
 
 ### 4. Resolve failures by type
 
@@ -170,14 +189,17 @@ An automation for this workflow should have the following shape.
 ### Guardrails
 
 - stop on dirty worktree
+- stop if `mainline-audit` still reports newer-than-main drift outside `main`
 - never force-push `main`
 - never force-push without explicit approval
 - never auto-resolve semantic conflicts without rerunning tests
 - persist logs for each failed step
 
-In continuous mainline mode, a direct `git push origin main` is allowed only as a
-fast-forward of a validated local `main` after the validation ladder above passes.
-Squash merges and history rewrites remain disallowed.
+In continuous mainline mode, `origin-reconcile` is the terminal path. A direct
+`git push origin main` is allowed only as a fast-forward of a validated local
+`main` after `mainline-audit` reports no newer-than-main drift and the
+validation ladder above passes. Squash merges and history rewrites remain
+disallowed.
 
 ### Failure Policy
 
@@ -190,7 +212,8 @@ Squash merges and history rewrites remain disallowed.
 
 ## Current Repository Snapshot
 
-As exercised on March 6, 2026, this repository validated cleanly locally after
-replaying and repairing the current integration branch. The branch can now be
-treated as PR-ready once its remaining unpushed changes are committed and pushed
-to `origin`.
+As of March 25, 2026, the active newer-than-main branch is
+`codex/frontend/recreate-pr70` at `945b76581b2b289792c1862ef47917860f4b32a3`.
+`origin-reconcile` must not report success again until that branch is either
+folded into local `main` and pushed to `origin/main`, or explicitly blocked with
+branch name, `HEAD` SHA, and reason.

@@ -3,6 +3,7 @@
 ## Unreleased
 - Added a fail-closed `./scripts/codex_wsl_tasks.sh mainline-verify` command so `origin-reconcile` can validate backend, frontend, build, migrations, and Playwright gates before pushing `main`.
 - Documented the continuous local-main automation flow and updated the WSL migration helper to preserve commit traceability during mainline folding.
+- Added repo-owned `branch-gate`, `mainline-audit`, `mainline-sweep`, and `origin-reconcile` commands so automations can enforce tracked-branch handoff, consume newer-than-main drift, and refuse false no-op reconciliation.
 - Removed stale merge separator artifacts from the primary docs runbooks.
 - Removed notifications payload `user_id` overrides and now enforce authenticated-request ownership for immediate and scheduled notification creation.
 - Hardened common auth resolution so invalid/malformed `Authorization` headers no longer fall back to `X-User-Id`, with focused dependency tests for `require_user_id` and `optional_user_id`.

@@ -14,7 +14,7 @@ This repo now ships a project-local Codex environment at `.codex/environments/en
   - Centralizes the Linux-first bootstrap and task entrypoints used by the local environment.
   - Keeps the Python venv separate from the existing Windows `.codex-venv` by using `.codex-venv-wsl`.
   - Installs dependencies only when `requirements.txt` or the frontend manifest changes.
-  - Exposes `mainline-verify` as the fail-closed validation ladder for `origin-reconcile`.
+  - Exposes `branch-gate`, `mainline-audit`, `mainline-sweep`, `mainline-verify`, and `origin-reconcile` as repo-owned convergence commands.
 - `scripts/apply_codex_wsl_migration.py`
   - Patches the writable-outside-repo Codex home when you run it manually with access to `%USERPROFILE%\.codex`.
   - Sets the app state toggles that matter for WSL and rewrites the active mainline automations so they use the repo's WSL-first verification flow.
@@ -29,6 +29,7 @@ Run these from WSL inside the repo:
 ./scripts/codex_wsl_tasks.sh frontend-build
 ./scripts/codex_wsl_tasks.sh frontend-test
 ./scripts/codex_wsl_tasks.sh mainline-verify
+./scripts/codex_wsl_tasks.sh mainline-audit
 ./scripts/codex_wsl_tasks.sh compose-config
 ```
 
@@ -36,9 +37,10 @@ Run these from WSL inside the repo:
 
 The intended automation order is:
 
-1. Lane automations produce scoped commits in worktrees.
-2. `podpusher-mainline-sweep` folds those commits into local `main`, preferring `git merge --no-ff` so commit history remains attributable.
-3. `origin-reconcile` fetches `origin`, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`.
+1. Work-producing automations start from `./scripts/codex_wsl_tasks.sh branch-gate`, create or update a named branch, and report branch name plus `HEAD` SHA in their inbox handoff.
+2. `podpusher-mainline-sweep` runs `./scripts/codex_wsl_tasks.sh mainline-sweep --verify`, which discovers newer-than-main tracked branches from active worktrees and folds only the top-level candidates into local `main` with `git merge --no-ff`.
+3. `origin-reconcile` runs `./scripts/codex_wsl_tasks.sh origin-reconcile`, which refuses a no-op exit while newer-than-main drift still exists, runs `./scripts/codex_wsl_tasks.sh mainline-verify` before any push, and only then fast-forward pushes local `main` to `origin/main`.
+4. A run is not complete until the delta is either reachable from `origin/main` or explicitly reported as blocked with branch name, `HEAD` SHA, and reason.
 
 `mainline-verify` does not install dependencies. It only validates against the repo-local WSL toolchains that are already present, so missing toolchains fail closed instead of silently pushing an unverified `main`.
 
@@ -61,8 +63,8 @@ That script currently:
 
 - Forces `runCodexInWindowsSubsystemForLinux = true` in `.codex-global-state.json`
 - Forces `integratedTerminalShell = "wsl"` in `.codex-global-state.json`
-- Rewrites `automations/origin-reconcile/automation.toml` to require `./scripts/codex_wsl_tasks.sh mainline-verify` before any push
-- Rewrites `automations/podpusher-mainline-sweep/automation.toml` to preserve commit traceability during mainline folding
+  - Rewrites `automations/origin-reconcile/automation.toml` to call the repo-owned `origin-reconcile` command
+  - Rewrites `automations/podpusher-mainline-sweep/automation.toml` to call the repo-owned `mainline-sweep --verify` command
 
 ## Shell startup
 
