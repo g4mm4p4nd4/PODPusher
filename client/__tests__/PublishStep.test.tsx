@@ -18,3 +18,20 @@ test('publishes with price and tags', () => {
 
   expect(onPublish).toHaveBeenCalledWith({ price: 20, tags: ['one', 'two'] });
 });
+
+test('renders schedule action when provided', () => {
+  const onPublish = jest.fn();
+  const onSchedule = jest.fn();
+
+  render(
+    <PublishStep
+      product={{ image_url: 'img' }}
+      onPublish={onPublish}
+      onSchedule={onSchedule}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'schedule' }));
+
+  expect(onSchedule).toHaveBeenCalledTimes(1);
+});

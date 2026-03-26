@@ -296,7 +296,13 @@ export default function Generate() {
           {selectedProduct?.image_url && (
             <section className="rounded border border-gray-200 bg-white p-4 shadow-sm">
               <h2 className="mb-2 text-lg font-semibold">{t('generate.results.publish')}</h2>
-              <PublishStep product={{ image_url: selectedProduct.image_url }} onPublish={handlePublish} />
+              <PublishStep
+                product={{ image_url: selectedProduct.image_url }}
+                onPublish={handlePublish}
+                onSchedule={() => {
+                  void router.push('/schedule');
+                }}
+              />
             </section>
           )}
 
