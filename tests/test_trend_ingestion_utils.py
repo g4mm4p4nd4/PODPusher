@@ -5,6 +5,7 @@ import pytest
 from services.common.database import get_session, init_db
 from services.models import TrendSignal
 from services.trend_ingestion import service as ingestion_service
+from services.trend_ingestion.circuit_breaker import CircuitBreaker, CircuitState
 from services.trend_ingestion.service import (
     _parse_metric,
     categorize,
@@ -100,3 +101,83 @@ async def test_get_live_trends_applies_source_dedup_recency_and_limit():
     assert len(trends["animals"]) == 1
     assert trends["animals"][0]["keyword"] == "Funny Cat"
     assert trends["animals"][0]["source"] == "tiktok"
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_skips_open_circuit(monkeypatch):
+    class _DummyPlaywrightCtx:
+        async def __aenter__(self):
+            return object()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    breaker = CircuitBreaker(failure_threshold=1, recovery_timeout=60.0)
+    breaker.record_failure("blocked")
+    assert breaker.state("blocked") == CircuitState.OPEN
+
+    called = {"scrape": 0}
+
+    async def _fake_scrape(_pw, _name, _config):
+        called["scrape"] += 1
+        return []
+
+    async def _fake_rss():
+        return []
+
+    monkeypatch.setattr(ingestion_service, "STUB_ONLY", False)
+    monkeypatch.setattr(ingestion_service, "scraper_circuit_breaker", breaker)
+    monkeypatch.setattr(ingestion_service, "PLATFORM_CONFIG", {"blocked": object()})
+    monkeypatch.setattr(ingestion_service, "async_playwright", lambda: _DummyPlaywrightCtx())
+    monkeypatch.setattr(ingestion_service, "_scrape_source", _fake_scrape)
+    monkeypatch.setattr(ingestion_service, "_fetch_rss_signals", _fake_rss)
+
+    _signals, metadata = await ingestion_service._gather_trends()
+
+    assert called["scrape"] == 0
+    assert metadata["sources_failed"]["blocked"] == "Circuit breaker open"
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_records_scrape_failures_into_circuit_breaker(monkeypatch):
+    class _DummyPlaywrightCtx:
+        async def __aenter__(self):
+            return object()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    breaker = CircuitBreaker(failure_threshold=1, recovery_timeout=60.0)
+
+    async def _fake_scrape(_pw, name, _config):
+        if name == "failing":
+            raise RuntimeError("boom")
+        return [
+            {
+                "source": "healthy",
+                "keyword": "funny cat",
+                "engagement_score": 123,
+                "category": "animals",
+            }
+        ]
+
+    async def _fake_rss():
+        return []
+
+    monkeypatch.setattr(ingestion_service, "STUB_ONLY", False)
+    monkeypatch.setattr(ingestion_service, "scraper_circuit_breaker", breaker)
+    monkeypatch.setattr(
+        ingestion_service,
+        "PLATFORM_CONFIG",
+        {"failing": object(), "healthy": object()},
+    )
+    monkeypatch.setattr(ingestion_service, "async_playwright", lambda: _DummyPlaywrightCtx())
+    monkeypatch.setattr(ingestion_service, "_scrape_source", _fake_scrape)
+    monkeypatch.setattr(ingestion_service, "_fetch_rss_signals", _fake_rss)
+
+    _signals, metadata = await ingestion_service._gather_trends()
+
+    assert metadata["sources_failed"]["failing"] == "boom"
+    assert "healthy" in metadata["sources_succeeded"]
+    assert breaker.state("failing") == CircuitState.OPEN
+    assert breaker.state("healthy") == CircuitState.CLOSED

@@ -10,6 +10,7 @@ Reference: IN-05 (Error Handling & Logging), TD-02
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -17,6 +18,16 @@ import httpx
 from .errors import AppError, ErrorCode
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_runtime_status_and_detail(exc: Exception) -> tuple[int, str] | None:
+    """Parse provider RuntimeError strings shaped like '... status <code>: <detail>'."""
+    if not isinstance(exc, RuntimeError):
+        return None
+    match = re.search(r"status\s+(\d{3})\s*:\s*(.+)$", str(exc), re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1)), match.group(2).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +52,15 @@ def handle_printify_error(exc: Exception, context: dict[str, Any] | None = None)
     code = ErrorCode.PRINTIFY_ERROR
     message = "An error occurred while communicating with Printify"
 
-    if isinstance(exc, httpx.HTTPStatusError):
+    runtime_detail = _extract_runtime_status_and_detail(exc)
+    if runtime_detail:
+        resp_status, detail = runtime_detail
+        mapped = PRINTIFY_ERROR_MAP.get(resp_status)
+        if mapped:
+            code, message = mapped
+        status_code = 502 if resp_status >= 500 else resp_status
+        context = {**(context or {}), "provider_detail": detail}
+    elif isinstance(exc, httpx.HTTPStatusError):
         resp_status = exc.response.status_code
         mapped = PRINTIFY_ERROR_MAP.get(resp_status)
         if mapped:
@@ -90,7 +109,18 @@ def handle_etsy_error(exc: Exception, context: dict[str, Any] | None = None) -> 
     code = ErrorCode.ETSY_ERROR
     message = "An error occurred while communicating with Etsy"
 
-    if isinstance(exc, httpx.HTTPStatusError):
+    runtime_detail = _extract_runtime_status_and_detail(exc)
+    if runtime_detail:
+        resp_status, detail = runtime_detail
+        mapped = ETSY_ERROR_MAP.get(resp_status)
+        if mapped:
+            code, message = mapped
+        if "listing fee" in detail.lower():
+            code = ErrorCode.ETSY_LISTING_FEE
+            message = "Etsy listing fee payment required — check your Etsy billing settings"
+        context = {**(context or {}), "provider_detail": detail}
+        status_code = 502 if resp_status >= 500 else resp_status
+    elif isinstance(exc, httpx.HTTPStatusError):
         resp_status = exc.response.status_code
         mapped = ETSY_ERROR_MAP.get(resp_status)
         if mapped:

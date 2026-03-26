@@ -6,6 +6,8 @@ import pytest
 from services.integration import service
 from packages.integrations import etsy as etsy_mod
 from packages.integrations import printify as printify_mod
+from services.common.errors import ErrorCode
+from services.common.provider_errors import handle_etsy_error, handle_printify_error
 
 
 def test_create_sku_uses_stub_when_no_key(monkeypatch, caplog):
@@ -198,3 +200,23 @@ def test_publish_listing_maps_runtime_upstream_error(monkeypatch):
             credential={"access_token": "x", "account_id": "y"},
             require_live=False,
         )
+
+
+def test_handle_printify_runtime_error_preserves_status_and_detail():
+    result = handle_printify_error(
+        RuntimeError("Printify API request failed with status 400: Invalid blueprint")
+    )
+
+    assert result.code == ErrorCode.PRINTIFY_VALIDATION
+    assert result.status_code == 400
+    assert result.details == {"provider_detail": "Invalid blueprint"}
+
+
+def test_handle_etsy_runtime_error_preserves_listing_fee_detail():
+    result = handle_etsy_error(
+        RuntimeError("Etsy API request failed with status 400: Listing fee payment required")
+    )
+
+    assert result.code == ErrorCode.ETSY_LISTING_FEE
+    assert result.status_code == 400
+    assert result.details == {"provider_detail": "Listing fee payment required"}
