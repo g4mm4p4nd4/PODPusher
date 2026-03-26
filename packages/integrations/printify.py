@@ -216,3 +216,95 @@ def get_printify_client(credential: Optional[Dict] = None):
     if not token or not shop_id:
         return _create_sku_stub
     return lambda products: _create_sku_real(token, shop_id, products)
+
+
+def _create_product_stub(
+    idea_id: str,
+    image_ids: List[str],
+    blueprint_id: str,
+    variants: List[str],
+    mockups: Optional[List[str]] = None,
+) -> Dict:
+    logger.info("Printify credentials missing; returning stub product")
+    sources = list(mockups or image_ids)
+    variant_ids = [f"stub-var-{index}" for index, _ in enumerate(variants, start=1)]
+    return {
+        "product_id": "stub-product",
+        "variant_ids": variant_ids,
+        "images": sources,
+        "blueprint_id": blueprint_id,
+        "idea_id": idea_id,
+    }
+
+
+def _create_product_real(
+    token: str,
+    idea_id: str,
+    image_ids: List[str],
+    blueprint_id: str,
+    variants: List[str],
+    mockups: Optional[List[str]] = None,
+    shop_id: Optional[str] = None,
+) -> Dict:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    sources = list(mockups or image_ids)
+    payload = {
+        "title": f"Idea {idea_id}",
+        "blueprint_id": blueprint_id,
+        "print_provider_id": 1,
+        "variants": [{"id": variant, "is_enabled": True} for variant in variants],
+        "images": [{"src": image} for image in sources],
+    }
+    endpoint = (
+        f"{API_BASE}/shops/{shop_id}/products.json"
+        if shop_id
+        else f"{API_BASE}/products.json"
+    )
+    try:
+        response = httpx.post(endpoint, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        logger.error("Printify API error: %s", exc)
+        raise
+
+    data = response.json()
+    response_variants = data.get("variants") or []
+    variant_ids = [str(variant.get("id", "")) for variant in response_variants]
+    return {
+        "product_id": str(data.get("id") or data.get("product_id") or ""),
+        "variant_ids": variant_ids or [str(variant) for variant in variants],
+        "images": sources,
+        "blueprint_id": blueprint_id,
+        "idea_id": idea_id,
+    }
+
+
+def create_product(
+    idea_id: str,
+    image_ids: List[str],
+    blueprint_id: str,
+    variants: List[str],
+    mockups: Optional[List[str]] = None,
+    credential: Optional[Dict] = None,
+) -> Dict:
+    token = None
+    shop_id = None
+    if credential:
+        token = credential.get("access_token")
+        shop_id = credential.get("account_id")
+    token = token or os.getenv("PRINTIFY_API_KEY")
+    shop_id = shop_id or os.getenv("PRINTIFY_SHOP_ID")
+    if not token:
+        return _create_product_stub(idea_id, image_ids, blueprint_id, variants, mockups)
+    return _create_product_real(
+        token,
+        idea_id,
+        image_ids,
+        blueprint_id,
+        variants,
+        mockups,
+        shop_id=shop_id,
+    )

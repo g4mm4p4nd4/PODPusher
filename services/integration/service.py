@@ -6,8 +6,12 @@ from typing import Dict, List, Optional
 import httpx
 from sqlmodel import select
 
-from packages.integrations.printify import get_printify_client
+from packages.integrations import gemini
 from packages.integrations.etsy import get_etsy_client
+from packages.integrations.printify import (
+    create_product as printify_create_product,
+    get_printify_client,
+)
 from services.auth import service as auth_service
 from ..common.database import get_session
 from ..models import OAuthCredential, OAuthProvider
@@ -103,6 +107,41 @@ def create_sku(
                     "Printify live credentials are not configured"
                 )
     return created
+
+
+def create_printify_product(
+    idea_id: str,
+    image_ids: List[str],
+    blueprint_id: str,
+    variants: List[str],
+    credential: Optional[Dict[str, Optional[str]]] = None,
+    require_live: bool = False,
+) -> dict:
+    if require_live:
+        credential = _ensure_live_credential(OAuthProvider.PRINTIFY, credential)
+    mockups = [gemini.generate_mockup(f"{blueprint_id} variant {variant}") for variant in variants]
+    try:
+        product = printify_create_product(
+            idea_id,
+            image_ids,
+            blueprint_id,
+            variants,
+            mockups,
+            credential=credential,
+        )
+    except ValueError as exc:
+        raise IntegrationPayloadError(str(exc)) from exc
+    except RuntimeError as exc:
+        raise IntegrationUpstreamError(str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise IntegrationUpstreamError("Printify product request failed") from exc
+    if require_live:
+        product_id = str(product.get("product_id", "")).strip()
+        if not product_id or product_id.startswith("stub-"):
+            raise IntegrationCredentialError(
+                "Printify live credentials are not configured"
+            )
+    return product
 
 
 def publish_listing(

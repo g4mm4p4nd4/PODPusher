@@ -53,6 +53,9 @@
       "description": "Beschreibung",
       "price": "Preis",
       "tags": "Tags",
+      "select": "Auswaehlen",
+      "publish": "Veroeffentlichen",
+      "publishReady": "Bereit, {{title}} fuer {{price}} zu veroeffentlichen.",
       "listing": "Angebotsvorschau",
       "viewListing": "Angebot ansehen",
       "missingIntegrations": "Verbinde {{providers}}, um automatisch zu veroeffentlichen.",
@@ -61,6 +64,12 @@
       "unknown": "Unbekannt",
       "untitled": "Ohne Titel"
     }
+  },
+  "publish": {
+    "price": "Preis",
+    "tags": "Tags",
+    "publishNow": "Jetzt veroeffentlichen",
+    "schedule": "Planen"
   },
   "suggestions": {
     "title": "Produktvorschläge",
