@@ -11,6 +11,7 @@ top of the current remote baseline.
 
 PODPusher also operates a continuous local-main flow for Codex automations:
 
+1. `./scripts/codex_wsl_tasks.sh branch-gate` confirms each automation starts from a named branch and logs divergence vs `origin/main`.
 1. lane automations produce scoped commits in worktrees
 2. `podpusher-mainline-sweep` folds those commits into local `main`
 3. `origin-reconcile` fetches `origin`, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`
@@ -32,6 +33,7 @@ source worktree or commit SHAs in the message.
    makes conflicts and regressions attributable.
 5. Automation must preserve user work. A dirty worktree is a stop condition, not
    something to "fix" automatically.
+6. Every automation must run `./scripts/codex_wsl_tasks.sh branch-gate` before making integration-affecting changes.
 
 ## Preconditions
 
@@ -194,3 +196,5 @@ As exercised on March 6, 2026, this repository validated cleanly locally after
 replaying and repairing the current integration branch. The branch can now be
 treated as PR-ready once its remaining unpushed changes are committed and pushed
 to `origin`.
+
+For current backlog visibility, review `docs/branch_reconciliation_backlog.md` before each mainline cycle to identify non-merged local and remote branches.

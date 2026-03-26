@@ -14,6 +14,7 @@ Commands:
   backend-test    Run pytest from the repo root
   frontend-test   Run the frontend Jest suite
   frontend-build  Run the frontend production build
+  branch-gate     Verify branch integrity before automation changes
   mainline-verify Run the full mainline validation ladder without installing deps
   compose-config  Render docker compose config
   compose-up      Run docker compose up with any extra args
@@ -171,7 +172,45 @@ frontend_build() {
   npm run build -- "$@"
 }
 
+branch_gate() {
+  ensure_wsl
+  ensure_dirs
+  require_cmd git
+  cd "$CODEX_WSL_REPO_ROOT"
+
+  local branch divergence behind ahead
+  branch="$(git symbolic-ref -q --short HEAD 2>/dev/null || true)"
+
+  if [[ -z "$branch" ]]; then
+    echo "Detached HEAD detected. Automation work must run on a branch." >&2
+    echo "Current commit: $(git rev-parse --short HEAD)" >&2
+    echo "Recommended: git switch -c codex/<lane>/<slug> origin/main" >&2
+    exit 1
+  fi
+
+  if [[ "$branch" != "main" && "$branch" != codex/* && "$branch" != pr/* && "$branch" != backup/* && "$branch" != tmp/* && "$branch" != repair/* && "$branch" != test-* ]]; then
+    echo "Warning: branch '$branch' is outside the documented automation namespace." >&2
+    echo "If intentional, continue. Otherwise, stop and switch before editing files." >&2
+  fi
+
+  if git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+    divergence="$(git rev-list --left-right --count "origin/main...$branch" || echo '0\t0')"
+    behind="$(cut -f1 <<<"$divergence")"
+    ahead="$(cut -f2 <<<"$divergence")"
+    echo "branch-gate: branch=$branch head=$(git rev-parse --short HEAD) origin/main..$branch behind=$behind ahead=$ahead"
+
+    if [[ "$behind" != "0" && "$ahead" == "0" ]]; then
+      echo "Warning: branch is behind origin/main by $behind commits." >&2
+    fi
+  fi
+
+  if [[ "$branch" != "main" ]] && ! git rev-parse --quiet --abbrev-ref "${branch}@{upstream}" >/dev/null 2>&1; then
+    echo "Warning: branch '$branch' has no tracked upstream." >&2
+  fi
+}
+
 mainline_verify() {
+  branch_gate
   ensure_wsl
   require_existing_python_env
   require_existing_frontend_deps
@@ -274,6 +313,9 @@ main() {
   shift
 
   case "$command" in
+    branch-gate)
+      branch_gate "$@"
+      ;;
     bootstrap)
       bootstrap "$@"
       ;;

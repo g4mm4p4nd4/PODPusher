@@ -1,0 +1,84 @@
+# Branch Reconciliation Backlog
+
+Generated: 2026-03-25 21:30 UTC
+
+# Unmerged local branches (non-zero range against origin/main):
+backup/pr-80-20260323 53	1
+codex/frontend/cleanup-pr80 53	1
+codex/frontend/recreate-pr64 0	3
+codex/frontend/recreate-pr69 0	1
+codex/frontend/recreate-pr70 0	2
+codex/frontend/retry-pr84 0	1
+codex/integrate-origin-main-20260306 29	12
+codex/local-main-preserve-20260307 44	3
+codex/reconcile-origin-20260306-124537 29	8
+codex/reconcile-origin-20260306-124537-reviewfix 29	8
+codex/update-celery-tasks-for-asyncio-execution 44	4
+pr/64 56	1
+pr/69 55	2
+pr/70 55	1
+pr/80 53	1
+pr/84 34	6
+repair/pr79 0	1
+test-update 0	1
+test-write-probe 0	1
+tmp/front-pr70 0	1
+
+# Unmerged remote codex branches:
+origin/codex/add-length-tracking-and-validation-for-submissions 47	1
+origin/codex/add-listing-composer-with-tag-suggestions 69	1
+origin/codex/add-unit-tests-for-integration-stubs 69	1
+origin/codex/automate-sku-creation-and-etsy-listings 55	1
+origin/codex/build-live-trend-signals-ingestion-service 55	1
+origin/codex/build-printify-and-etsy-api-clients 69	1
+origin/codex/create-mock-data-for-analytics-api 54	1
+origin/codex/draft-social-media-generator-specification 74	1
+origin/codex/draft-specification-for-social-media-generator 69	1
+origin/codex/enhance-testing-and-qa-for-podpusher 59	1
+origin/codex/extend-localization-and-internationalization-support 56	1
+origin/codex/extend-user-model-with-quota_limit 46	1
+origin/codex/fix-requirements.txt-for-pytest-asyncio 51	3
+origin/codex/frontend/recreate-pr64 0	2
+origin/codex/frontend/recreate-pr69 0	1
+origin/codex/frontend/recreate-pr70 0	2
+origin/codex/frontend/retry-pr84 0	1
+origin/codex/implement-a/b-testing-service 69	1
+origin/codex/implement-a/b-testing-support 86	1
+origin/codex/implement-advanced-search-and-filtering 86	1
+origin/codex/implement-analytics-enhancements 60	1
+origin/codex/implement-bulk-product-creation-endpoint 59	1
+origin/codex/implement-event-driven-orchestration-and-scheduling 55	3
+origin/codex/implement-high-resolution-image-generation-service 55	1
+origin/codex/implement-high-resolution-image-generation-service-7bpbvk 55	1
+origin/codex/implement-high-resolution-image-generation-service-yerjq2 55	2
+origin/codex/implement-image-review-and-tagging-tool 98	1
+origin/codex/implement-imagecard-component-and-review-page 48	1
+origin/codex/implement-monitoring-and-observability-for-podpusher 59	1
+origin/codex/implement-notification-and-scheduling-system 86	1
+origin/codex/implement-notification-and-scheduling-system-x98xyz 56	1
+origin/codex/implement-product-service-features-and-tests 52	1
+origin/codex/implement-real-analytics-service-and-dashboard 69	1
+origin/codex/implement-social-media-generator-service 59	1
+origin/codex/implement-stub-microservices-and-orchestration-pipeline 110	1
+origin/codex/implement-user-plan-tracking-and-quota-enforcement 69	1
+origin/codex/implement-user-plans-and-quotas 98	9
+origin/codex/integrate-origin-main-20260306 29	12
+origin/codex/re-implement-a/b-testing-support 80	1
+origin/codex/re-implement-a/b-testing-support-v3 64	1
+origin/codex/re-implement-a/b-testing-support-v4 61	1
+origin/codex/re-implement-advanced-search-and-filtering 80	1
+origin/codex/re-implement-bulk-product-creation-endpoint 58	1
+origin/codex/re-implement-monitoring-and-observability 58	1
+origin/codex/re-implement-monitoring-and-observability-for-podpusher 56	1
+origin/codex/re-implement-testing-and-qa-for-podpusher-v2 58	1
+origin/codex/re-implement-testing-and-qa-for-podpusher-v3 57	1
+origin/codex/reconcile-origin-20260306-124537 29	8
+origin/codex/recreate-notifications-and-scheduling-service 69	1
+origin/codex/reimplement-advanced-search-and-filtering-v2 64	1
+origin/codex/reimplement-listing-composer-enhancements 80	1
+origin/codex/reimplement-listing-composer-enhancements-v2-41zuys 64	1
+origin/codex/reimplement-monitoring-for-podpusher-v3-xbahdm 57	1
+origin/codex/reimplement-printify-and-etsy-api-clients 62	1
+origin/codex/remove-stubs-and-clean-up-podpusher 56	1
+origin/codex/update-and-expand-podpusher-documentation 56	1
+origin/codex/update-celery-tasks-for-asyncio-execution 0	1
