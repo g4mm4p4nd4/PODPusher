@@ -13,6 +13,7 @@ const translations: Record<string, string> = {
   'nav.suggestions': 'Suggestions',
   'nav.search': 'Search',
   'nav.listings': 'Listings',
+  'nav.schedule': 'Schedule',
   'nav.images': 'Images',
   'nav.analytics': 'Analytics',
   'nav.socialGenerator': 'Social Generator',
@@ -60,4 +61,14 @@ test('renders an Images navigation link', async () => {
   );
 
   expect(await screen.findByRole('link', { name: 'Images' })).toHaveAttribute('href', '/images');
+});
+
+test('renders a Schedule navigation link', async () => {
+  render(
+    <Layout>
+      <div>Child</div>
+    </Layout>
+  );
+
+  expect(await screen.findByRole('link', { name: 'Schedule' })).toHaveAttribute('href', '/schedule');
 });
