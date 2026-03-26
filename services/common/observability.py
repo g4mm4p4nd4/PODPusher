@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import suppress
 from uuid import uuid4
 import time
-from typing import Awaitable, Callable, Optional
+from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import text
