@@ -15,6 +15,7 @@ This repo now ships a project-local Codex environment at `.codex/environments/en
   - Keeps the Python venv separate from the existing Windows `.codex-venv` by using `.codex-venv-wsl`.
   - Installs dependencies only when `requirements.txt` or the frontend manifest changes.
   - Exposes `mainline-verify` as the fail-closed validation ladder for `origin-reconcile`.
+  - Exposes `branch-gate` as the mandatory preflight for branch integrity and detached-HEAD prevention.
 - `scripts/apply_codex_wsl_migration.py`
   - Patches the writable-outside-repo Codex home when you run it manually with access to `%USERPROFILE%\.codex`.
   - Sets the app state toggles that matter for WSL and rewrites the active mainline automations so they use the repo's WSL-first verification flow.
@@ -30,6 +31,12 @@ Run these from WSL inside the repo:
 ./scripts/codex_wsl_tasks.sh frontend-test
 ./scripts/codex_wsl_tasks.sh mainline-verify
 ./scripts/codex_wsl_tasks.sh compose-config
+```
+
+Before starting any automation lane work, run:
+
+```bash
+./scripts/codex_wsl_tasks.sh branch-gate
 ```
 
 ## Continuous mainline flow
@@ -63,6 +70,7 @@ That script currently:
 - Forces `integratedTerminalShell = "wsl"` in `.codex-global-state.json`
 - Rewrites `automations/origin-reconcile/automation.toml` to require `./scripts/codex_wsl_tasks.sh mainline-verify` before any push
 - Rewrites `automations/podpusher-mainline-sweep/automation.toml` to preserve commit traceability during mainline folding
+- Rewrites `automations/*/automation.toml` to require `./scripts/codex_wsl_tasks.sh branch-gate` as the first execution step
 
 ## Shell startup
 
@@ -87,3 +95,4 @@ After merging this repo change and applying the external migration:
 3. Confirm the working directory resolves under `/mnt/c/...` or `/mnt/d/...`.
 4. Run `./scripts/codex_wsl_tasks.sh print-env` from WSL and verify `CODEX_HOME` points at `/mnt/c/Users/Bear/.codex`.
 5. Run the bootstrap, backend, frontend, and compose validation commands above.
+6. Before each lane run, use `docs/branch_reconciliation_backlog.md` to confirm branch coverage and avoid unmerged drift.

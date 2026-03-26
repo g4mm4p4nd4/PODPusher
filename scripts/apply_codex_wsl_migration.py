@@ -10,6 +10,8 @@ from pathlib import Path
 
 
 ORIGIN_RECONCILE_PROMPT = (
+    "Preflight: run `./scripts/codex_wsl_tasks.sh branch-gate` immediately before executing this automation. "
+    "If this check fails, stop and open an inbox item before any merge or push steps. "
     "Reconcile local main with origin/main in this repo. Inspect git status and "
     "history, fetch origin, and use direct git commands from a WSL shell. If "
     "origin/main moved, integrate those commits without rewriting history and keep "
@@ -23,6 +25,8 @@ ORIGIN_RECONCILE_PROMPT = (
 )
 ORIGIN_RECONCILE_RRULE = "FREQ=HOURLY;INTERVAL=1;BYMINUTE=55"
 MAINLINE_SWEEP_PROMPT = (
+    "Preflight: run `./scripts/codex_wsl_tasks.sh branch-gate` immediately before executing this automation. "
+    "If this check fails, stop and open an inbox item before any branch folding steps. "
     "Review Git worktrees and the main workspace for detached Codex changes. "
     "Preserve commit traceability: prefer merging the source branch or worktree "
     "into main with `git merge --no-ff` so original commits remain visible. Only "

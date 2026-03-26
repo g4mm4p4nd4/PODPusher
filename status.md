@@ -1,6 +1,6 @@
 # PODPusher Status
 
-Last updated: March 8, 2026 (America/New_York)
+Last updated: March 25, 2026 (America/New_York)
 Maintainer: PODPusher Coordinator (`podpusher-delivery`)
 
 This file tracks current delivery state and detached-worktree triage outcomes. Long-form historical completion logs are intentionally omitted; active execution state is authoritative.
@@ -19,6 +19,12 @@ This file tracks current delivery state and detached-worktree triage outcomes. L
 | `frontend` | `BLOCKED` | Remove remaining default internal-user fallback in shared transport and settings/oauth flows. | Start only after backend contract is frozen for this cycle. | `npm --prefix client test -- --runInBand __tests__/SocialSettings.test.tsx __tests__/oauthCallback.test.tsx __tests__/settingsPage.test.tsx`; `npm --prefix client run typecheck` |
 | `platform-qa` | `BLOCKED` | Keep workflow/test/doc smoke contract aligned and capture `staging-smoke-junit` artifact evidence. | Requires external secrets owner and workflow dispatch operator. | `python -m pytest -q -s tests/test_staging_smoke_workflow_contract.py tests/test_ci_workflow_contract.py` |
 | `integrations` | `BLOCKED` | Execute one credential-backed non-stub smoke run and verify trend->idea->image->listing evidence. | Requires Platform-QA alignment plus external secrets/dispatch ownership. | `python -m pytest -q -s tests/test_staging_pipeline_smoke.py tests/test_integration_service.py tests/test_integration_api.py`; then Actions run evidence |
+
+## Outstanding Reconciliation Backlog
+
+- Current unmerged branch snapshot: `docs/branch_reconciliation_backlog.md`
+- Current triage action: merge/reconcile only branches marked as production-code candidates, and preserve detached commit history with `git merge --no-ff` when folding.
+- Governance rule: all automation runs must pass `./scripts/codex_wsl_tasks.sh branch-gate` before changing branch or files.
 
 ## Variance Resolution Note
 
