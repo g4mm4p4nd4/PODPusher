@@ -4,7 +4,21 @@ from httpx import AsyncClient, ASGITransport
 from services.auth.service import create_session
 from services.common.database import get_session, init_db
 from services.image_gen.api import app as image_app
-from services.models import User
+from services.models import Idea, Trend, User
+
+
+async def _seed_idea() -> int:
+    async with get_session() as session:
+        trend = Trend(term="cat", category="animals")
+        session.add(trend)
+        await session.commit()
+        await session.refresh(trend)
+
+        idea = Idea(trend_id=trend.id, description="cat t-shirt")
+        session.add(idea)
+        await session.commit()
+        await session.refresh(idea)
+        return int(idea.id)
 
 
 @pytest.mark.asyncio
@@ -114,3 +128,27 @@ async def test_quota_rejects_invalid_bearer_even_with_user_header():
         )
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Authentication required"
+
+
+@pytest.mark.asyncio
+async def test_quota_enforcement_on_generate_endpoint():
+    await init_db()
+    idea_id = await _seed_idea()
+    async with get_session() as session:
+        existing = await session.get(User, 77)
+        if existing:
+            await session.delete(existing)
+            await session.commit()
+
+    transport = ASGITransport(app=image_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for i in range(21):
+            resp = await client.post(
+                "/generate",
+                json={"idea_id": idea_id, "style": "default", "provider_override": "stub"},
+                headers={"X-User-Id": "77"},
+            )
+            if i < 20:
+                assert resp.status_code == 200
+            else:
+                assert resp.status_code == 403

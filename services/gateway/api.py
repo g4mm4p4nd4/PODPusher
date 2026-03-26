@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel
 
 from ..ab_tests.api import app as ab_app
 from ..analytics.api import router as analytics_router
@@ -14,10 +15,11 @@ from ..common.auth import require_user_id
 from ..common.cache import CACHE_TTL_TRENDS, cache_get, cache_key, cache_set
 from ..common.errors import register_error_handlers
 from ..common.observability import register_observability
+from ..common.quotas import check_quota, increment_quota, quota_exceeded_response
 from ..common.rate_limit import register_rate_limiting
 from ..ideation.api import app as ideation_app
 from ..ideation.service import generate_ideas
-from ..image_gen.service import generate_images
+from ..image_gen.service import delete_image, generate_image_for_idea, generate_images, list_images
 from ..integration.service import create_sku, load_oauth_credentials, publish_listing
 from ..listing_composer.api import app as listing_app
 from ..models import OAuthProvider
@@ -61,6 +63,12 @@ def _assemble_products(ideas: List[dict], images: List[dict]) -> List[dict]:
             }
         )
     return products
+
+
+class ImageGenerateRequest(BaseModel):
+    idea_id: int
+    style: str = "default"
+    provider_override: str | None = None
 
 
 app = FastAPI(lifespan=_gateway_lifespan)
@@ -142,6 +150,46 @@ async def generate(
         },
     }
     return response
+
+
+@app.post("/api/images/generate")
+async def generate_image_endpoint(
+    payload: ImageGenerateRequest,
+    user_id: int = Depends(require_user_id),
+):
+    allowed, details = await check_quota(user_id, "images", 1)
+    if not allowed:
+        return quota_exceeded_response(details)
+
+    images = await generate_image_for_idea(
+        idea_id=payload.idea_id,
+        style=payload.style,
+        provider_override=payload.provider_override,
+    )
+    if not images:
+        raise HTTPException(status_code=404, detail="Idea not found")
+
+    await increment_quota(user_id, "images", 1)
+    return images
+
+
+@app.get("/api/images")
+async def list_images_endpoint(
+    idea_id: int,
+    _user_id: int = Depends(require_user_id),
+):
+    return await list_images(idea_id)
+
+
+@app.delete("/api/images/{image_id}")
+async def delete_image_endpoint(
+    image_id: int,
+    _user_id: int = Depends(require_user_id),
+):
+    deleted = await delete_image(image_id)
+    if deleted["status"] == "not_found":
+        raise HTTPException(status_code=404, detail="Image not found")
+    return deleted
 
 
 @app.post("/api/bulk_create", response_model=BulkCreateResponse)

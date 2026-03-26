@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { useTranslation } from 'next-i18next';
@@ -32,6 +32,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link href="/suggestions" className="hover:underline">{t('nav.suggestions')}</Link>
           <Link href="/search" className="hover:underline">{t('nav.search')}</Link>
           <Link href="/listings" className="hover:underline">{t('nav.listings')}</Link>
+          <Link href="/images" className="hover:underline">{t('nav.images')}</Link>
           <Link href="/analytics" className="hover:underline">{t('nav.analytics')}</Link>
           <Link href="/social-generator" className="hover:underline">{t('nav.socialGenerator')}</Link>
           <Link href="/ab_tests" className="hover:underline">{t('nav.abTests')}</Link>

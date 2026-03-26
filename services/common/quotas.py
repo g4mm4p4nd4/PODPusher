@@ -23,6 +23,20 @@ def plan_limit(plan: str) -> Optional[int]:
     return LEGACY_PLAN_LIMITS.get(plan, LEGACY_PLAN_LIMITS["free"])
 
 
+def quota_exceeded_response(details: dict) -> JSONResponse:
+    return JSONResponse(
+        {
+            "detail": "Quota exceeded",
+            "code": "QUOTA_EXCEEDED",
+            "limit": details["limit"],
+            "used": details["used"],
+            "plan_tier": details["plan_tier"],
+            "upgrade_url": "/api/billing/portal",
+        },
+        status_code=details.get("status_code", 402),
+    )
+
+
 async def get_user_plan_tier(user_id: int) -> str:
     """Get the user's plan tier from billing service."""
     try:
@@ -177,7 +191,7 @@ async def increment_quota(user_id: int, resource_type: str, count: int = 1) -> d
 
 async def quota_middleware(request: Request, call_next):
     """Middleware to enforce quotas on image generation endpoint."""
-    if request.url.path != "/images" or request.method.upper() != "POST":
+    if request.url.path not in {"/images", "/generate"} or request.method.upper() != "POST":
         return await call_next(request)
 
     try:
@@ -190,7 +204,8 @@ async def quota_middleware(request: Request, call_next):
     body_bytes = await request.body()
     try:
         payload = json.loads(body_bytes)
-        count = len(payload.get("ideas", []))
+        ideas = payload.get("ideas")
+        count = len(ideas) if isinstance(ideas, list) else 1
     except Exception:
         count = 1
     request._body = body_bytes
@@ -198,17 +213,7 @@ async def quota_middleware(request: Request, call_next):
     allowed, details = await check_quota(user_id, "images", count)
 
     if not allowed:
-        return JSONResponse(
-            {
-                "detail": "Quota exceeded",
-                "code": "QUOTA_EXCEEDED",
-                "limit": details["limit"],
-                "used": details["used"],
-                "plan_tier": details["plan_tier"],
-                "upgrade_url": "/api/billing/portal",
-            },
-            status_code=details.get("status_code", 402),
-        )
+        return quota_exceeded_response(details)
 
     response = await call_next(request)
 
