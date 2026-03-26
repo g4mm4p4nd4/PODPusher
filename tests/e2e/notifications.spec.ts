@@ -18,7 +18,7 @@ test('notifications page lists items', async ({ page }) => {
   });
 
   await page.goto('/notifications');
-  await expect(page.getByText('Notifications')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
   await expect(page.getByText('hello')).toBeVisible();
   await page.getByTestId('read-1').click();
 });
