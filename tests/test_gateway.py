@@ -4,6 +4,7 @@ import types
 from httpx import ASGITransport, AsyncClient
 
 from services.common.database import get_session, init_db
+from services.common.product_pipeline import assemble_products
 from services.models import Idea, Trend, User
 
 if "stripe" not in sys.modules:
@@ -77,6 +78,53 @@ async def test_generate_with_linked_oauth(monkeypatch):
     assert data["listing_url"] == "https://etsy.test/listing-1"
     assert data["listing"]["listing_url"] == "https://etsy.test/listing-1"
     assert data["products"] and data["products"][0]["id"] == "prod-1"
+
+
+@pytest.mark.asyncio
+async def test_generate_uses_shared_product_pipeline(monkeypatch):
+    await init_db()
+    trends = [{"id": 1, "term": "cats", "category": "animals"}]
+    ideas = [
+        {
+            "id": 11,
+            "term": "cats",
+            "category": "animals",
+            "description": "Cat mug with floral outline",
+            "suggested_price": 29.5,
+        }
+    ]
+    images = [
+        {
+            "id": 21,
+            "idea_id": 11,
+            "image_url": "https://example.com/cat-mug.png",
+            "category": "animals",
+        }
+    ]
+
+    async def fake_fetch_trends(_category=None):
+        return trends
+
+    async def fake_generate_ideas(_trends):
+        return ideas
+
+    async def fake_generate_images(_ideas):
+        return images
+
+    async def fake_load(_user_id, _provider):
+        return None
+
+    monkeypatch.setattr("services.gateway.api.fetch_trends", fake_fetch_trends)
+    monkeypatch.setattr("services.gateway.api.generate_ideas", fake_generate_ideas)
+    monkeypatch.setattr("services.gateway.api.generate_images", fake_generate_images)
+    monkeypatch.setattr("services.gateway.api.load_oauth_credentials", fake_load)
+
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/generate", headers={"X-User-Id": "12"})
+
+    assert resp.status_code == 200
+    assert resp.json()["products"] == assemble_products(ideas, images)
 
 
 @pytest.mark.asyncio
