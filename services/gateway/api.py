@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
