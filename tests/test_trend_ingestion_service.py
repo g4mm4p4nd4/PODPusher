@@ -6,6 +6,7 @@ from sqlmodel import select
 from services.common.database import get_session, init_db
 from services.models import TrendSignal
 from services.trend_ingestion import service
+from services.trend_ingestion.circuit_breaker import CircuitBreaker
 
 
 def test_extract_rss_signals_parses_items():
@@ -68,3 +69,28 @@ def test_get_refresh_status_formats_timestamps(monkeypatch):
     assert payload["last_mode"] == "live"
     assert payload["signals_collected"] == 3
     assert payload["signals_persisted"] == 2
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_falls_back_when_playwright_boot_fails(monkeypatch):
+    class _BrokenPlaywrightCtx:
+        async def __aenter__(self):
+            raise RuntimeError("playwright unavailable")
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def _fake_rss():
+        return []
+
+    monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "scraper_circuit_breaker", CircuitBreaker())
+    monkeypatch.setattr(service, "PLATFORM_CONFIG", {"tiktok": object()})
+    monkeypatch.setattr(service, "async_playwright", lambda: _BrokenPlaywrightCtx())
+    monkeypatch.setattr(service, "_fetch_rss_signals", _fake_rss)
+
+    signals, metadata = await service._gather_trends()
+
+    assert metadata["mode"] == "fallback_stub"
+    assert metadata["sources_failed"]["playwright"] == "playwright unavailable"
+    assert signals

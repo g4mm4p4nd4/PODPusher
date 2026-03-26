@@ -244,29 +244,26 @@ async def _scrape_source(playwright, name: str, config: SourceConfig) -> List[Di
 
 
 async def _scrape_with_circuit_breaker(playwright, name: str, config: SourceConfig) -> List[Dict[str, Any]]:
-    """Wrap scraping with circuit-breaker and scrape metrics."""
-    if not scraper_circuit_breaker.allow_request(name):
-        logger.warning("Circuit breaker OPEN for %s - skipping scrape", name)
-        SCRAPE_TOTAL.labels(name, "circuit_open").inc()
-        return []
-
+    """Scrape a single source and record scrape metrics."""
     started = time.monotonic()
     try:
         results = await _scrape_source(playwright, name, config)
-        duration = time.monotonic() - started
-        SCRAPE_DURATION.labels(name).observe(duration)
-        SCRAPE_TOTAL.labels(name, "success").inc()
-        SCRAPE_KEYWORDS.labels(name).inc(len(results))
-        scraper_circuit_breaker.record_success(name)
-        logger.info("Scraped %s: %d results in %.1fs", name, len(results), duration)
-        return results
     except Exception as exc:
         duration = time.monotonic() - started
         SCRAPE_DURATION.labels(name).observe(duration)
         SCRAPE_TOTAL.labels(name, "failure").inc()
-        scraper_circuit_breaker.record_failure(name)
         logger.error("Scrape failed for %s after %.1fs: %s", name, duration, exc)
-        return []
+        raise
+
+    duration = time.monotonic() - started
+    SCRAPE_DURATION.labels(name).observe(duration)
+    if results:
+        SCRAPE_TOTAL.labels(name, "success").inc()
+        SCRAPE_KEYWORDS.labels(name).inc(len(results))
+        logger.info("Scraped %s: %d results in %.1fs", name, len(results), duration)
+    else:
+        logger.warning("Scrape returned no results for %s after %.1fs", name, duration)
+    return results
 
 
 def _extract_rss_signals(xml_text: str) -> List[Dict[str, Any]]:
@@ -311,20 +308,39 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
     aggregated: List[Dict[str, Any]] = []
     sources_succeeded: List[str] = []
     sources_failed: Dict[str, str] = {}
+    allowed_source_names: List[str] = []
 
-    async with async_playwright() as pw:
-        source_names = list(PLATFORM_CONFIG.keys())
-        tasks = [_scrape_with_circuit_breaker(pw, name, PLATFORM_CONFIG[name]) for name in source_names]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for name, result in zip(source_names, results):
-        if isinstance(result, Exception):
-            sources_failed[name] = str(result)
-            continue
-        if result:
-            aggregated.extend(result)
-            sources_succeeded.append(name)
-        else:
+    try:
+        async with async_playwright() as pw:
+            tasks = []
+            for name, config in PLATFORM_CONFIG.items():
+                if not scraper_circuit_breaker.allow_request(name):
+                    logger.warning("Circuit breaker OPEN for %s - skipping scrape", name)
+                    SCRAPE_TOTAL.labels(name, "circuit_open").inc()
+                    sources_failed[name] = "Circuit breaker open"
+                    continue
+                allowed_source_names.append(name)
+                tasks.append(_scrape_with_circuit_breaker(pw, name, config))
+            results = await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+    except Exception as exc:
+        for name in allowed_source_names:
+            scraper_circuit_breaker.record_failure(name)
+        sources_failed["playwright"] = str(exc)
+        logger.warning("Playwright trend collection failed: %s", exc)
+    else:
+        for name, result in zip(allowed_source_names, results):
+            if isinstance(result, Exception):
+                scraper_circuit_breaker.record_failure(name)
+                sources_failed[name] = str(result)
+                logger.warning("Trend scrape failed for %s: %s", name, result)
+                continue
+            if result:
+                scraper_circuit_breaker.record_success(name)
+                aggregated.extend(result)
+                sources_succeeded.append(name)
+                continue
+            scraper_circuit_breaker.record_failure(name)
+            SCRAPE_TOTAL.labels(name, "failure").inc()
             sources_failed[name] = "No trend items collected"
 
     try:
