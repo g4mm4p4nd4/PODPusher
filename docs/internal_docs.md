@@ -7,6 +7,26 @@ The integration runbook for reconciling local work with `origin/main` lives in
 validation ladder, and automation guardrails used to prove that a local branch
 has actually been integrated into the remote source of truth.
 
+## Event-Driven Orchestration
+
+The `orchestrator` service consumes user-scoped Redis Streams events and drives
+the existing ideation -> image generation -> integration pipeline with the same
+product assembly logic used by the gateway `/generate` endpoint.
+
+### Event Contract
+
+- `trend_signals`: `{ user_id, trend, source, auto }`
+- `ideas_ready`: preserves `user_id` and carries the generated `ideas`
+- `images_ready`: preserves `user_id` and carries `ideas` plus `images`
+- `products_ready`: preserves `user_id` and carries created `products`
+- `listings_ready`: preserves `user_id` and carries the final `listing`
+
+### Scheduling
+
+The APScheduler integration is user-scoped only. The service never invents a
+default global user; periodic jobs are created only through explicit
+user-authenticated schedule registration.
+
 ## Testing & QA Strategy
 
 Quality assurance combines unit, integration and browser tests.
