@@ -15,6 +15,8 @@ This repo now ships a project-local Codex environment at `.codex/environments/en
   - Keeps the Python venv separate from the existing Windows `.codex-venv` by using `.codex-venv-wsl`.
   - Installs dependencies only when `requirements.txt` or the frontend manifest changes.
   - Exposes `branch-gate`, `mainline-audit`, `mainline-sweep`, `mainline-verify`, and `origin-reconcile` as repo-owned convergence commands.
+- `docs/automation_control_plane.md`
+  - Canonical freeze/resume contract, current live blocker snapshot, and structured stop-record template for blocked automation runs.
 - `scripts/apply_codex_wsl_migration.py`
   - Patches the writable-outside-repo Codex home when you run it manually with access to `%USERPROFILE%\.codex`.
   - Sets the app state toggles that matter for WSL and rewrites the active mainline automations so they use the repo's WSL-first verification flow.
@@ -41,6 +43,10 @@ The intended automation order is:
 2. `podpusher-mainline-sweep` runs `./scripts/codex_wsl_tasks.sh mainline-sweep --verify`, which discovers newer-than-main tracked branches from active worktrees and folds only the top-level candidates into local `main` with `git merge --no-ff`.
 3. `origin-reconcile` runs `./scripts/codex_wsl_tasks.sh origin-reconcile`, which refuses a no-op exit while newer-than-main drift still exists, runs `./scripts/codex_wsl_tasks.sh mainline-verify` before any push, and only then fast-forward pushes local `main` to `origin/main`.
 4. A run is not complete until the delta is either reachable from `origin/main` or explicitly reported as blocked with branch name, `HEAD` SHA, and reason.
+
+If the control plane is frozen, work-producing automations remain paused until
+the resume gates in [docs/automation_control_plane.md](./automation_control_plane.md)
+pass.
 
 `mainline-verify` does not install dependencies. It only validates against the repo-local WSL toolchains that are already present, so missing toolchains fail closed instead of silently pushing an unverified `main`.
 
