@@ -1,6 +1,6 @@
 # PODPusher Delivery Roadmap
 
-Last updated: March 8, 2026 (America/New_York)
+Last updated: March 27, 2026 (America/New_York)
 Owner: PODPusher Coordinator (`podpusher-delivery`)
 
 ## Coordination Objective
@@ -11,6 +11,14 @@ Run a four-lane board with exactly one active slice per lane and explicit depend
 2. `frontend`
 3. `platform-qa`
 4. `integrations`
+
+## Automation Control Freeze
+
+The automation layer is frozen until the live mainline audit is clean. Product lane
+assignments below remain the authoritative backlog, but no lane should resume
+while `mainline-audit` still reports active newer-than-main drift or a `main`
+checkout conflict. See [docs/automation_control_plane.md](./automation_control_plane.md)
+for the shared resume contract.
 
 Ordering rationale:
 - Backend auth/identity behavior must stay stable before frontend removes any remaining fallback assumptions.
@@ -31,6 +39,7 @@ Ordering rationale:
 - Staging smoke still requires confirmed ownership for repository secrets: `OPENAI_API_KEY`, `ETSY_CLIENT_ID`, `ETSY_ACCESS_TOKEN`, `ETSY_SHOP_ID`, `PRINTIFY_API_KEY`, `PRINTIFY_SHOP_ID`.
 - A human/authorized operator is still required for first `workflow_dispatch` execution evidence.
 - Some local environments still cannot run full billing collections due missing `stripe` dependency.
+- Mainline convergence is frozen until `/mnt/d/Users/Bear/Documents/GitHub/PODPusher` frees `main` and the active newer-than-main branch `codex/backend-auth-identity` is either folded or explicitly blocked.
 
 ## Cross-Lane Conflict Risks
 

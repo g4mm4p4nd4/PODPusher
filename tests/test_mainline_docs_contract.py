@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 CODEX_WSL_DOC = Path("docs/codex-wsl.md")
+AUTOMATION_CONTROL_DOC = Path("docs/automation_control_plane.md")
 SOURCE_OF_TRUTH_DOC = Path("docs/source_of_truth_integration.md")
 STATUS_DOC = Path("status.md")
 
@@ -26,3 +27,14 @@ def test_status_requires_explicit_terminal_mainline_disposition() -> None:
     assert "preserved on a named tracked branch with branch name and `HEAD` SHA reported" in status
     assert "blocked with branch name or detached `HEAD` SHA plus a concrete reason" in status
     assert "`origin-reconcile` may only no-op" in status
+
+
+def test_automation_control_doc_captures_freeze_resume_contract() -> None:
+    content = AUTOMATION_CONTROL_DOC.read_text(encoding="utf-8")
+
+    assert "FROZEN" in content
+    assert "mainline-audit --json" in content
+    assert "structured stop record" in content
+    assert "Pause every active PODPusher runner" in content
+    assert "mainline-sweep --verify" in content
+    assert "origin-reconcile" in content
