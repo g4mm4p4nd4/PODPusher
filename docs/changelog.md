@@ -1,7 +1,9 @@
 # Changelog
 
 ## Unreleased
-- Froze the active PODPusher automation runners, captured the current mainline deadlock in `docs/automation_control_plane.md`, and refreshed the live mainline/status docs from `mainline-audit`.
+- Refreshed the mainline control-plane docs from the live git state, cleared the obsolete freeze snapshot, and optimized `mainline-audit` to avoid scanning every worktree status on each run.
+- Added `planning.md` as the root-level mainline recovery backlog so the control-plane remediation work is tracked in one executable place.
+- Froze the active PODPusher automation runners, captured the then-current mainline deadlock in `docs/automation_control_plane.md`, and refreshed the live mainline/status docs from `mainline-audit`.
 - Added a fail-closed `./scripts/codex_wsl_tasks.sh mainline-verify` command so `origin-reconcile` can validate backend, frontend, build, migrations, and Playwright gates before pushing `main`.
 - Documented the continuous local-main automation flow and updated the WSL migration helper to preserve commit traceability during mainline folding.
 - Added repo-owned `branch-gate`, `mainline-audit`, `mainline-sweep`, and `origin-reconcile` commands so automations can enforce tracked-branch handoff, consume newer-than-main drift, and refuse false no-op reconciliation.

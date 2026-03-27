@@ -11,13 +11,12 @@ This file tracks current delivery state and detached-worktree triage outcomes. L
 - Rule: exactly one active slice per lane, no parallel slice expansion.
 - Current lane order: `backend -> frontend -> platform-qa -> integrations`.
 
-## Automation Control Freeze
+## Automation Control State
 
-- State: `FROZEN`.
+- State: `ACTIVE`.
 - Governing doc: [docs/automation_control_plane.md](docs/automation_control_plane.md)
-- Live blockers: `main` is checked out in `/mnt/d/Users/Bear/Documents/GitHub/PODPusher`; the active newer-than-main branch is `codex/backend-auth-identity` at `151e5301a96289bb21f78d623a56291fd7621a1d`.
-- Paused runners: `origin-reconcile`, `podpusher-backend-lane`, `podpusher-cleanup`, `podpusher-coordinator`, `podpusher-mainline-sweep`.
-- Already paused runners: `podpusher-frontend-lane`, `podpusher-integrations-lane`, `podpusher-platform-qa-lane`, `skill-progression-map`, `create-tmp-probe1-txt-with-the-text-ok1-and-stop`.
+- Live state: `main` and `origin/main` both point at `0b7f99a`; the canonical integration worktree is `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`.
+- Backlog branches still awaiting deliberate triage: `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`, `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`.
 - Resume order: `podpusher-mainline-sweep`, `origin-reconcile`, `podpusher-coordinator`, `podpusher-backend-lane`, `podpusher-frontend-lane`, `podpusher-platform-qa-lane`, `podpusher-integrations-lane`, `podpusher-cleanup`.
 
 ## Lane Assignments
@@ -42,13 +41,12 @@ Consolidation rules applied:
 
 ## Mainline Convergence Snapshot
 
-- Live audit baseline: `mainline-audit --json` on March 27, 2026.
-- Active newer-than-main merge candidate: `codex/backend-auth-identity` at `151e5301a96289bb21f78d623a56291fd7621a1d`.
-  - This bundle captures the explicit malformed auth-header handling fix and remains blocked because the primary repo still has `main` checked out.
-- Older unmerged replay lines that still require deliberate manual triage after the active bundle:
+- Live audit baseline: `mainline-audit --json` on March 27, 2026 now reports clean mainline convergence.
+- Active newer-than-main merge candidate: none.
+- Older unmerged replay lines that still require deliberate manual triage:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
-- Terminal rule: `origin-reconcile` may only report success when `mainline-audit` shows no newer-than-main branch/worktree drift outside `main` and the control plane has been resumed.
+- Terminal rule: `origin-reconcile` may report success when the canonical integration worktree is clean and the sweep/reconcile ladder has completed against the current `main`.
 
 ## Staging Flash-Stop Review Outcome
 

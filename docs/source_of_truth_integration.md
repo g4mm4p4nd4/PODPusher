@@ -16,10 +16,11 @@ PODPusher also operates a continuous local-main flow for Codex automations:
 3. `./scripts/codex_wsl_tasks.sh mainline-sweep --verify` folds top-level newer-than-main tracked branches into local `main`
 4. `./scripts/codex_wsl_tasks.sh origin-reconcile` fetches `origin`, refuses a no-op exit while newer-than-main drift still exists, runs `./scripts/codex_wsl_tasks.sh mainline-verify`, and only then fast-forward pushes local `main` to `origin/main`
 
-The shared freeze/resume contract for that flow lives in
+The shared state/resume contract for that flow lives in
 [docs/automation_control_plane.md](./automation_control_plane.md). When that
-document says `FROZEN`, the active automation set stays paused and does not
-retry the same blocker.
+document says `ACTIVE`, work-producing automations may proceed. If it reports
+drift or a checkout conflict, pause the active set until the live audit is
+clean.
 
 This mode exists to keep GitHub synchronized without squash merges. Commit
 storytelling must remain intact: prefer preserving original commits with
@@ -217,15 +218,16 @@ disallowed.
 
 ## Current Repository Snapshot
 
-The live `mainline-audit --json` snapshot at the time of the freeze reports:
+The live `mainline-audit --json` snapshot now reports:
 
-- local `main` at `e380c72891370bd6d1e7a17b51c908d451572ac3`
-- `main` checked out elsewhere at `/mnt/d/Users/Bear/Documents/GitHub/PODPusher`
-- active newer-than-main tracked branch:
-  `codex/backend-auth-identity` at `151e5301a96289bb21f78d623a56291fd7621a1d`
+- local `main` at `0b7f99a...`
+- `origin/main` at the same commit
+- `main` checked out in the canonical integration worktree at
+  `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`
+- active newer-than-main tracked branches: none
 - older unmerged backlog branches that still require deliberate triage:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
 
-Until the live audit is clean, the control plane remains frozen and
-`origin-reconcile` must not report success.
+The live audit is clean, so `origin-reconcile` may proceed from the canonical
+worktree after the verification ladder passes.

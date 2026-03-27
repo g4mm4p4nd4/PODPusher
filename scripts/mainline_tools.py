@@ -157,7 +157,14 @@ def dirty_entries_for(
     return dirty
 
 
-def parse_worktrees(repo_root: Path, allowed_untracked: Iterable[str]) -> list[WorktreeState]:
+def parse_worktrees(
+    repo_root: Path,
+    allowed_untracked: Iterable[str],
+    dirty_paths: Iterable[Path] | None = None,
+) -> list[WorktreeState]:
+    # Scanning every worktree status is expensive on this repo. Restrict the
+    # dirt check to the paths we actually need for audit and gate decisions.
+    dirty_targets = {Path(path) for path in dirty_paths} if dirty_paths is not None else {repo_root}
     output = git(repo_root, "worktree", "list", "--porcelain").stdout.splitlines()
     records: list[dict[str, str | bool]] = []
     current: dict[str, str | bool] = {}
@@ -184,9 +191,13 @@ def parse_worktrees(repo_root: Path, allowed_untracked: Iterable[str]) -> list[W
                 path=str(worktree_path),
                 head=str(record["HEAD"]),
                 branch=branch_name,
-                dirty=dirty_entries_for(
-                    worktree_path,
-                    allowed_untracked=allowed_untracked,
+                dirty=(
+                    dirty_entries_for(
+                        worktree_path,
+                        allowed_untracked=allowed_untracked,
+                    )
+                    if worktree_path in dirty_targets
+                    else []
                 ),
             )
         )
@@ -293,7 +304,11 @@ def build_audit(
     current_ref = current_branch(current_root)
     main_sha = git(current_root, "rev-parse", main_branch).stdout.strip()
     main_epoch = commit_epoch(current_root, main_branch)
-    worktrees = parse_worktrees(current_root, allowed_untracked)
+    worktrees = parse_worktrees(
+        current_root,
+        allowed_untracked,
+        dirty_paths={current_root},
+    )
     branches = collect_branches(
         current_root,
         main_branch=main_branch,

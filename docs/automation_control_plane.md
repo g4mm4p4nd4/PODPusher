@@ -1,53 +1,37 @@
-# Automation Control Plane Freeze
+# Automation Control Plane
 
 ## Purpose
 
-This document is the single freeze/resume contract for PODPusher Codex automations.
-It captures the live blocked state, the stop-record payload, and the conditions
+This document is the single state/resume contract for PODPusher Codex automations.
+It captures the live mainline state, the stop-record payload, and the conditions
 required before any runner resumes.
 
 ## Current Live State
 
 At the time of this update, `mainline-audit --json` reports:
 
-- State: `FROZEN`
-- local `main` at `e380c72891370bd6d1e7a17b51c908d451572ac3`
-- `main` checked out elsewhere at `/mnt/d/Users/Bear/Documents/GitHub/PODPusher`
-- active newer-than-main drift: `codex/backend-auth-identity` at
-  `151e5301a96289bb21f78d623a56291fd7621a1d`
+- State: `ACTIVE`
+- local `main` at `0b7f99a...`
+- `origin/main` matches local `main`
+- canonical integration worktree: `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`
+- no active newer-than-main drift
 - older unmerged backlog:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
 
-The automation status files were frozen to `PAUSED` for:
+The repo-owned mainline is not frozen. Work-producing automations may proceed
+as long as they keep the live audit clean.
 
-- `origin-reconcile`
-- `podpusher-backend-lane`
-- `podpusher-cleanup`
-- `podpusher-coordinator`
-- `podpusher-mainline-sweep`
+## Operating Rules
 
-Already paused definitions remain paused:
-
-- `podpusher-frontend-lane`
-- `podpusher-integrations-lane`
-- `podpusher-platform-qa-lane`
-- `skill-progression-map`
-- `create-tmp-probe1-txt-with-the-text-ok1-and-stop`
-
-## Freeze Rules
-
-- A frozen run emits one structured stop record and exits instead of retrying the
-  same failure.
+- A run emits one structured stop record and exits instead of retrying the same failure.
 - `mainline-audit --json` is the canonical live source of truth for branch drift,
   detached heads, and `main` checkout conflicts.
 - Keep the guardrails in `scripts/mainline_tools.py` intact; do not weaken
   `require_main_available`, `require_no_active_drift`, or the clean-worktree
   checks.
-- Do not run `mainline-sweep --verify` or `origin-reconcile` while the primary
-  repo has `main` checked out.
-- Do not resume a lane simply because a later retry timed out. Resume only after
-  the live audit is clean.
+- Do not run `mainline-sweep --verify` or `origin-reconcile` from a dirty worktree.
+- Do not retry a blocked run unless the blocker changed or was cleared.
 
 ## Resume Gates
 
@@ -86,10 +70,10 @@ Every blocked run should report:
 ## Operational Prompt
 
 ```text
-Audit all PODPusher automations and treat the current condition as a control-plane deadlock, not a product-code failure.
+Audit all PODPusher automations and treat any future deadlock as a control-plane incident, not a product-code failure.
 
 1. Inventory every runnable automation definition and classify it as ACTIVE, PAUSED, BLOCKED, or READY.
-2. Pause every active PODPusher runner until the mainline is clean and the integration authority is unambiguous.
+2. Pause active runners only when the live mainline audit reports drift or a checkout conflict.
 3. Use `mainline-audit` as the only live source of truth for branch drift, checked-out `main`, and dirty worktrees.
 4. Do not weaken `mainline_tools.py` guardrails; fix the workflow topology instead.
 5. Require a dedicated clean integration worktree and a single lease/lock for `mainline-sweep --verify` and `origin-reconcile`.

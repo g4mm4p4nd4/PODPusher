@@ -12,12 +12,12 @@ Run a four-lane board with exactly one active slice per lane and explicit depend
 3. `platform-qa`
 4. `integrations`
 
-## Automation Control Freeze
+## Automation Control State
 
-The automation layer is frozen until the live mainline audit is clean. Product lane
-assignments below remain the authoritative backlog, but no lane should resume
-while `mainline-audit` still reports active newer-than-main drift or a `main`
-checkout conflict. See [docs/automation_control_plane.md](./automation_control_plane.md)
+The automation layer is active because the live mainline audit is clean. Product
+lane assignments below remain the authoritative backlog, but any future pause
+still depends on `mainline-audit` reporting active newer-than-main drift or a
+`main` checkout conflict. See [docs/automation_control_plane.md](./automation_control_plane.md)
 for the shared resume contract.
 
 Ordering rationale:

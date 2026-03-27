@@ -23,18 +23,19 @@ def test_docs_align_on_repo_owned_convergence_commands() -> None:
 def test_status_requires_explicit_terminal_mainline_disposition() -> None:
     status = STATUS_DOC.read_text(encoding="utf-8")
 
+    assert "State: `ACTIVE`" in status
     assert "merged into local `main` via `mainline-sweep`" in status
     assert "preserved on a named tracked branch with branch name and `HEAD` SHA reported" in status
     assert "blocked with branch name or detached `HEAD` SHA plus a concrete reason" in status
     assert "`origin-reconcile` may only no-op" in status
 
 
-def test_automation_control_doc_captures_freeze_resume_contract() -> None:
+def test_automation_control_doc_captures_live_state_contract() -> None:
     content = AUTOMATION_CONTROL_DOC.read_text(encoding="utf-8")
 
-    assert "FROZEN" in content
+    assert "ACTIVE" in content
     assert "mainline-audit --json" in content
     assert "structured stop record" in content
-    assert "Pause every active PODPusher runner" in content
+    assert "no active newer-than-main drift" in content
     assert "mainline-sweep --verify" in content
     assert "origin-reconcile" in content
