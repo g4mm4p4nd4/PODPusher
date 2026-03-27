@@ -39,3 +39,27 @@ async def test_rate_limit_uses_bearer_authenticated_user(monkeypatch):
     assert third.status_code == 429
     assert third.json()["code"] == "RATE_LIMITED"
     assert third.headers["X-RateLimit-Limit"] == "2"
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_rejects_malformed_authorization_header():
+    app = FastAPI()
+    register_rate_limiting(app)
+
+    @app.get("/limited")
+    async def limited():
+        return {"ok": True}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/limited",
+            headers={
+                "Authorization": "Token malformed",
+                "X-User-Id": "12",
+            },
+        )
+
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "UNAUTHORIZED"
+    assert resp.json()["message"] == "Invalid Authorization header"

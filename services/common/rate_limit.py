@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from .auth import optional_user_id
@@ -119,7 +119,17 @@ def register_rate_limiting(app: FastAPI) -> None:
             return await call_next(request)
 
         # Determine rate limit key and limit
-        user_id = await optional_user_id(request)
+        try:
+            user_id = await optional_user_id(request)
+        except HTTPException as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "code": "UNAUTHORIZED",
+                    "message": str(exc.detail),
+                    "request_id": getattr(request.state, "request_id", ""),
+                },
+            )
         if user_id is not None:
             # Per-user rate limiting based on plan tier
             plan = getattr(request.state, "plan", None) or "free"

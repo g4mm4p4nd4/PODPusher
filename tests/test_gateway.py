@@ -159,6 +159,24 @@ async def test_generate_rejects_invalid_bearer_even_with_user_header():
     assert body["message"] == "Authentication required"
 
 
+@pytest.mark.asyncio
+async def test_generate_rejects_malformed_authorization_header():
+    await init_db()
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/generate",
+            headers={
+                "Authorization": "Token invalid-format",
+                "X-User-Id": "9",
+            },
+        )
+    assert resp.status_code == 401
+    body = resp.json()
+    assert body["code"] == "UNAUTHORIZED"
+    assert body["message"] == "Invalid Authorization header"
+
+
 async def _seed_image_idea(description: str = "cat shirt", category: str = "animals") -> int:
     async with get_session() as session:
         trend = Trend(term="cat", category=category)
