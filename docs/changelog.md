@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Excluded repo-local virtualenv and Node toolchain directories from flake8 so `mainline-verify` no longer linted vendored dependencies.
 - Refreshed the mainline control-plane docs from the live git state, cleared the obsolete freeze snapshot, and optimized `mainline-audit` to avoid scanning every worktree status on each run.
 - Added `planning.md` as the root-level mainline recovery backlog so the control-plane remediation work is tracked in one executable place.
 - Froze the active PODPusher automation runners, captured the then-current mainline deadlock in `docs/automation_control_plane.md`, and refreshed the live mainline/status docs from `mainline-audit`.
