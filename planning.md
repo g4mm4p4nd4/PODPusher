@@ -91,4 +91,3 @@ If any of those fields are missing, the run is not ready for unattended operatio
 4. Run the sweep and reconcile commands from the canonical worktree.
 5. Refresh the status and freeze documents from the live audit output.
 6. Re-enable the paused runners only after the resume gates are met.
-
