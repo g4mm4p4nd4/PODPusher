@@ -11,13 +11,14 @@ required before any runner resumes.
 At the time of this update, `mainline-audit --json` reports:
 
 - State: `ACTIVE`
-- local `main` at `0b7f99a...`
+- local `main` at `1d3ed67...`
 - `origin/main` matches local `main`
-- canonical integration worktree: `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`
+- canonical integration worktree: `/mnt/d/Users/Bear/.codex-data/worktrees/c0b6/PODPusher`
 - no active newer-than-main drift
 - older unmerged backlog:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
+- always-on watchdog: `podpusher-mainline-watchdog` runs hourly as a read-only stall detector and opens an inbox note on clean or stalled snapshots.
 
 The repo-owned mainline is not frozen. Work-producing automations may proceed
 as long as they keep the live audit clean.
@@ -27,6 +28,8 @@ as long as they keep the live audit clean.
 - A run emits one structured stop record and exits instead of retrying the same failure.
 - `mainline-audit --json` is the canonical live source of truth for branch drift,
   detached heads, and `main` checkout conflicts.
+- `podpusher-mainline-watchdog` stays ACTIVE as a read-only monitor; it reports
+  stalls and never mutates the repo.
 - Keep the guardrails in `scripts/mainline_tools.py` intact; do not weaken
   `require_main_available`, `require_no_active_drift`, or the clean-worktree
   checks.
@@ -43,6 +46,12 @@ as long as they keep the live audit clean.
 4. `./scripts/codex_wsl_tasks.sh mainline-sweep --verify` succeeds.
 5. `./scripts/codex_wsl_tasks.sh origin-reconcile` succeeds or no-ops only after
    the sweep is green.
+
+## Always-On Monitor
+
+`podpusher-mainline-watchdog` stays ACTIVE at all times and should keep running
+even when merge-oriented lanes are paused. Its job is to surface stalls early,
+not to repair them.
 
 ## Resume Order
 
