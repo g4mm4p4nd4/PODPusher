@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Realigned local `main` with `origin/main` after the project pause, confirmed the quota and image-review slices are already present on main, and refreshed the control-plane docs around the live `3e890f8` baseline with only the two preserved recovery branches left for manual triage.
 - Added an hourly `podpusher-mainline-watchdog` automation and refreshed the automation control-plane snapshot so stalls surface as inbox items instead of going silent.
 - Excluded repo-local virtualenv and Node toolchain directories from flake8 so `mainline-verify` no longer linted vendored dependencies.
 - Refreshed the mainline control-plane docs from the live git state, cleared the obsolete freeze snapshot, and optimized `mainline-audit` to avoid scanning every worktree status on each run.

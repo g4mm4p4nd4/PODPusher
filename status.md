@@ -1,6 +1,6 @@
 # PODPusher Status
 
-Last updated: March 27, 2026 (America/New_York)
+Last updated: April 5, 2026 (America/New_York)
 Maintainer: PODPusher Coordinator (`podpusher-delivery`)
 
 This file tracks current delivery state and detached-worktree triage outcomes. Long-form historical completion logs are intentionally omitted; active execution state is authoritative.
@@ -15,9 +15,9 @@ This file tracks current delivery state and detached-worktree triage outcomes. L
 
 - State: `ACTIVE`.
 - Governing doc: [docs/automation_control_plane.md](docs/automation_control_plane.md)
-- Live state: `main` and `origin/main` both point at `0b7f99a`; the canonical integration worktree is `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`.
+- Live state: local `main` and `origin/main` both point at `3e890f8`; this maintenance checkout remains detached at `e380c72`, so merge-oriented work should resume from a clean `main`-attached worktree rather than the current checkout.
 - Backlog branches still awaiting deliberate triage: `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`, `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`.
-- Resume order: `podpusher-mainline-sweep`, `origin-reconcile`, `podpusher-coordinator`, `podpusher-backend-lane`, `podpusher-frontend-lane`, `podpusher-platform-qa-lane`, `podpusher-integrations-lane`, `podpusher-cleanup`.
+- Resume order: `podpusher-mainline-watchdog`, `podpusher-coordinator`, `podpusher-backend-lane`, `podpusher-frontend-lane`, `podpusher-platform-qa-lane`, `podpusher-integrations-lane`, `podpusher-cleanup`. Run `podpusher-mainline-sweep` and `origin-reconcile` only when new tracked drift appears.
 
 ## Lane Assignments
 
@@ -30,8 +30,8 @@ This file tracks current delivery state and detached-worktree triage outcomes. L
 
 ## Variance Resolution Note
 
-This cycle consolidated planner/status detached variance from worktrees:
-`0550`, `9b4d`, `94f0`, `72c3`, `1897`, `8696`, `5188`, `4808`.
+This cycle refreshed the control-plane docs after a one-week shutdown and
+realigned the local `main` ref with `origin/main` before lane work resumes.
 
 Consolidation rules applied:
 - Preferred latest concrete lane ownership + boundaries + verification commands.
@@ -41,8 +41,9 @@ Consolidation rules applied:
 
 ## Mainline Convergence Snapshot
 
-- Live audit baseline: `mainline-audit --json` on March 27, 2026 now reports clean mainline convergence.
+- Live audit baseline: `mainline-audit --json` on April 5, 2026 reports local `main` and `origin/main` both at `3e890f8`.
 - Active newer-than-main merge candidate: none.
+- Detached archival worktrees already sitting on `3e890f8` are duplicate baseline copies, not promotable drift.
 - Older unmerged replay lines that still require deliberate manual triage:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`

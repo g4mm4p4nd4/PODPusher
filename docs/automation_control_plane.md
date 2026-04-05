@@ -11,17 +11,20 @@ required before any runner resumes.
 At the time of this update, `mainline-audit --json` reports:
 
 - State: `ACTIVE`
-- local `main` at `1d3ed67...`
+- local `main` at `3e890f8...`
 - `origin/main` matches local `main`
-- canonical integration worktree: `/mnt/d/Users/Bear/.codex-data/worktrees/c0b6/PODPusher`
 - no active newer-than-main drift
+- detached archival worktrees already at `3e890f8...` exist, but they are
+  duplicate baseline copies rather than promotable drift
+- this maintenance checkout remains detached at `e380c72...`, so it is not the
+  canonical integration worktree
 - older unmerged backlog:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
 - always-on watchdog: `podpusher-mainline-watchdog` runs hourly as a read-only stall detector and opens an inbox note on clean or stalled snapshots.
 
 The repo-owned mainline is not frozen. Work-producing automations may proceed
-as long as they keep the live audit clean.
+once they start from a clean attached worktree and keep the live audit clean.
 
 ## Operating Rules
 
@@ -40,8 +43,8 @@ as long as they keep the live audit clean.
 
 1. `./scripts/codex_wsl_tasks.sh mainline-audit --json` shows no active
    newer-than-main drift and no `main` checkout conflict.
-2. The intended integration worktree is clean and attached to a named `codex/*`
-   branch.
+2. The intended integration worktree is clean and attached to `main` or a
+   named `codex/*` branch.
 3. `./scripts/codex_wsl_tasks.sh branch-gate` passes from that worktree.
 4. `./scripts/codex_wsl_tasks.sh mainline-sweep --verify` succeeds.
 5. `./scripts/codex_wsl_tasks.sh origin-reconcile` succeeds or no-ops only after
@@ -55,14 +58,14 @@ not to repair them.
 
 ## Resume Order
 
-1. `podpusher-mainline-sweep`
-2. `origin-reconcile`
-3. `podpusher-coordinator`
-4. `podpusher-backend-lane`
-5. `podpusher-frontend-lane`
-6. `podpusher-platform-qa-lane`
-7. `podpusher-integrations-lane`
-8. `podpusher-cleanup`
+1. `podpusher-mainline-watchdog`
+2. `podpusher-coordinator`
+3. `podpusher-backend-lane`
+4. `podpusher-frontend-lane`
+5. `podpusher-platform-qa-lane`
+6. `podpusher-integrations-lane`
+7. `podpusher-cleanup`
+8. `podpusher-mainline-sweep` / `origin-reconcile` on demand when new tracked drift appears
 
 ## Structured Stop Record
 
@@ -86,7 +89,7 @@ Audit all PODPusher automations and treat any future deadlock as a control-plane
 3. Use `mainline-audit` as the only live source of truth for branch drift, checked-out `main`, and dirty worktrees.
 4. Do not weaken `mainline_tools.py` guardrails; fix the workflow topology instead.
 5. Require a dedicated clean integration worktree and a single lease/lock for `mainline-sweep --verify` and `origin-reconcile`.
-6. Resume work-producing automations only after the active newer-than-main branch is folded and verified.
+6. Resume work-producing automations only after the active newer-than-main branch is folded and verified, or immediately when the audit already reports a clean mainline.
 7. Report every run with one structured record: automation id, timestamp, branch, HEAD SHA, blocker, next owner action, and resume eligibility.
 8. Keep backlog branches and scratch worktrees out of the active sweep path; triage them separately after the active drift is resolved.
 9. Optimize for throughput by preventing retry loops, reducing duplicate runs, and making the coordinator the only resume authority.

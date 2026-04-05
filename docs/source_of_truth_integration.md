@@ -220,14 +220,18 @@ disallowed.
 
 The live `mainline-audit --json` snapshot now reports:
 
-- local `main` at `0b7f99a...`
+- local `main` at `3e890f8...`
 - `origin/main` at the same commit
-- `main` checked out in the canonical integration worktree at
-  `/mnt/d/Users/Bear/.codex-data/worktrees/dd0c/PODPusher`
 - active newer-than-main tracked branches: none
+- detached archival worktrees already at `3e890f8...` are duplicate baseline
+  copies rather than promotable drift
+- this maintenance checkout at `/mnt/d/Users/Bear/Documents/GitHub/PODPusher`
+  remains detached at `e380c72...` and should not be used for
+  `mainline-sweep --verify` or `origin-reconcile`
 - older unmerged backlog branches that still require deliberate triage:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
 
-The live audit is clean, so `origin-reconcile` may proceed from the canonical
-worktree after the verification ladder passes.
+The live audit is clean enough to restart the control plane, but merge-oriented
+work should resume from a clean checkout attached to `main` or a named
+`codex/*` branch after the verification ladder passes.

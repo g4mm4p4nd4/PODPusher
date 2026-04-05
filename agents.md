@@ -301,13 +301,13 @@ A feature or pull request is DONE when:
 
 ## 19 | Status & Next Steps
 
-- **Pending pull requests:** new PRs from Codex for user quota features and the image review & tagging feature await review and merge.
-- **Backend_Coder:** integrate real Printify and Etsy APIs by replacing stubs in `services/integration/service.py`; implement the social media generator service; enhance analytics endpoints to return real metrics; remove placeholder code once integrations pass tests.
-- **Frontend_Coder:** finalise UI components for user quota display, the image review & rating tool, listing composer enhancements, social media generator, and analytics dashboard improvements.
-- **Integrations_Engineer:** build Printify, Etsy (with OAuth flow), and Stripe billing integrations with robust authentication and error handling.
-- **QA:** expand unit, integration and e2e tests to cover all new features and verify system performance and reliability.
-- **Docs_Writer:** update `/docs/internal_docs.md` with the latest architecture and features, and document new services.
-- **Additional improvements:** add structured logging, health checks and metrics across services, finalise listing composer updates, and remove all stubs after testing completes.
+- **Pending pull requests:** no active local merge candidates remain for the historical quota or image-review slices; both are already present on main. The only preserved manual-triage backlog is `codex/recovery-snapshot-20260325` and `codex/recovery-local-recreate-pr70-20260326`.
+- **Backend_Coder:** resume with the auth-derived identity hardening slice and keep integration stub reduction behind the existing verification gates.
+- **Frontend_Coder:** resume by removing remaining default internal-user fallback behavior in shared transport and settings/oauth flows.
+- **Integrations_Engineer:** prepare one credential-backed staging smoke run once Platform-QA confirms workflow contract and secrets ownership.
+- **QA:** keep backend auth/quota coverage green, then re-run staging smoke contract and integration suites as external blockers clear.
+- **Docs_Writer:** keep `status.md`, `planning.md`, and the control-plane docs synced to the live audit; update `/docs/internal_docs.md` only when service behavior changes.
+- **Additional improvements:** designate one clean `main`-attached integration worktree, archive or replay the preserved recovery branches deliberately, and avoid starting new work from detached maintenance checkouts.
 
 ---
 

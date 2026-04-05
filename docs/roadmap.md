@@ -1,6 +1,6 @@
 # PODPusher Delivery Roadmap
 
-Last updated: March 27, 2026 (America/New_York)
+Last updated: April 5, 2026 (America/New_York)
 Owner: PODPusher Coordinator (`podpusher-delivery`)
 
 ## Coordination Objective
@@ -14,11 +14,13 @@ Run a four-lane board with exactly one active slice per lane and explicit depend
 
 ## Automation Control State
 
-The automation layer is active because the live mainline audit is clean. Product
-lane assignments below remain the authoritative backlog, but any future pause
-still depends on `mainline-audit` reporting active newer-than-main drift or a
-`main` checkout conflict. See [docs/automation_control_plane.md](./automation_control_plane.md)
-for the shared resume contract.
+The automation layer is restart-ready because local `main` now matches
+`origin/main` at `3e890f8`. Product lane assignments below remain the
+authoritative backlog. The remaining control-plane work is housekeeping:
+reattach one clean integration worktree to `main`, keep the watchdog active,
+and triage the two preserved recovery branches outside the sweep path. See
+[docs/automation_control_plane.md](./automation_control_plane.md) for the shared
+resume contract.
 
 Ordering rationale:
 - Backend auth/identity behavior must stay stable before frontend removes any remaining fallback assumptions.
@@ -39,10 +41,11 @@ Ordering rationale:
 - Staging smoke still requires confirmed ownership for repository secrets: `OPENAI_API_KEY`, `ETSY_CLIENT_ID`, `ETSY_ACCESS_TOKEN`, `ETSY_SHOP_ID`, `PRINTIFY_API_KEY`, `PRINTIFY_SHOP_ID`.
 - A human/authorized operator is still required for first `workflow_dispatch` execution evidence.
 - Some local environments still cannot run full billing collections due missing `stripe` dependency.
-- Mainline convergence is frozen until `/mnt/d/Users/Bear/Documents/GitHub/PODPusher` frees `main` and the active newer-than-main branch `codex/backend-auth-identity` is either folded or explicitly blocked.
+- Mainline drift is no longer the blocker: local `main` now matches `origin/main` at `3e890f8`, but merge-oriented work must resume from a clean `main`-attached worktree instead of a detached maintenance checkout.
 
 ## Cross-Lane Conflict Risks
 
 - Parallel backend/frontend edits in auth identity paths can reintroduce inconsistent fallback behavior.
 - Parallel integrations/platform-qa edits can drift smoke workflow, docs, and test contract expectations.
 - Detached worktree planner updates can silently diverge from mainline docs unless consolidated each sweep.
+- Restarting work from an older detached checkout can resurrect pre-main history; use `main` or a named `codex/*` branch only.
