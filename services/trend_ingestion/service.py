@@ -6,8 +6,10 @@ import re
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Sequence
+from uuid import uuid4
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -18,6 +20,11 @@ from ..common.database import get_session
 from ..common.observability import Counter, Histogram
 from ..models import TrendSignal
 from .circuit_breaker import scraper_circuit_breaker
+from .scrapegraph_adapter import (
+    PublicOnlyConfigError,
+    scrape_with_scrapegraph,
+    validate_public_only_config,
+)
 from .sources import PLATFORM_CONFIG, SourceConfig, SelectorSet
 
 logger = logging.getLogger(__name__)
@@ -37,6 +44,21 @@ SCRAPE_KEYWORDS = Counter(
     "Total keywords extracted per platform",
     labelnames=("platform",),
 )
+SCRAPE_METHOD_TOTAL = Counter(
+    "pod_scrape_method_total",
+    "Scrape attempts by platform, extraction method, and outcome",
+    labelnames=("platform", "method", "outcome"),
+)
+SCRAPE_FALLBACK_TOTAL = Counter(
+    "pod_scrape_fallback_total",
+    "Scrape fallback transitions by platform and extraction method",
+    labelnames=("platform", "from_method", "to_method"),
+)
+SCRAPE_PERSISTED = Counter(
+    "pod_scrape_persisted_total",
+    "Trend signals persisted by source",
+    labelnames=("source",),
+)
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
@@ -51,10 +73,24 @@ SCRAPE_INTERVAL_HOURS = int(os.getenv("SCRAPE_INTERVAL_HOURS", "6"))
 PLAYWRIGHT_PROXY = os.getenv("PLAYWRIGHT_PROXY")
 TOP_K = int(os.getenv("TREND_INGESTION_TOP_K", "5"))
 SCRAPER_TIMEOUT_MS = int(os.getenv("TREND_INGESTION_TIMEOUT_MS", "15000"))
-STUB_ONLY = os.getenv("TREND_INGESTION_STUB", "1").lower() in {"1", "true", "yes"}
+STUB_ONLY = os.getenv("TREND_INGESTION_STUB", "0").lower() in {"1", "true", "yes"}
 TREND_RSS_URL = os.getenv("TREND_INGESTION_RSS_URL", "https://trends.google.com/trending/rss?geo=US")
 DEFAULT_LOOKBACK_HOURS = int(os.getenv("TREND_INGESTION_LOOKBACK_HOURS", "72"))
 MAX_LIVE_TRENDS_PER_GROUP = int(os.getenv("TREND_INGESTION_MAX_LIVE_PER_GROUP", "50"))
+RANDOM_SEED = os.getenv("TREND_INGESTION_RANDOM_SEED")
+
+
+@dataclass(frozen=True)
+class ScrapeProfile:
+    user_agent: str
+    viewport_width: int
+    viewport_height: int
+    locale: str
+    timezone_id: str
+    scroll_iterations: int
+    scroll_pixels: int
+    delay_ms: int
+
 
 scheduler = AsyncIOScheduler()
 
@@ -64,8 +100,13 @@ _refresh_status: Dict[str, Any] = {
     "last_mode": "idle",
     "sources_succeeded": [],
     "sources_failed": {},
+    "source_methods": {},
+    "sources_skipped": [],
     "signals_collected": 0,
     "signals_persisted": 0,
+    "failed_count": 0,
+    "fallback_count": 0,
+    "skipped_count": 0,
 }
 
 
@@ -128,9 +169,46 @@ def get_refresh_status() -> Dict[str, Any]:
         "last_mode": _refresh_status.get("last_mode", "idle"),
         "sources_succeeded": list(_refresh_status.get("sources_succeeded", [])),
         "sources_failed": dict(_refresh_status.get("sources_failed", {})),
+        "source_methods": dict(_refresh_status.get("source_methods", {})),
+        "sources_skipped": list(_refresh_status.get("sources_skipped", [])),
         "signals_collected": int(_refresh_status.get("signals_collected", 0)),
         "signals_persisted": int(_refresh_status.get("signals_persisted", 0)),
+        "failed_count": int(_refresh_status.get("failed_count", 0)),
+        "fallback_count": int(_refresh_status.get("fallback_count", 0)),
+        "skipped_count": int(_refresh_status.get("skipped_count", 0)),
     }
+
+
+def _new_rng() -> random.Random:
+    if RANDOM_SEED is None:
+        return random.Random()
+    try:
+        seed: int | str = int(RANDOM_SEED)
+    except ValueError:
+        seed = RANDOM_SEED
+    return random.Random(seed)
+
+
+def build_scrape_plan(source_names: Sequence[str] | None = None, rng: random.Random | None = None) -> List[str]:
+    names = list(source_names or PLATFORM_CONFIG.keys())
+    active_rng = rng or _new_rng()
+    active_rng.shuffle(names)
+    return names
+
+
+def build_scrape_profile(config: SourceConfig, rng: random.Random | None = None) -> ScrapeProfile:
+    active_rng = rng or _new_rng()
+    configured_scrolls = int(getattr(config, "scroll_iterations", 0) or 0)
+    return ScrapeProfile(
+        user_agent=active_rng.choice(USER_AGENTS),
+        viewport_width=active_rng.randint(1200, 1600),
+        viewport_height=active_rng.randint(720, 1000),
+        locale=active_rng.choice(["en-US", "en-GB"]),
+        timezone_id=active_rng.choice(["America/New_York", "America/Chicago", "America/Los_Angeles"]),
+        scroll_iterations=max(0, configured_scrolls + active_rng.randint(0, 1)),
+        scroll_pixels=active_rng.randint(1600, 2800),
+        delay_ms=active_rng.randint(250, 1250),
+    )
 
 
 async def _first_text(handle, selectors: Sequence[str]) -> str:
@@ -198,22 +276,36 @@ async def _collect_items(page, selectors: SelectorSet) -> List[Any]:
     return collected
 
 
-async def _scrape_source(playwright, name: str, config: SourceConfig) -> List[Dict[str, Any]]:
-    ua = random.choice(USER_AGENTS)
+async def _scrape_source(
+    playwright,
+    name: str,
+    config: SourceConfig,
+    profile: ScrapeProfile | None = None,
+) -> List[Dict[str, Any]]:
+    active_profile = profile or build_scrape_profile(config)
     proxy_settings = {"server": PLAYWRIGHT_PROXY} if PLAYWRIGHT_PROXY else None
     browser = await playwright.chromium.launch(headless=True, proxy=proxy_settings)
-    context = await browser.new_context(user_agent=ua)
+    context = await browser.new_context(
+        user_agent=active_profile.user_agent,
+        viewport={
+            "width": active_profile.viewport_width,
+            "height": active_profile.viewport_height,
+        },
+        locale=active_profile.locale,
+        timezone_id=active_profile.timezone_id,
+    )
     page = await context.new_page()
     results: List[Dict[str, Any]] = []
     try:
+        await page.wait_for_timeout(active_profile.delay_ms)
         await page.goto(config.url, wait_until="networkidle", timeout=SCRAPER_TIMEOUT_MS)
         try:
             await page.wait_for_selector(config.wait_for_selector, timeout=SCRAPER_TIMEOUT_MS)
         except Exception:
             pass
-        for _ in range(config.scroll_iterations):
-            await page.mouse.wheel(0, 2400)
-            await page.wait_for_timeout(1000)
+        for _ in range(active_profile.scroll_iterations):
+            await page.mouse.wheel(0, active_profile.scroll_pixels)
+            await page.wait_for_timeout(active_profile.delay_ms)
         items = await _collect_items(page, config.selectors)
         for handle in items[: TOP_K * 2]:
             title = await _first_text(handle, config.selectors.title)
@@ -243,15 +335,37 @@ async def _scrape_source(playwright, name: str, config: SourceConfig) -> List[Di
     return results
 
 
-async def _scrape_with_circuit_breaker(playwright, name: str, config: SourceConfig) -> List[Dict[str, Any]]:
+async def _call_selector_scraper(
+    playwright,
+    name: str,
+    config: SourceConfig,
+    profile: ScrapeProfile,
+) -> List[Dict[str, Any]]:
+    try:
+        return await _scrape_source(playwright, name, config, profile)
+    except TypeError as exc:
+        # Some tests monkeypatch _scrape_source with the older 3-argument shape.
+        if "argument" not in str(exc) and "positional" not in str(exc):
+            raise
+        return await _scrape_source(playwright, name, config)  # type: ignore[misc]
+
+
+async def _scrape_with_circuit_breaker(
+    playwright,
+    name: str,
+    config: SourceConfig,
+    profile: ScrapeProfile | None = None,
+) -> List[Dict[str, Any]]:
     """Scrape a single source and record scrape metrics."""
+    active_profile = profile or build_scrape_profile(config)
     started = time.monotonic()
     try:
-        results = await _scrape_source(playwright, name, config)
+        results = await _call_selector_scraper(playwright, name, config, active_profile)
     except Exception as exc:
         duration = time.monotonic() - started
         SCRAPE_DURATION.labels(name).observe(duration)
         SCRAPE_TOTAL.labels(name, "failure").inc()
+        SCRAPE_METHOD_TOTAL.labels(name, "selector_fallback", "failure").inc()
         logger.error("Scrape failed for %s after %.1fs: %s", name, duration, exc)
         raise
 
@@ -259,11 +373,79 @@ async def _scrape_with_circuit_breaker(playwright, name: str, config: SourceConf
     SCRAPE_DURATION.labels(name).observe(duration)
     if results:
         SCRAPE_TOTAL.labels(name, "success").inc()
+        SCRAPE_METHOD_TOTAL.labels(name, "selector_fallback", "success").inc()
         SCRAPE_KEYWORDS.labels(name).inc(len(results))
         logger.info("Scraped %s: %d results in %.1fs", name, len(results), duration)
     else:
         logger.warning("Scrape returned no results for %s after %.1fs", name, duration)
     return results
+
+
+async def _scrape_with_scrapegraph_method(
+    name: str,
+    config: SourceConfig,
+    run_id: str,
+) -> List[Dict[str, Any]]:
+    started = time.monotonic()
+    try:
+        results = await scrape_with_scrapegraph(name, config)
+    except Exception as exc:
+        duration = time.monotonic() - started
+        SCRAPE_DURATION.labels(name).observe(duration)
+        SCRAPE_METHOD_TOTAL.labels(name, "scrapegraph", "failure").inc()
+        logger.info(
+            "ScrapeGraphAI failed source=%s run_id=%s duration=%.1fs error=%s",
+            name,
+            run_id,
+            duration,
+            exc,
+        )
+        raise
+
+    duration = time.monotonic() - started
+    SCRAPE_DURATION.labels(name).observe(duration)
+    if results:
+        SCRAPE_METHOD_TOTAL.labels(name, "scrapegraph", "success").inc()
+        SCRAPE_TOTAL.labels(name, "success").inc()
+        SCRAPE_KEYWORDS.labels(name).inc(len(results))
+        logger.info(
+            "ScrapeGraphAI scraped source=%s run_id=%s count=%d duration=%.1fs",
+            name,
+            run_id,
+            len(results),
+            duration,
+        )
+    return results
+
+
+async def _scrape_source_chain(
+    playwright,
+    name: str,
+    config: SourceConfig,
+    profile: ScrapeProfile,
+    run_id: str,
+) -> tuple[List[Dict[str, Any]], str | None, str | None]:
+    scrapegraph_error: str | None = None
+    try:
+        results = await _scrape_with_scrapegraph_method(name, config, run_id)
+        if results:
+            return results, "scrapegraph", None
+        scrapegraph_error = "No ScrapeGraphAI trend items collected"
+    except Exception as exc:
+        scrapegraph_error = str(exc)
+
+    SCRAPE_FALLBACK_TOTAL.labels(name, "scrapegraph", "selector_fallback").inc()
+    try:
+        selector_results = await _scrape_with_circuit_breaker(playwright, name, config, profile)
+        if selector_results:
+            for result in selector_results:
+                result.setdefault("method", "selector_fallback")
+            return selector_results, "selector_fallback", scrapegraph_error
+        return [], None, "No selector trend items collected"
+    except Exception as exc:
+        if scrapegraph_error:
+            return [], None, f"scrapegraph: {scrapegraph_error}; selector_fallback: {exc}"
+        return [], None, str(exc)
 
 
 def _extract_rss_signals(xml_text: str) -> List[Dict[str, Any]]:
@@ -303,55 +485,93 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "mode": "stub",
             "sources_succeeded": ["stub_seed"],
             "sources_failed": {},
+            "source_methods": {"stub_seed": "stub"},
+            "sources_skipped": [],
+            "fallback_count": 0,
+            "failed_count": 0,
+            "skipped_count": 0,
         }
 
+    validate_public_only_config()
+    run_id = uuid4().hex[:12]
+    rng = _new_rng()
     aggregated: List[Dict[str, Any]] = []
     sources_succeeded: List[str] = []
     sources_failed: Dict[str, str] = {}
+    source_methods: Dict[str, str] = {}
+    sources_skipped: List[str] = []
     allowed_source_names: List[str] = []
+    fallback_count = 0
 
     try:
         async with async_playwright() as pw:
             tasks = []
-            for name, config in PLATFORM_CONFIG.items():
+            for name in build_scrape_plan(rng=rng):
+                config = PLATFORM_CONFIG[name]
                 if not scraper_circuit_breaker.allow_request(name):
                     logger.warning("Circuit breaker OPEN for %s - skipping scrape", name)
                     SCRAPE_TOTAL.labels(name, "circuit_open").inc()
+                    SCRAPE_METHOD_TOTAL.labels(name, "circuit", "skipped").inc()
                     sources_failed[name] = "Circuit breaker open"
+                    source_methods[name] = "failed"
+                    sources_skipped.append(name)
                     continue
                 allowed_source_names.append(name)
-                tasks.append(_scrape_with_circuit_breaker(pw, name, config))
+                profile = build_scrape_profile(config, rng)
+                tasks.append(_scrape_source_chain(pw, name, config, profile, run_id))
             results = await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+    except PublicOnlyConfigError:
+        raise
     except Exception as exc:
         for name in allowed_source_names:
             scraper_circuit_breaker.record_failure(name)
         sources_failed["playwright"] = str(exc)
+        source_methods["playwright"] = "failed"
         logger.warning("Playwright trend collection failed: %s", exc)
     else:
         for name, result in zip(allowed_source_names, results):
             if isinstance(result, Exception):
                 scraper_circuit_breaker.record_failure(name)
                 sources_failed[name] = str(result)
+                source_methods[name] = "failed"
                 logger.warning("Trend scrape failed for %s: %s", name, result)
                 continue
-            if result:
+            source_results, method, upstream_error = result
+            if upstream_error:
+                fallback_count += 1
+            if source_results and method:
                 scraper_circuit_breaker.record_success(name)
-                aggregated.extend(result)
+                aggregated.extend(source_results)
                 sources_succeeded.append(name)
+                source_methods[name] = method
                 continue
             scraper_circuit_breaker.record_failure(name)
             SCRAPE_TOTAL.labels(name, "failure").inc()
-            sources_failed[name] = "No trend items collected"
+            SCRAPE_METHOD_TOTAL.labels(name, "selector_fallback", "failure").inc()
+            source_methods[name] = "failed"
+            sources_failed[name] = upstream_error or "No trend items collected"
 
     try:
         rss_signals = await _fetch_rss_signals()
         if rss_signals:
+            for signal in rss_signals:
+                signal.setdefault("method", "rss_fallback")
             aggregated.extend(rss_signals)
             sources_succeeded.append("google_trends_rss")
+            source_methods["google_trends_rss"] = "rss_fallback"
+            SCRAPE_TOTAL.labels("google_trends_rss", "success").inc()
+            SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "success").inc()
+            SCRAPE_KEYWORDS.labels("google_trends_rss").inc(len(rss_signals))
+            if any(method == "failed" for method in source_methods.values()):
+                fallback_count += 1
         else:
             sources_failed["google_trends_rss"] = "No RSS trend items collected"
+            source_methods["google_trends_rss"] = "failed"
+            SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
     except Exception as exc:
         sources_failed["google_trends_rss"] = str(exc)
+        source_methods["google_trends_rss"] = "failed"
+        SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
 
     if not aggregated:
         fallback = _stub_signals()
@@ -360,12 +580,22 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "mode": "fallback_stub",
             "sources_succeeded": sources_succeeded,
             "sources_failed": sources_failed,
+            "source_methods": source_methods,
+            "sources_skipped": sources_skipped,
+            "fallback_count": fallback_count,
+            "failed_count": len(sources_failed),
+            "skipped_count": len(sources_skipped),
         }
 
     return aggregated, {
         "mode": "live",
         "sources_succeeded": sources_succeeded,
         "sources_failed": sources_failed,
+        "source_methods": source_methods,
+        "sources_skipped": sources_skipped,
+        "fallback_count": fallback_count,
+        "failed_count": len(sources_failed),
+        "skipped_count": len(sources_skipped),
     }
 
 
@@ -383,8 +613,13 @@ async def refresh_trends() -> Dict[str, Any]:
                 "last_mode": mode,
                 "sources_succeeded": gather_meta.get("sources_succeeded", []),
                 "sources_failed": gather_meta.get("sources_failed", {}),
+                "source_methods": gather_meta.get("source_methods", {}),
+                "sources_skipped": gather_meta.get("sources_skipped", []),
                 "signals_collected": 0,
                 "signals_persisted": 0,
+                "failed_count": gather_meta.get("failed_count", 0),
+                "fallback_count": gather_meta.get("fallback_count", 0),
+                "skipped_count": gather_meta.get("skipped_count", 0),
             }
         )
         return get_refresh_status()
@@ -418,6 +653,7 @@ async def refresh_trends() -> Dict[str, Any]:
                         timestamp=datetime.utcnow(),
                     )
                 )
+                SCRAPE_PERSISTED.labels(signal["source"]).inc()
                 persisted += 1
         await session.commit()
 
@@ -428,8 +664,13 @@ async def refresh_trends() -> Dict[str, Any]:
             "last_mode": mode,
             "sources_succeeded": gather_meta.get("sources_succeeded", []),
             "sources_failed": gather_meta.get("sources_failed", {}),
+            "source_methods": gather_meta.get("source_methods", {}),
+            "sources_skipped": gather_meta.get("sources_skipped", []),
             "signals_collected": len(signals),
             "signals_persisted": persisted,
+            "failed_count": gather_meta.get("failed_count", 0),
+            "fallback_count": gather_meta.get("fallback_count", 0),
+            "skipped_count": gather_meta.get("skipped_count", 0),
         }
     )
     return get_refresh_status()

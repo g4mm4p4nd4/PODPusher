@@ -1,0 +1,17 @@
+.git
+.codex
+.codex-tools
+.codex-venv
+.codex-venv-wsl
+.mypy_cache
+.npm-cache
+.pip-cache
+.playwright-wsl
+.pytest_cache
+.tmp
+__pycache__
+*.pyc
+client/.next
+client/node_modules
+ci_migration.db
+test.db

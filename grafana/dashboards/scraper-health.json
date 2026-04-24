@@ -244,6 +244,54 @@
           }
         }
       }
+    },
+    {
+      "title": "Extraction Method Outcomes",
+      "description": "ScrapeGraphAI, selector fallback, RSS fallback, and skipped/failed outcomes.",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_method_total[5m])",
+          "legendFormat": "{{platform}} - {{method}} - {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        }
+      }
+    },
+    {
+      "title": "Persisted Trend Signals",
+      "description": "Trend signals persisted by source.",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "id": 10,
+      "targets": [
+        {
+          "expr": "rate(pod_scrape_persisted_total[5m])",
+          "legendFormat": "{{source}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50
+          }
+        }
+      }
     }
   ],
   "refresh": "30s",

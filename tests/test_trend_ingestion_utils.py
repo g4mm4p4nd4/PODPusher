@@ -8,11 +8,14 @@ from services.trend_ingestion import service as ingestion_service
 from services.trend_ingestion.circuit_breaker import CircuitBreaker, CircuitState
 from services.trend_ingestion.service import (
     _parse_metric,
+    build_scrape_plan,
+    build_scrape_profile,
     categorize,
     compute_engagement,
     get_live_trends,
     normalize_text,
 )
+from services.trend_ingestion.sources import SourceConfig, SelectorSet
 
 
 def test_normalize_text_removes_emojis_and_stopwords():
@@ -38,6 +41,37 @@ def test_parse_metric_parses_suffixes():
 def test_parse_metric_handles_invalid():
     assert _parse_metric("") == 0
     assert _parse_metric("abc") == 0
+
+
+def test_scrape_plan_and_profile_are_seedable_and_bounded():
+    import random
+
+    rng = random.Random(7)
+    plan = build_scrape_plan(["a", "b", "c"], rng)
+    assert sorted(plan) == ["a", "b", "c"]
+    assert plan != ["a", "b", "c"]
+
+    config = SourceConfig(
+        url="https://example.com",
+        selectors=SelectorSet(
+            item=["article"],
+            title=["h1"],
+            hashtags=["a"],
+            likes=["span"],
+            shares=["span"],
+            comments=["span"],
+        ),
+        wait_for_selector="article",
+        scroll_iterations=2,
+    )
+    profile = build_scrape_profile(config, random.Random(9))
+
+    assert profile.user_agent
+    assert 1200 <= profile.viewport_width <= 1600
+    assert 720 <= profile.viewport_height <= 1000
+    assert profile.scroll_iterations in {2, 3}
+    assert 1600 <= profile.scroll_pixels <= 2800
+    assert 250 <= profile.delay_ms <= 1250
 
 
 @pytest.mark.asyncio
@@ -177,7 +211,7 @@ async def test_gather_trends_records_scrape_failures_into_circuit_breaker(monkey
 
     _signals, metadata = await ingestion_service._gather_trends()
 
-    assert metadata["sources_failed"]["failing"] == "boom"
+    assert "selector_fallback: boom" in metadata["sources_failed"]["failing"]
     assert "healthy" in metadata["sources_succeeded"]
     assert breaker.state("failing") == CircuitState.OPEN
     assert breaker.state("healthy") == CircuitState.CLOSED

@@ -1,78 +1,169 @@
-version: '3.8'
+x-backend-env: &backend-env
+  DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://user:pass@db:5432/pod}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  PLAYWRIGHT_PROXY: ${PLAYWRIGHT_PROXY:-}
+  SCRAPE_INTERVAL_HOURS: ${SCRAPE_INTERVAL_HOURS:-6}
+  TREND_INGESTION_STUB: ${TREND_INGESTION_STUB:-0}
+  TREND_INGESTION_SCRAPEGRAPH: ${TREND_INGESTION_SCRAPEGRAPH:-1}
+  TREND_INGESTION_TOP_K: ${TREND_INGESTION_TOP_K:-5}
+  TREND_INGESTION_TIMEOUT_MS: ${TREND_INGESTION_TIMEOUT_MS:-15000}
+  SCRAPEGRAPH_MODEL: ${SCRAPEGRAPH_MODEL:-ollama/llama3.2}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+  SCRAPEGRAPHAI_TELEMETRY_ENABLED: ${SCRAPEGRAPHAI_TELEMETRY_ENABLED:-false}
+  BILLING_STUB_MODE: ${BILLING_STUB_MODE:-true}
+  OPENAI_USE_STUB: ${OPENAI_USE_STUB:-1}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  PRINTIFY_CLIENT_ID: ${PRINTIFY_CLIENT_ID:-}
+  PRINTIFY_CLIENT_SECRET: ${PRINTIFY_CLIENT_SECRET:-}
+  PRINTIFY_API_KEY: ${PRINTIFY_API_KEY:-}
+  PRINTIFY_SHOP_ID: ${PRINTIFY_SHOP_ID:-}
+  ETSY_CLIENT_ID: ${ETSY_CLIENT_ID:-}
+  ETSY_CLIENT_SECRET: ${ETSY_CLIENT_SECRET:-}
+  ETSY_ACCESS_TOKEN: ${ETSY_ACCESS_TOKEN:-}
+  ETSY_SHOP_ID: ${ETSY_SHOP_ID:-}
+  STRIPE_CLIENT_ID: ${STRIPE_CLIENT_ID:-}
+  STRIPE_CLIENT_SECRET: ${STRIPE_CLIENT_SECRET:-}
+
+x-backend-service: &backend-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    <<: *backend-env
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
 services:
   redis:
     image: redis:7
+    ports:
+      - "6379:6379"
+
   db:
     image: postgres:15
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: pod
-  trend_scraper:
-    build: .
-    command: uvicorn services.trend_scraper.api:app --port 8001 --host 0.0.0.0
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d pod"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+  ollama-pull:
+    image: ollama/ollama:latest
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-  ideation:
-    build: .
-    command: uvicorn services.ideation.api:app --port 8002 --host 0.0.0.0
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-  image_gen:
-    build: .
-    command: uvicorn services.image_gen.api:app --port 8003 --host 0.0.0.0
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-  integration:
-    build: .
-    command: uvicorn services.integration.api:app --port 8004 --host 0.0.0.0
-    environment:
-      - PRINTIFY_CLIENT_ID=${PRINTIFY_CLIENT_ID}
-      - PRINTIFY_CLIENT_SECRET=${PRINTIFY_CLIENT_SECRET}
-      - PRINTIFY_API_KEY=${PRINTIFY_API_KEY}
-      - PRINTIFY_SHOP_ID=${PRINTIFY_SHOP_ID}
-      - ETSY_CLIENT_ID=${ETSY_CLIENT_ID}
-      - ETSY_CLIENT_SECRET=${ETSY_CLIENT_SECRET}
-      - ETSY_ACCESS_TOKEN=${ETSY_ACCESS_TOKEN}
-      - ETSY_SHOP_ID=${ETSY_SHOP_ID}
-  notifications:
-    build: .
-    command: uvicorn services.notifications.api:app --port 8005 --host 0.0.0.0
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-  gateway:
-    build: .
-    command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
-  orchestrator:
-    build: .
-    command: uvicorn services.orchestrator.api:app --port 8006 --host 0.0.0.0
-    environment:
-      - REDIS_URL=${REDIS_URL}
-      - IDEATION_URL=http://ideation:8002
-      - IMAGE_URL=http://image_gen:8003
-      - INTEGRATION_URL=http://integration:8004
-      - NOTIFICATIONS_URL=http://notifications:8005
+      OLLAMA_HOST: http://ollama:11434
+    command: pull llama3.2
     depends_on:
-      - redis
-      - ideation
-      - image_gen
-      - integration
-      - notifications
+      - ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: "no"
+
+  migrate:
+    <<: *backend-service
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  gateway:
+    <<: *backend-service
+    command: uvicorn services.gateway.api:app --port 8000 --host 0.0.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+  trend_ingestion:
+    <<: *backend-service
+    command: uvicorn services.trend_ingestion.api:app --port 8007 --host 0.0.0.0
+    ports:
+      - "8007:8007"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_started
+
+  worker:
+    <<: *backend-service
+    command: celery -A services.tasks worker -B -l info
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
   frontend:
-    image: node:18
+    image: node:20
     working_dir: /app
     volumes:
       - ./client:/app
-    command: sh -c "npm install && npm run build && npm start"
+      - frontend-node-modules:/app/node_modules
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    command: sh -c "npm ci && npm run build && npm start"
     ports:
       - "3000:3000"
     depends_on:
       - gateway
-  worker:
-    build: .
-    command: celery -A services.tasks worker -l info
-    environment:
-      - REDIS_URL=${REDIS_URL}
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
     depends_on:
-      - redis
-      - db
+      - gateway
+      - trend_ingestion
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_DEFAULT_THEME: light
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres-data:
+  ollama-data:
+  frontend-node-modules:
+  prometheus-data:
+  grafana-data:

@@ -6,7 +6,13 @@ from sqlmodel import select
 from services.common.database import get_session, init_db
 from services.models import TrendSignal
 from services.trend_ingestion import service
+from services.trend_ingestion.scrapegraph_adapter import (
+    PublicOnlyConfigError,
+    normalize_scrapegraph_result,
+    validate_public_only_config,
+)
 from services.trend_ingestion.circuit_breaker import CircuitBreaker
+from services.trend_ingestion.sources import SourceConfig, SelectorSet
 
 
 def test_extract_rss_signals_parses_items():
@@ -20,6 +26,42 @@ def test_extract_rss_signals_parses_items():
     assert len(signals) == 2
     assert signals[0]["source"] == "google_trends_rss"
     assert signals[0]["keyword"] == "funny cat shirt"
+
+
+def test_scrapegraph_adapter_normalizes_structured_trends():
+    payload = {
+        "trends": [
+            {"keyword": "Funny Cat Shirt", "engagement_score": "1,250", "category": "animals"},
+            {"term": "Funny Cat Shirt", "score": 1},
+            "Minimalist Mug",
+        ]
+    }
+
+    trends = normalize_scrapegraph_result("etsy", payload)
+
+    assert trends == [
+        {
+            "source": "etsy",
+            "keyword": "Funny Cat Shirt",
+            "engagement_score": 1250,
+            "category": "animals",
+            "method": "scrapegraph",
+        },
+        {
+            "source": "etsy",
+            "keyword": "Minimalist Mug",
+            "engagement_score": 98,
+            "category": "other",
+            "method": "scrapegraph",
+        },
+    ]
+
+
+def test_public_only_config_rejects_session_settings(monkeypatch):
+    monkeypatch.setenv("TREND_INGESTION_COOKIE_FILE", "/local/cookies.json")
+
+    with pytest.raises(PublicOnlyConfigError):
+        validate_public_only_config()
 
 
 @pytest.mark.asyncio
@@ -48,6 +90,7 @@ async def test_refresh_trends_persists_and_updates_status(monkeypatch):
     assert result["signals_collected"] == 1
     assert result["signals_persisted"] == 1
     assert result["last_finished_at"] is not None
+    assert result["failed_count"] == 0
 
     async with get_session() as session:
         rows = (await session.exec(select(TrendSignal))).all()
@@ -94,3 +137,111 @@ async def test_gather_trends_falls_back_when_playwright_boot_fails(monkeypatch):
     assert metadata["mode"] == "fallback_stub"
     assert metadata["sources_failed"]["playwright"] == "playwright unavailable"
     assert signals
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_uses_scrapegraph_before_selector(monkeypatch):
+    class _DummyPlaywrightCtx:
+        async def __aenter__(self):
+            return object()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def _fake_scrapegraph(name, _config):
+        return [
+            {
+                "source": name,
+                "keyword": "public trend",
+                "engagement_score": 77,
+                "category": "other",
+                "method": "scrapegraph",
+            }
+        ]
+
+    async def _selector_should_not_run(*_args, **_kwargs):
+        raise AssertionError("selector fallback should not run after ScrapeGraphAI success")
+
+    async def _fake_rss():
+        return []
+
+    config = SourceConfig(
+        url="https://example.com/trends",
+        selectors=SelectorSet(
+            item=["article"],
+            title=["h1"],
+            hashtags=["a"],
+            likes=["span"],
+            shares=["span"],
+            comments=["span"],
+        ),
+        wait_for_selector="article",
+    )
+
+    monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "PLATFORM_CONFIG", {"public": config})
+    monkeypatch.setattr(service, "async_playwright", lambda: _DummyPlaywrightCtx())
+    monkeypatch.setattr(service, "scrape_with_scrapegraph", _fake_scrapegraph)
+    monkeypatch.setattr(service, "_scrape_source", _selector_should_not_run)
+    monkeypatch.setattr(service, "_fetch_rss_signals", _fake_rss)
+
+    signals, metadata = await service._gather_trends()
+
+    assert signals[0]["keyword"] == "public trend"
+    assert metadata["source_methods"]["public"] == "scrapegraph"
+    assert metadata["source_methods"]["google_trends_rss"] == "failed"
+    assert metadata["fallback_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_falls_back_from_scrapegraph_to_selector(monkeypatch):
+    class _DummyPlaywrightCtx:
+        async def __aenter__(self):
+            return object()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def _fake_scrapegraph(_name, _config):
+        raise RuntimeError("local model unavailable")
+
+    async def _fake_selector(_pw, name, _config):
+        return [
+            {
+                "source": name,
+                "keyword": "selector trend",
+                "engagement_score": 44,
+                "category": "other",
+            }
+        ]
+
+    async def _fake_rss():
+        return []
+
+    config = SourceConfig(
+        url="https://example.com/trends",
+        selectors=SelectorSet(
+            item=["article"],
+            title=["h1"],
+            hashtags=["a"],
+            likes=["span"],
+            shares=["span"],
+            comments=["span"],
+        ),
+        wait_for_selector="article",
+    )
+
+    monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "PLATFORM_CONFIG", {"public": config})
+    monkeypatch.setattr(service, "async_playwright", lambda: _DummyPlaywrightCtx())
+    monkeypatch.setattr(service, "scrape_with_scrapegraph", _fake_scrapegraph)
+    monkeypatch.setattr(service, "_scrape_source", _fake_selector)
+    monkeypatch.setattr(service, "_fetch_rss_signals", _fake_rss)
+
+    signals, metadata = await service._gather_trends()
+
+    assert signals[0]["keyword"] == "selector trend"
+    assert signals[0]["method"] == "selector_fallback"
+    assert metadata["source_methods"]["public"] == "selector_fallback"
+    assert metadata["source_methods"]["google_trends_rss"] == "failed"
+    assert metadata["fallback_count"] == 1
