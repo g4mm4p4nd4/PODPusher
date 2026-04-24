@@ -1,6 +1,6 @@
 # PODPusher Delivery Roadmap
 
-Last updated: April 5, 2026 (America/New_York)
+Last updated: April 6, 2026 (America/New_York)
 Owner: PODPusher Coordinator (`podpusher-delivery`)
 
 ## Coordination Objective
@@ -15,10 +15,10 @@ Run a four-lane board with exactly one active slice per lane and explicit depend
 ## Automation Control State
 
 The automation layer is restart-ready because local `main` now matches
-`origin/main` at `3e890f8`. Product lane assignments below remain the
+`origin/main` at `b853cc2`. Product lane assignments below remain the
 authoritative backlog. The remaining control-plane work is housekeeping:
-reattach one clean integration worktree to `main`, keep the watchdog active,
-and triage the two preserved recovery branches outside the sweep path. See
+keep the watchdog active and triage the two preserved recovery branches
+outside the sweep path. See
 [docs/automation_control_plane.md](./automation_control_plane.md) for the shared
 resume contract.
 
