@@ -5,7 +5,10 @@ from __future__ import annotations
 import os
 import logging
 
-import stripe
+try:
+    import stripe
+except ModuleNotFoundError:  # pragma: no cover - exercised in minimal local envs
+    stripe = None
 
 from .service import (
     handle_subscription_created,
@@ -19,7 +22,11 @@ from .service import (
 logger = logging.getLogger(__name__)
 
 WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-STUB_MODE = os.getenv("BILLING_STUB_MODE", "false").lower() == "true" or not WEBHOOK_SECRET
+STUB_MODE = (
+    os.getenv("BILLING_STUB_MODE", "false").lower() == "true"
+    or stripe is None
+    or not WEBHOOK_SECRET
+)
 
 
 def verify_webhook_signature(payload: bytes, sig_header: str) -> dict:
@@ -30,15 +37,14 @@ def verify_webhook_signature(payload: bytes, sig_header: str) -> dict:
     if STUB_MODE:
         # In stub mode, parse the payload directly
         import json
+
         return json.loads(payload)
 
     if not WEBHOOK_SECRET:
         raise ValueError("Webhook secret not configured")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
         return event
     except stripe.error.SignatureVerificationError as e:
         logger.warning(f"Webhook signature verification failed: {e}")

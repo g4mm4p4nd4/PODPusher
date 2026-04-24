@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+  background: #020617;
+}
+
+body {
+  margin: 0;
+  background: #020617;
+}
+
+* {
+  box-sizing: border-box;
+}

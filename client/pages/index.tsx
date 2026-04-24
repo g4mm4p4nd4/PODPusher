@@ -1,153 +1,157 @@
-import React from 'react';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'next-i18next';
+import React, { useEffect, useState } from 'react';
+
+import {
+  Button,
+  EmptyState,
+  LoadingState,
+  MetricGrid,
+  PageHeader,
+  Panel,
+  Pill,
+  ProgressBar,
+  ProvenanceNote,
+  formatNumber,
+} from '../components/ControlCenter';
+import { DashboardResponse, fetchOverview } from '../services/controlCenter';
 import { getCommonStaticProps } from '../utils/translationProps';
 
-import { resolveApiUrl } from '../services/apiBase';
-import {
-  fetchLiveTrends,
-  LiveTrendsByCategory,
-  refreshLiveTrends,
-  TrendRefreshStatus,
-} from '../services/trends';
-
-const EMPTY_STATUS: TrendRefreshStatus = {
-  last_started_at: null,
-  last_finished_at: null,
-  last_mode: 'idle',
-  sources_succeeded: [],
-  sources_failed: {},
-  signals_collected: 0,
-  signals_persisted: 0,
-};
-
 export default function Home() {
-  const { t } = useTranslation('common');
-  const [trends, setTrends] = useState<LiveTrendsByCategory>({});
-  const [events, setEvents] = useState<string[]>([]);
-  const [status, setStatus] = useState<TrendRefreshStatus>(EMPTY_STATUS);
+  const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const hasTrends = Object.values(trends).some(items => items.length > 0);
-
-  const loadDashboard = async () => {
+  const load = async () => {
+    setLoading(true);
     try {
-      const month = new Date().toLocaleString('default', { month: 'long' }).toLowerCase();
-      const [liveTrends, statusRes, eventsRes] = await Promise.all([
-        fetchLiveTrends({ lookbackHours: 72, limit: 8 }),
-        axios.get<TrendRefreshStatus>(resolveApiUrl('/api/trends/live/status')),
-        axios.get<{ month: string; events: string[] }>(resolveApiUrl(`/events/${month}`)),
-      ]);
-      setTrends(liveTrends);
-      setStatus(statusRes.data || EMPTY_STATUS);
-      setEvents(Array.isArray(eventsRes.data.events) ? eventsRes.data.events : []);
+      setData(await fetchOverview());
       setError('');
-    } catch (err) {
-      console.error(err);
-      setTrends({});
-      setEvents([]);
-      setError(t('index.loadError'));
+    } catch {
+      setError('Could not load dashboard metrics.');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    void loadDashboard();
+    void load();
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setError('');
-    try {
-      const refreshStatus = await refreshLiveTrends();
-      setStatus(refreshStatus);
-    } catch (err) {
-      console.error(err);
-      setError(t('index.refreshError'));
-      setRefreshing(false);
-      return;
-    }
-    await loadDashboard();
-  };
-
-  const formatTimestamp = (value?: string | null): string => {
-    if (!value) {
-      return t('index.notAvailable');
-    }
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return t('index.notAvailable');
-    }
-    return parsed.toLocaleString();
-  };
+  if (loading) return <LoadingState />;
+  if (error || !data) return <EmptyState message={error || 'No overview data available.'} />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t('index.trending')}</h1>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className="rounded bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-          disabled={refreshing}
-        >
-          {refreshing ? t('index.refreshing') : t('index.refresh')}
-        </button>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Overview Dashboard"
+        subtitle="Your POD business at a glance. Key metrics, trends, and opportunities."
+        actions={<Button onClick={load}>Refresh</Button>}
+      />
+      <MetricGrid metrics={data.metrics || []} />
 
-      <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-        <p>
-          <span className="font-semibold">{t('index.lastRun')}:</span> {formatTimestamp(status.last_finished_at)}
-        </p>
-        <p>
-          <span className="font-semibold">{t('index.mode')}:</span> {status.last_mode || t('index.notAvailable')}
-        </p>
-        <p>
-          <span className="font-semibold">{t('index.signals')}:</span> {status.signals_persisted}
-        </p>
-      </div>
-
-      {loading ? <p>{t('index.loading')}</p> : null}
-      {error ? (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
-          {error}
-        </p>
-      ) : null}
-      {!loading && !error && !hasTrends ? <p>{t('index.empty')}</p> : null}
-
-      {Object.entries(trends).map(([category, items]) => (
-        <section key={category}>
-          <h2 className="text-xl font-semibold capitalize">{category}</h2>
-          <ul className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {items.map(item => (
-              <li key={`${category}:${item.source}:${item.keyword}`} className="rounded border border-gray-200 p-3">
-                <p className="font-medium">{item.keyword}</p>
-                <p className="text-sm text-gray-600">
-                  {t('index.source')}: {item.source}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {t('index.engagement')}: {item.engagement_score}
-                </p>
-              </li>
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+        <Panel title="Keyword Growth Trend" action={<Pill>Last 30 Days</Pill>}>
+          <div className="h-64">
+            <TrendArea data={data.keyword_growth || []} />
+          </div>
+        </Panel>
+        <Panel title="Top Rising Niches" action={<a className="text-sm text-blue-400" href="/niches">View all</a>}>
+          <div className="space-y-3">
+            {(data.top_rising_niches || []).map((item: any) => (
+              <div key={item.niche} className="grid grid-cols-[1fr_80px_110px] items-center gap-3 text-sm">
+                <span className="font-medium text-slate-100">{item.niche}</span>
+                <span className="text-emerald-400">+{item.growth}%</span>
+                <span className="text-slate-400">{item.competition_label}</span>
+              </div>
             ))}
-          </ul>
-        </section>
-      ))}
-
-      <div>
-        <h2 className="mt-4 text-xl font-semibold">{t('index.events')}</h2>
-        <ul className="grid grid-cols-2 gap-1 list-disc list-inside pl-4 md:grid-cols-3 lg:grid-cols-4">
-          {events.map(event => (
-            <li key={event}>{event}</li>
-          ))}
-        </ul>
+          </div>
+        </Panel>
       </div>
+
+      <div className="grid gap-4 xl:grid-cols-4">
+        <Panel title="Popular Product Categories">
+          <div className="space-y-3">
+            {(data.popular_categories || []).slice(0, 5).map((item: any) => (
+              <div key={item.category}>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span>{item.category}</span>
+                  <span className="text-slate-400">{formatNumber(item.listings)}</span>
+                </div>
+                <ProgressBar value={item.demand} />
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Upcoming Seasonal Events">
+          <div className="space-y-3">
+            {(data.seasonal_events || []).slice(0, 5).map((event: any) => (
+              <div key={event.name} className="flex items-center justify-between gap-2 text-sm">
+                <div>
+                  <p className="font-medium text-slate-100">{event.name}</p>
+                  <p className="text-xs text-slate-500">{event.event_date}</p>
+                </div>
+                <Pill tone={event.priority === 'high' ? 'red' : 'orange'}>{event.priority}</Pill>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Recent Listing Composer">
+          <div className="space-y-3">
+            {(data.recent_drafts || []).map((draft: any) => (
+              <div key={`${draft.id}-${draft.title}`} className="rounded-md border border-slate-800 bg-slate-950 p-3 text-sm">
+                <p className="font-medium text-slate-100">{draft.title}</p>
+                <p className="text-xs text-slate-500">{draft.language} draft</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="A/B Test Performance">
+          <div className="space-y-3">
+            {(data.ab_performance || []).map((test: any) => (
+              <div key={test.test} className="grid grid-cols-[1fr_70px_70px] gap-2 text-sm">
+                <span>{test.test}</span>
+                <span>{test.ctr}%</span>
+                <span className={test.lift >= 0 ? 'text-emerald-400' : 'text-red-400'}>{test.lift} pp</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <Panel title="Notifications" action={<a className="text-sm text-blue-400" href="/notifications">View all</a>}>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {(data.notifications || []).map((item: any) => (
+            <div key={`${item.id}-${item.message}`} className="rounded-md border border-slate-800 bg-slate-950 p-3 text-sm">
+              <Pill tone={item.type === 'warning' ? 'orange' : item.type === 'success' ? 'green' : 'blue'}>
+                {item.type}
+              </Pill>
+              <p className="mt-2 text-slate-200">{item.message}</p>
+            </div>
+          ))}
+        </div>
+        <ProvenanceNote provenance={data.provenance} />
+      </Panel>
     </div>
+  );
+}
+
+function TrendArea({ data }: { data: Array<{ date: string; value: number }> }) {
+  if (!data.length) return <EmptyState message="No growth data yet." />;
+  const max = Math.max(...data.map((item) => item.value), 1);
+  const points = data
+    .map((item, index) => {
+      const x = (index / Math.max(1, data.length - 1)) * 100;
+      const y = 100 - (item.value / max) * 88;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  return (
+    <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polyline points={points} fill="none" stroke="rgb(249 115 22)" strokeWidth="1.6" />
+      <polygon points={`0,100 ${points} 100,100`} fill="rgba(249,115,22,0.18)" />
+    </svg>
   );
 }
 

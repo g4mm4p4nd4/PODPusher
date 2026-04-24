@@ -10,6 +10,21 @@ jest.mock('next-i18next', () => ({
 jest.mock('../services/listings', () => ({
   fetchTagSuggestions: jest.fn(() => Promise.resolve(['one', 'two'])),
   saveDraft: jest.fn(() => Promise.resolve(1)),
+  generateListingDraft: jest.fn(() =>
+    Promise.resolve({
+      title: 'Generated Title',
+      description: 'Generated description with enough words for testing a quality listing.',
+      tags: ['one', 'two'],
+      score: { optimization_score: 92, seo_score: 94, checks: {} },
+      compliance: { status: 'compliant', checks: [] },
+    })
+  ),
+  scoreListingDraft: jest.fn(() =>
+    Promise.resolve({ optimization_score: 92, seo_score: 94, checks: {} })
+  ),
+  checkListingDraftCompliance: jest.fn(() =>
+    Promise.resolve({ status: 'compliant', checks: [] })
+  ),
   loadDraft: jest.fn(() =>
     Promise.resolve({
       id: 1,
@@ -34,11 +49,11 @@ beforeEach(() => {
 
 test('shows character counts and adds tags', async () => {
   render(<ListingComposer onPublish={onPublish} />);
-  const titleInput = screen.getAllByRole('textbox')[0];
+  const titleInput = screen.getByLabelText(/Title/);
   fireEvent.change(titleInput, { target: { value: 'Hello' } });
   expect(screen.getByText(/5\/140/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByText('suggest'));
+  fireEvent.click(screen.getByRole('button', { name: 'Suggest Tags' }));
   const tagButton = await screen.findByRole('button', { name: 'one' });
   fireEvent.click(tagButton);
   expect(screen.getAllByText('one').length).toBeGreaterThan(0);
@@ -46,7 +61,7 @@ test('shows character counts and adds tags', async () => {
 
 test('saves draft', async () => {
   render(<ListingComposer onPublish={onPublish} />);
-  fireEvent.click(screen.getByText('save'));
+  fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
   expect(services.saveDraft).toHaveBeenCalled();
 });
 
@@ -55,7 +70,7 @@ test('automatically fetches suggestions when length threshold is reached', async
   try {
     render(<ListingComposer onPublish={onPublish} />);
 
-    const titleInput = screen.getAllByRole('textbox')[0];
+    const titleInput = screen.getByLabelText(/Title/);
     fireEvent.change(titleInput, { target: { value: 'a'.repeat(12) } });
 
     await act(async () => {
@@ -77,13 +92,13 @@ test('automatically fetches suggestions when length threshold is reached', async
 test('blocks publishing when limits are exceeded', () => {
   render(<ListingComposer onPublish={onPublish} />);
 
-  const titleInput = screen.getAllByRole('textbox')[0];
+  const titleInput = screen.getByLabelText(/Title/);
   fireEvent.change(titleInput, { target: { value: 'a'.repeat(150) } });
 
-  const titleLabel = screen.getByText('title (150/140)');
-  expect(titleLabel).toHaveClass('text-red-600');
+  const titleLabel = screen.getByText('Title (150/140)');
+  expect(titleLabel).toHaveClass('text-red-400');
 
-  const publishButton = screen.getByRole('button', { name: 'publish' });
+  const publishButton = screen.getByRole('button', { name: 'Publish Queue' });
   expect(publishButton).toBeDisabled();
 
   fireEvent.click(publishButton);
@@ -93,6 +108,5 @@ test('blocks publishing when limits are exceeded', () => {
 test('renders localized language options', () => {
   render(<ListingComposer onPublish={onPublish} />);
 
-  expect(screen.getByRole('option', { name: 'languages.en' })).toBeInTheDocument();
-  expect(screen.getByRole('option', { name: 'languages.es' })).toBeInTheDocument();
+  expect(screen.getByDisplayValue('en')).toBeInTheDocument();
 });

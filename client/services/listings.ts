@@ -26,3 +26,18 @@ export async function loadDraft(id: number): Promise<DraftData> {
   const res = await axios.get(`${api}/api/listing-composer/drafts/${id}`);
   return res.data as DraftData;
 }
+
+export async function generateListingDraft(payload: Record<string, unknown>) {
+  const res = await axios.post(resolveApiUrl('/api/listing-composer/generate'), payload);
+  return res.data;
+}
+
+export async function scoreListingDraft(payload: Record<string, unknown>) {
+  const res = await axios.post(resolveApiUrl('/api/listing-composer/score'), payload);
+  return res.data;
+}
+
+export async function checkListingDraftCompliance(payload: Record<string, unknown>) {
+  const res = await axios.post(resolveApiUrl('/api/listing-composer/compliance'), payload);
+  return res.data;
+}
