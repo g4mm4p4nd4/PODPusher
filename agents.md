@@ -1,6 +1,6 @@
 # AGENTS.md – **POD Automator AI**
 
-> **Status:** Full Specification v1.0 – compiled **July 21 2025** from the *POD development prompt* (see `POD.md`), uploaded demo code, and market research.  This file supersedes all prior scaffolds.  It is the **authoritative contract** for every ChatGPT Codex agent operating in the `pod` monorepo.  Amendments require a PR approved by the **Project‑Manager** agent.
+> **Status:** Full Specification v1.1 - updated **April 24 2026** to reflect the local Docker trend-ingestion and observability slice now present on `main`. This file supersedes all prior scaffolds. It is the **authoritative contract** for every ChatGPT Codex agent operating in the `pod` monorepo. Amendments require a PR approved by the **Project-Manager** agent.
 
 ---
 
@@ -66,12 +66,12 @@ Success will be measured by:
 | Layer                | Tech / Service                                                       | Notes                                               |
 | -------------------- | -------------------------------------------------------------------- | --------------------------------------------------- |
 | **🖥 Front‑end**     | React 18 + Next.js 14, Tailwind CSS 3, TypeScript 5                  | PWA dashboard, WebSockets for job status            |
-| **⚙️ Back‑end**      | FastAPI 0.110, async PostgreSQL via SQLModel, Redis+Celery           | Decomposed micro‑services (Scraper, Ideation, Image) |
+| **⚙️ Back‑end**      | FastAPI 0.110, async PostgreSQL via SQLModel, Redis+Celery, ScrapeGraphAI, Playwright, Ollama | Decomposed micro‑services (Scraper, Ideation, Image); local trend ingestion runs without marketplace keys |
 | **🔐 Auth**          | OAuth 2 PKCE with Etsy & Printify; Keycloak or Auth0 for platform    | RBAC roles: owner, editor                            |
 | **🤖 AI**            | GPT‑4o for idea generation; gpt‑image‑1 for mock‑ups                 | Prompt templates versioned in `/packages/ai/prompts` |
-| **📊 Data**          | TimescaleDB for trend signals; S3/MinIO for images                   | Scalable storage                                     |
+| **📊 Data**          | PostgreSQL for local development; TimescaleDB target for trend signals; S3/MinIO target for images | Local Compose uses `postgresql+psycopg://...` with Redis queueing |
 | **🛒 Integrations**  | Etsy v3 API, Printify REST API, Stripe Billing API                   | Rate‑limited wrappers                                |
-| **☁ Infra**         | GitHub Actions CI/CD, Docker Compose (dev), Helm‑K8s (prod), Grafana | Blue‑green deploy, HPA (0‑10 pods)                  |
+| **☁ Infra**         | Docker Compose (dev), GitHub Actions CI/CD, Helm‑K8s (prod target), Prometheus, Grafana | Docker Desktop is the current priority; Compose includes gateway, trend ingestion, worker, frontend, Postgres, Redis, Ollama, Prometheus, and Grafana |
 
 ### 3.2 Operational
 
@@ -117,14 +117,14 @@ Our architecture follows a micro‑services pattern with clear bounded contexts.
 
 1. **Frontend:** Next.js SPA with WebSockets for real‑time job updates; protected pages via OAuth.
 2. **Gateway API:** FastAPI service that exposes GraphQL and REST endpoints; handles auth tokens and rate limiting.
-3. **Trend Scraper:** A service using Playwright/Requests to fetch trending hashtags from TikTok, Instagram, Twitter, LinkedIn, Reddit, and Facebook; caches results in TimescaleDB.
+3. **Trend Scraper / Ingestion:** Current local implementation is public-only and no-key. It shuffles configured sources per refresh, randomizes browser profile settings, attempts ScrapeGraphAI + Playwright against public pages, falls back to configured selectors, and finally falls back to Google Trends RSS. It persists normalized trend rows and scrape metadata only; raw page bodies, cookies, browser sessions, login credentials, and account-backed scraping are out of scope for this slice.
 4. **Ideation Service:** GPT‑4o function‑calling to cluster trends into product briefs; generates titles, styles and descriptions.
 5. **Image Gen Service:** wrapper around OpenAI `gpt‑image‑1` with prompt templating, style parameters, DPI settings; creates both transparent and mocked images.
 6. **Integration Service:** connectors for Printify and Etsy to create products, variants, and listings; manages OAuth tokens and rate limits.
 7. **Job Queue:** Redis+Celery for asynchronous tasks and retries; backoff strategies.
 8. **Database:** PostgreSQL/TimescaleDB core with PGVector for embeddings; S3/Blob storage for image assets.
 9. **Secrets & Config:** HashiCorp Vault or AWS Secrets Manager; environment variables loaded via `.env`.
-10. **Observability:** Grafana+Prometheus for metrics; Sentry for error tracking; Loki for logs.
+10. **Observability:** Local Compose provisions Prometheus and Grafana. Gateway and trend ingestion expose `/metrics`; scraper metrics track attempts, duration, method use, persisted keywords, fallback use, and source failures. Sentry, Loki, tracing, and alert routing remain production targets.
 
 ---
 
@@ -199,7 +199,7 @@ Each specialist agent has a dedicated markdown file in `/pod_agents/` describing
 
 | Feature                        | Requirement                                                         | Owner Agent(s)                      | Acceptance Criteria                                             |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------- |
-| **Trend Scraper**              | Gather top trending keywords from TikTok, Instagram, Twitter, etc.   | Data‑Seeder                         | Returns ≥ 50 unique keywords per scan; ≤ 5 % scrape failures    |
+| **Trend Scraper**              | Gather public trend signals through ScrapeGraphAI, selector fallback, and Google Trends RSS without credentials | Data‑Seeder                         | Local Docker smoke proves non-stub refresh attempts, method-level status, persisted trends, and visible fallback/failure accounting |
 | **Idea Generation**            | Generate creative briefs from keywords via GPT‑4o                   | AI‑Engineer, Backend‑Coder          | JSON brief matches schema; BLEU vs curated ideas ≥ 0.8          |
 | **Mock‑up Creation**           | Use gpt‑image‑1 to generate 4K PNG mock‑ups                         | AI‑Engineer, Integrations‑Engineer  | 1024×1024 images saved; DPI 300; passes OpenAI content filters  |
 | **Printify SKU Creation**      | Create product variants via Printify API                             | Integrations‑Engineer               | SKU ID returned; product published; error rate < 2 %            |
@@ -260,10 +260,13 @@ Each specialist agent has a dedicated markdown file in `/pod_agents/` describing
 ## 15 | Observability & SRE Playbook
 
 - **Metrics:** instrument services with Prometheus counters & histograms; track job durations, error rates, API latency.
+- **Current local metrics:** gateway and trend ingestion are scraped by Prometheus through `prometheus/prometheus.yml`; trend ingestion emits scrape attempts, extraction method, fallback usage, persisted keyword counts, failures, and request latency.
 - **Logging:** use structured logging (pino for Node services, loguru for Python); stream to Loki with 30 day retention.
+- **Current local logging:** scraper logs must include source, method, and run identifiers. Do not persist raw page bodies.
 - **Tracing:** propagate trace IDs across services using OpenTelemetry; sample 10 % of requests.
 - **Alerts:** define error budget policies; use PagerDuty for on‑call rotations; SLO breaches trigger escalation.
-- **Runbooks:** store runbooks under `/docs/SRE/` including playbooks for scraper outages, Printify rate‑limit errors, and Etsy auth failures.
+- **Runbooks:** store runbooks under `/docs/SRE/` or `docs/runbooks/` including playbooks for scraper outages, Printify rate‑limit errors, and Etsy auth failures.
+- **Local smoke:** run `docker compose up --build`, call `POST /api/trends/refresh`, inspect `GET /api/trends/live/status`, and confirm Grafana's `Scraper Health` dashboard receives metrics.
 
 ---
 
@@ -301,14 +304,17 @@ A feature or pull request is DONE when:
 
 ## 19 | Status & Next Steps
 
-- **Pending pull requests:** no active local merge candidates remain for the historical quota or image-review slices; both are already present on main. The only preserved manual-triage backlog is `codex/recovery-snapshot-20260325` and `codex/recovery-local-recreate-pr70-20260326`.
-- **Backend_Coder:** resume with the auth-derived identity hardening slice and keep integration stub reduction behind the existing verification gates.
-- **Frontend_Coder:** resume by removing remaining default internal-user fallback behavior in shared transport and settings/oauth flows.
-- **Integrations_Engineer:** prepare one credential-backed staging smoke run once Platform-QA confirms workflow contract and secrets ownership.
-- **QA:** keep backend auth/quota coverage green, then re-run staging smoke contract and integration suites as external blockers clear.
-- **Docs_Writer:** keep `status.md`, `planning.md`, and the control-plane docs synced to the live audit; update `/docs/internal_docs.md` only when service behavior changes.
-- **Additional improvements:** designate one clean `main`-attached integration worktree, archive or replay the preserved recovery branches deliberately, and avoid starting new work from detached maintenance checkouts.
+- **Current main baseline:** `main` includes the local Docker trend-ingestion and observability slice. The stack runs Postgres, Redis, Ollama, gateway, trend ingestion, worker, frontend, Prometheus, and Grafana through `docker-compose.yml`.
+- **Trend pipeline status:** live trend mode is the local default with `TREND_INGESTION_STUB=0`. The provider chain is ScrapeGraphAI + Playwright, selector fallback, then Google Trends RSS. Public-only validation rejects cookies, exported sessions, login URLs, usernames, and passwords.
+- **Auditable status:** `/api/trends/refresh`, `/api/trends/live`, and `/api/trends/live/status` expose enough evidence to verify non-stub trend coverage before publishing. Refresh status reports source methods and collected, persisted, failed, fallback, and skipped counts.
+- **Observability status:** Prometheus scrapes gateway and trend ingestion. Grafana provisioning loads the Prometheus datasource and scraper dashboard. Metrics cover scrape attempts, durations, persisted keywords, fallback usage, source failures, and API latency.
+- **Credential boundary:** Etsy, Printify, Stripe, OAuth, and OpenAI credential-backed flows remain non-priority and should stay stubbed or non-blocking until public trend discovery is manually proven.
+- **Manual smoke next:** run `docker compose up --build`, call `POST /api/trends/refresh`, confirm `/api/trends/live/status` shows non-stub attempts and persisted trends, and verify Grafana receives scraper metrics.
+- **Backend_Coder / Data-Seeder:** harden blocked-source handling, source tuning, and trend normalization based on manual smoke results.
+- **DevOps_Engineer / QA:** keep Compose contract tests, observability tests, and focused trend ingestion tests green; add alert rules after local metrics stabilize.
+- **Integrations_Engineer:** defer credential-backed Etsy and Printify smoke tests until the user confirms trend coverage is acceptable and chooses to provide credentials.
+- **Docs_Writer:** keep `README.md`, `docs/observability.md`, `docs/runbooks/scraper-outage.md`, and this agent contract synced whenever trend runtime behavior changes.
 
 ---
 
-> **End of AGENTS.md v1.0 – subsequent edits must follow the agent process.**
+> **End of AGENTS.md v1.1 - subsequent edits must follow the agent process.**
