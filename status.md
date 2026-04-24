@@ -15,7 +15,7 @@ This file tracks current delivery state and detached-worktree triage outcomes. L
 
 - State: `ACTIVE`.
 - Governing doc: [docs/automation_control_plane.md](docs/automation_control_plane.md)
-- Live state: local `main` and `origin/main` both point at `a1e6368`; coordinator reconciliation is merged to main, and `codex/podpusher-coordinator-20260406` is patch-equivalent backlog rather than promotable drift.
+- Live state: local `main` and `origin/main` match; coordinator reconciliation is merged to main, and `codex/podpusher-coordinator-20260406` is superseded local backlog rather than promotable drift.
 - Backlog branches still awaiting deliberate triage: `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`, `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`.
 - Resume order: `podpusher-mainline-watchdog`, `podpusher-coordinator`, `podpusher-backend-lane`, `podpusher-frontend-lane`, `podpusher-platform-qa-lane`, `podpusher-integrations-lane`, `podpusher-cleanup`. Run `podpusher-mainline-sweep` and `origin-reconcile` only when new tracked drift appears.
 
@@ -41,9 +41,9 @@ Consolidation rules applied:
 
 ## Mainline Convergence Snapshot
 
-- Live audit baseline: `mainline-audit` on April 6, 2026 reports local `main` and `origin/main` both at `a1e6368`.
+- Live audit baseline: `mainline-audit` on April 6, 2026 reports local `main` and `origin/main` match.
 - Active newer-than-main merge candidate: none.
-- Detached archival worktrees already sitting on `a1e6368` are duplicate baseline copies, not promotable drift.
+- Detached archival worktrees already matching the current mainline are duplicate baseline copies, not promotable drift.
 - Older unmerged replay lines that still require deliberate manual triage:
   - `codex/recovery-snapshot-20260325` at `837e167acd8b984825ba734013bef228ceab0060`
   - `codex/recovery-local-recreate-pr70-20260326` at `c7b5000cc0e32d164ad3ed6ef6c667af27dc3902`
