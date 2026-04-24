@@ -1,119 +1,68 @@
-﻿import '@testing-library/jest-dom';
+import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import axios from 'axios';
 
 import Home from '../pages/index';
-import { TrendRefreshStatus } from '../services/trends';
 
 jest.mock('axios');
 
-jest.mock('next-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-describe('home page live trends', () => {
+describe('overview dashboard', () => {
   beforeEach(() => {
     mockedAxios.get.mockReset();
-    mockedAxios.post.mockReset();
   });
 
-  it('loads trends and refresh status from live endpoints', async () => {
-    mockedAxios.get.mockImplementation(async url => {
-      const value = String(url);
-      if (value.includes('/api/trends/live/status')) {
-        return {
-          data: {
-            last_started_at: '2026-03-06T12:00:00',
-            last_finished_at: '2026-03-06T12:00:02',
-            last_mode: 'live',
-            sources_succeeded: ['google_trends_rss'],
-            sources_failed: {},
-            signals_collected: 2,
-            signals_persisted: 1,
-          },
-        };
-      }
-      if (value.includes('/api/trends/live')) {
-        return {
-          data: {
-            animals: [
-              {
-                source: 'google_trends_rss',
-                keyword: 'funny cat',
-                engagement_score: 9,
-                timestamp: '2026-03-06T12:00:00',
-              },
-            ],
-          },
-        };
-      }
-      return { data: { month: 'March', events: ['St Patrick'] } };
-    });
-
-    render(<Home />);
-
-    await waitFor(() => expect(screen.getByText('funny cat')).toBeInTheDocument());
-    expect(screen.getByText(/index.mode/)).toBeInTheDocument();
-    expect(screen.getByText('St Patrick')).toBeInTheDocument();
-  });
-
-  it('triggers refresh and reloads trends', async () => {
-    let status: TrendRefreshStatus = {
-      last_started_at: null,
-      last_finished_at: null,
-      last_mode: 'idle',
-      sources_succeeded: [],
-      sources_failed: {},
-      signals_collected: 0,
-      signals_persisted: 0,
-    };
-    let trends: Record<string, unknown> = {};
-
-    mockedAxios.get.mockImplementation(async url => {
-      const value = String(url);
-      if (value.includes('/api/trends/live/status')) {
-        return { data: status };
-      }
-      if (value.includes('/api/trends/live')) {
-        return { data: trends };
-      }
-      return { data: { month: 'March', events: [] } };
-    });
-
-    mockedAxios.post.mockImplementation(async () => {
-      status = {
-        last_started_at: '2026-03-06T12:05:00',
-        last_finished_at: '2026-03-06T12:05:02',
-        last_mode: 'fallback_stub',
-        sources_succeeded: ['stub_seed'],
-        sources_failed: { google_trends_rss: 'timeout' },
-        signals_collected: 4,
-        signals_persisted: 4,
-      };
-      trends = {
-        animals: [
+  it('loads aggregate overview metrics', async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        metrics: [
           {
-            source: 'stub_seed',
-            keyword: 'funny dog shirts',
-            engagement_score: 88,
-            timestamp: '2026-03-06T12:05:00',
+            label: 'Trending Keywords',
+            value: 2847,
+            delta: 18.6,
+            sparkline: [1, 2],
+            provenance: { source: 'trend_signals', is_estimated: false, updated_at: '', confidence: 0.9 },
           },
         ],
-      };
-      return { data: status };
+        keyword_growth: [{ date: '2026-04-01', value: 100 }],
+        top_rising_niches: [{ niche: 'Dog Mom Gifts', growth: 64, competition_label: 'Low' }],
+        popular_categories: [{ category: 'T-Shirts', listings: 10, demand: 90 }],
+        seasonal_events: [{ name: "Mother's Day", event_date: '2026-05-10', priority: 'high' }],
+        recent_drafts: [{ id: 1, title: 'Dog Mom Tee', language: 'en' }],
+        ab_performance: [{ test: 'Dog Mom Tee v2', ctr: 3.2, lift: 0.8 }],
+        notifications: [{ id: 1, message: 'Quota warning', type: 'warning' }],
+        provenance: { source: 'aggregate', is_estimated: true, updated_at: '', confidence: 0.7 },
+      },
     });
 
     render(<Home />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'index.refresh' })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'index.refresh' }));
+    await waitFor(() => expect(screen.getByText('Overview Dashboard')).toBeInTheDocument());
+    expect(screen.getByText('Trending Keywords')).toBeInTheDocument();
+    expect(screen.getByText('Dog Mom Gifts')).toBeInTheDocument();
+    expect(screen.getByText('Dog Mom Tee')).toBeInTheDocument();
+  });
 
-    await waitFor(() => expect(mockedAxios.post).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText('funny dog shirts')).toBeInTheDocument());
+  it('refreshes overview metrics', async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        metrics: [],
+        keyword_growth: [],
+        top_rising_niches: [],
+        popular_categories: [],
+        seasonal_events: [],
+        recent_drafts: [],
+        ab_performance: [],
+        notifications: [],
+      },
+    });
+
+    render(<Home />);
+    await screen.findByRole('button', { name: 'Refresh' });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(2));
   });
 });

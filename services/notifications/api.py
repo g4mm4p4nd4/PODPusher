@@ -2,9 +2,14 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from fastapi import Depends, FastAPI, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field
 
+from ..common.auth import optional_user_id
+from ..control_center.service import (
+    create_notification_rule,
+    get_notifications_dashboard,
+)
 from ..auth.service import resolve_session_token
 from .service import (
     cancel_scheduled_notification,
@@ -42,6 +47,17 @@ class ScheduledNotificationCreate(BaseModel):
     metadata: Dict[str, Any] | None = None
 
 
+class NotificationRuleCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    metric: str = "image_quota_remaining"
+    operator: str = "less_than"
+    threshold: float = 20
+    window: str = "1 day"
+    channels: list[str] = Field(default_factory=lambda: ["Email", "In-App"])
+    active: bool = True
+
+
 class ScheduledNotificationResponse(BaseModel):
     id: int
     user_id: int
@@ -54,7 +70,9 @@ class ScheduledNotificationResponse(BaseModel):
     dispatched_at: Optional[datetime] = None
 
 
-def _parse_user_id(value: str | None, missing_detail: str = "Missing X-User-Id header") -> int:
+def _parse_user_id(
+    value: str | None, missing_detail: str = "Missing X-User-Id header"
+) -> int:
     if value is None:
         raise HTTPException(status_code=400, detail=missing_detail)
     try:
@@ -79,7 +97,9 @@ async def _resolve_request_user_id(
             if user_id is not None:
                 return user_id
             raise HTTPException(status_code=401, detail="Authentication required")
-    return _parse_user_id(request.headers.get("X-User-Id"), missing_detail=missing_detail)
+    return _parse_user_id(
+        request.headers.get("X-User-Id"), missing_detail=missing_detail
+    )
 
 
 def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
@@ -87,7 +107,11 @@ def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
         **data,
         "scheduled_for": datetime.fromisoformat(data["scheduled_for"]),
         "created_at": datetime.fromisoformat(data["created_at"]),
-        "dispatched_at": datetime.fromisoformat(data["dispatched_at"]) if data["dispatched_at"] else None,
+        "dispatched_at": (
+            datetime.fromisoformat(data["dispatched_at"])
+            if data["dispatched_at"]
+            else None
+        ),
     }
     return ScheduledNotificationResponse(**payload)
 
@@ -95,6 +119,11 @@ def _scheduled_response(data: dict) -> ScheduledNotificationResponse:
 @app.get("/")
 async def get_notifications(request: Request):
     return await list_notifications(await _resolve_request_user_id(request))
+
+
+@app.get("/dashboard")
+async def dashboard(user_id: int | None = Depends(optional_user_id)):
+    return await get_notifications_dashboard(user_id)
 
 
 @app.post("/")
@@ -150,3 +179,11 @@ async def cancel_scheduled_endpoint(
     if not record:
         raise HTTPException(status_code=404, detail="Scheduled notification not found")
     return _scheduled_response(record)
+
+
+@app.post("/rules")
+async def create_rule(
+    payload: NotificationRuleCreate,
+    user_id: int | None = Depends(optional_user_id),
+):
+    return await create_notification_rule(user_id, payload.model_dump())

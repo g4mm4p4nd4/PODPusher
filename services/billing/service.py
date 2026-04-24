@@ -8,21 +8,72 @@ from datetime import datetime
 from typing import Optional
 import re
 
-import stripe
+try:
+    import stripe
+except ModuleNotFoundError:  # pragma: no cover - exercised in minimal local envs
+
+    class _StripeFallbackError(Exception):
+        pass
+
+    class _StripeFallbackInvalidRequestError(_StripeFallbackError):
+        pass
+
+    class _StripeFallbackCustomer:
+        @staticmethod
+        def search(*_args, **_kwargs):
+            raise _StripeFallbackError("Stripe SDK is not installed")
+
+        @staticmethod
+        def list(*_args, **_kwargs):
+            raise _StripeFallbackError("Stripe SDK is not installed")
+
+        @staticmethod
+        def create(*_args, **_kwargs):
+            raise _StripeFallbackError("Stripe SDK is not installed")
+
+        @staticmethod
+        def retrieve(*_args, **_kwargs):
+            raise _StripeFallbackError("Stripe SDK is not installed")
+
+    class _StripeFallbackSubscription:
+        @staticmethod
+        def list(*_args, **_kwargs):
+            raise _StripeFallbackError("Stripe SDK is not installed")
+
+    class _StripeFallbackPortal:
+        class Session:
+            @staticmethod
+            def create(*_args, **_kwargs):
+                raise _StripeFallbackError("Stripe SDK is not installed")
+
+    class _StripeFallback:
+        api_key = None
+        Customer = _StripeFallbackCustomer
+        Subscription = _StripeFallbackSubscription
+        billing_portal = _StripeFallbackPortal
+
+        class error:
+            StripeError = _StripeFallbackError
+            InvalidRequestError = _StripeFallbackInvalidRequestError
+
+    stripe = _StripeFallback()
 
 from .plans import PlanTier, get_plan_limits, get_tier_from_stripe_product
 
 logger = logging.getLogger(__name__)
 
-# Initialize Stripe
+# Initialize Stripe when the optional SDK is available.
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # Stub mode for development without Stripe credentials
-STUB_MODE = os.getenv("BILLING_STUB_MODE", "false").lower() == "true" or not stripe.api_key
+STUB_MODE = (
+    os.getenv("BILLING_STUB_MODE", "false").lower() == "true" or not stripe.api_key
+)
 
 
 class BillingError(Exception):
     """Billing-related error."""
+
     pass
 
 
@@ -57,7 +108,9 @@ def _user_id_from_stub_customer(customer_id: str | None) -> int:
     return _coerce_user_id(match.group(1))
 
 
-def _resolve_user_id_for_subscription_event(payload: dict, customer_id: str | None) -> int:
+def _resolve_user_id_for_subscription_event(
+    payload: dict, customer_id: str | None
+) -> int:
     user_id = _user_id_from_metadata(payload)
     if user_id:
         return user_id
@@ -85,14 +138,14 @@ async def get_or_create_customer(user_id: int, email: str) -> str:
 
     try:
         # Preferred path: metadata search by internal user ID.
-        customers = stripe.Customer.search(
-            query=f"metadata['user_id']:'{user_id}'"
-        )
+        customers = stripe.Customer.search(query=f"metadata['user_id']:'{user_id}'")
         if customers.data:
             return customers.data[0].id
     except stripe.error.InvalidRequestError as e:
         # Fallback for Stripe accounts where search is not enabled.
-        logger.warning("Stripe customer search unavailable; falling back to list: %s", e)
+        logger.warning(
+            "Stripe customer search unavailable; falling back to list: %s", e
+        )
         try:
             listed_customers = stripe.Customer.list(email=email, limit=10)
         except stripe.error.StripeError as list_exc:
@@ -162,7 +215,9 @@ async def get_subscription_for_customer(customer_id: str) -> Optional[dict]:
 
         sub = subscriptions.data[0]
         product_id = sub.items.data[0].price.product if sub.items.data else None
-        plan_tier = get_tier_from_stripe_product(product_id) if product_id else PlanTier.FREE
+        plan_tier = (
+            get_tier_from_stripe_product(product_id) if product_id else PlanTier.FREE
+        )
 
         return {
             "id": sub.id,
@@ -187,9 +242,7 @@ async def get_user_plan_tier(user_id: int) -> PlanTier:
     # which is updated by webhooks
     try:
         # Search for customer by user_id metadata
-        customers = stripe.Customer.search(
-            query=f"metadata['user_id']:'{user_id}'"
-        )
+        customers = stripe.Customer.search(query=f"metadata['user_id']:'{user_id}'")
         if not customers.data:
             return PlanTier.FREE
 
@@ -201,7 +254,11 @@ async def get_user_plan_tier(user_id: int) -> PlanTier:
 
         return PlanTier.FREE
     except stripe.error.StripeError as exc:
-        logger.warning("Falling back to free tier for user %s due to Stripe error: %s", user_id, exc)
+        logger.warning(
+            "Falling back to free tier for user %s due to Stripe error: %s",
+            user_id,
+            exc,
+        )
         return PlanTier.FREE
     except Exception:
         # Default to free tier on any unexpected error.
@@ -248,7 +305,9 @@ async def handle_subscription_created(subscription: dict) -> dict:
     if not user_id:
         raise BillingError("No user_id found in customer metadata")
 
-    return await update_user_quotas_from_subscription(user_id, subscription_id, product_id)
+    return await update_user_quotas_from_subscription(
+        user_id, subscription_id, product_id
+    )
 
 
 async def handle_subscription_updated(subscription: dict) -> dict:

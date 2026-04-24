@@ -17,19 +17,39 @@ from ..common.observability import register_observability
 from ..common.product_pipeline import assemble_products
 from ..common.quotas import check_quota, increment_quota, quota_exceeded_response
 from ..common.rate_limit import register_rate_limiting
+from ..control_center.service import get_trend_insights
+from ..dashboard.api import app as dashboard_app
 from ..ideation.api import app as ideation_app
 from ..ideation.service import generate_ideas
-from ..image_gen.service import delete_image, generate_image_for_idea, generate_images, list_images
+from ..image_gen.service import (
+    delete_image,
+    generate_image_for_idea,
+    generate_images,
+    list_images,
+)
 from ..integration.service import create_sku, load_oauth_credentials, publish_listing
 from ..listing_composer.api import app as listing_app
 from ..models import OAuthProvider
+from ..niches.api import app as niches_app
 from ..notifications.api import app as notifications_app
 from ..product.api import app as product_app
 from ..search.api import app as search_app
+from ..seasonal.api import app as seasonal_app
+from ..settings.api import app as settings_app
 from ..social_generator.api import app as social_app
-from ..trend_ingestion.service import get_live_trends, get_refresh_status, refresh_trends, start_scheduler
+from ..trend_ingestion.service import (
+    get_live_trends,
+    get_refresh_status,
+    refresh_trends,
+    start_scheduler,
+)
 from ..trend_scraper.events import EVENTS
-from ..trend_scraper.service import fetch_trends, get_design_ideas, get_product_suggestions, get_trending_categories
+from ..trend_scraper.service import (
+    fetch_trends,
+    get_design_ideas,
+    get_product_suggestions,
+    get_trending_categories,
+)
 from ..user.api import router as user_router
 
 
@@ -54,7 +74,12 @@ app.include_router(user_router)
 app.mount("/api/products", product_app)
 app.mount("/api/notifications", notifications_app)
 app.mount("/api/search", search_app)
+app.mount("/api/dashboard", dashboard_app)
+app.mount("/api/seasonal", seasonal_app)
+app.mount("/api/niches", niches_app)
+app.mount("/api/settings", settings_app)
 app.mount("/ab_tests", ab_app)
+app.mount("/api/ab-tests", ab_app)
 app.mount("/api/ideation", ideation_app)
 app.mount("/api/listing-composer", listing_app)
 app.mount("/api/social", social_app)
@@ -97,7 +122,9 @@ async def generate(
     if not missing_providers:
         products = create_sku(product_inputs, credential=printify_credentials)
         if not products:
-            raise HTTPException(status_code=502, detail="Printify did not return any products")
+            raise HTTPException(
+                status_code=502, detail="Printify did not return any products"
+            )
         products_payload = [dict(product) for product in products]
         listing = publish_listing(dict(products[0]), credential=etsy_credentials)
         if not listing:
@@ -211,7 +238,13 @@ async def live_trends(
     lookback_hours: int = Query(default=72, ge=1, le=24 * 14),
     limit: int = Query(default=5, ge=1, le=50),
 ):
-    ck = cache_key("live_trends", category or "all", source or "all", str(lookback_hours), str(limit))
+    ck = cache_key(
+        "live_trends",
+        category or "all",
+        source or "all",
+        str(lookback_hours),
+        str(limit),
+    )
     cached = cache_get(ck)
     if cached is not None:
         return cached
@@ -233,3 +266,20 @@ async def live_trends_status():
 @app.post("/api/trends/refresh")
 async def refresh_trends_endpoint():
     return await refresh_trends()
+
+
+@app.get("/api/trends/insights")
+async def trend_insights(
+    marketplace: str = "etsy",
+    category: str | None = None,
+    country: str = "US",
+    language: str = "en",
+    lookback_days: int = Query(default=30, ge=1, le=180),
+):
+    return await get_trend_insights(
+        marketplace=marketplace,
+        category=category,
+        country=country,
+        language=language,
+        lookback_days=lookback_days,
+    )

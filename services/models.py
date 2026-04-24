@@ -105,6 +105,9 @@ class ABTest(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     experiment_type: "ExperimentType"
+    product_id: Optional[int] = Field(default=None, index=True)
+    status: str = Field(default="running", index=True)
+    winner_variant_id: Optional[int] = Field(default=None, nullable=True)
     start_time: datetime | None = None
     end_time: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -174,4 +177,156 @@ class UserSession(SQLModel, table=True):
     user_id: int
     token_hash: str = Field(index=True, unique=True, max_length=128)
     expires_at: datetime
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Store(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    name: str
+    marketplace: str = Field(default="etsy", index=True)
+    region: str = "US"
+    currency: str = "USD"
+    is_default: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class BrandProfile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    name: str = "PODPusher Default"
+    tone: str = "Humorous, Positive"
+    audience: str = "Adults, Parents"
+    interests: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    banned_topics: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    preferred_products: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    region: str = "US"
+    language: str = "en"
+    active: bool = True
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class SavedNiche(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    niche: str = Field(index=True)
+    score: int = 0
+    context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class SavedSearch(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    name: str
+    query: str
+    filters: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    result_count: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class WatchlistItem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    item_type: str = Field(index=True)
+    name: str = Field(index=True)
+    context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class SeasonalEvent(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, index=True)
+    name: str = Field(index=True)
+    event_date: datetime = Field(index=True)
+    region: str = Field(default="US", index=True)
+    language: str = "en"
+    marketplace: str = "etsy"
+    category: str = "all"
+    priority: str = Field(default="medium", index=True)
+    opportunity_score: int = 0
+    keywords: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    product_categories: List[Dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
+    saved: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ListingDraftRevision(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    draft_id: int = Field(index=True)
+    title: str
+    description: str
+    tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    metadata_json: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class ListingOptimization(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    draft_id: int = Field(index=True)
+    score: int = 0
+    seo_score: int = 0
+    compliance_status: str = "unknown"
+    checks: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    source: str = "local_estimator"
+    is_estimated: bool = True
+    confidence: float = 0.74
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class ABExperimentEvent(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    test_id: int = Field(index=True)
+    variant_id: Optional[int] = Field(default=None, index=True)
+    event_type: str = Field(index=True)
+    value: int = 1
+    context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class NotificationRule(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    name: str
+    metric: str
+    operator: str = "less_than"
+    threshold: float = 0
+    window: str = "1 day"
+    channels: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class AutomationJob(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    name: str
+    frequency: str
+    next_run: datetime = Field(index=True)
+    status: str = Field(default="on_track", index=True)
+    category: str = "system"
+    metadata_json: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UsageLedger(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    resource_type: str = Field(index=True)
+    quantity: int = 0
+    source: str = "local"
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class TeamMember(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    email: str = Field(index=True)
+    name: str
+    role: str = "viewer"
+    permissions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    status: str = "active"
+    last_active_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)

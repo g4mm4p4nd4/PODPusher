@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover - Alembic not installed
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_DB = ROOT / 'alembic_validation.db'
-EXPECTED_HEAD = "0005_merge_trend_and_user_pref_heads"
+EXPECTED_HEAD = "0006_wireframe_control_center"
 EXPECTED_TABLES = {
     "abtest",
     "abvariant",
@@ -29,6 +29,19 @@ EXPECTED_TABLES = {
     "trendsignal",
     "user",
     "usersession",
+    "abexperimentevent",
+    "automationjob",
+    "brandprofile",
+    "listingdraftrevision",
+    "listingoptimization",
+    "notificationrule",
+    "savedniche",
+    "savedsearch",
+    "seasonalevent",
+    "store",
+    "teammember",
+    "usageledger",
+    "watchlistitem",
 }
 EXPECTED_INDEXES = {
     "analyticsevent": {
@@ -58,6 +71,23 @@ EXPECTED_INDEXES = {
         "ix_trendsignal_timestamp",
     },
     "usersession": {"ix_usersession_token_hash"},
+    "brandprofile": {"ix_brandprofile_user_id", "ix_brandprofile_updated_at"},
+    "seasonalevent": {
+        "ix_seasonalevent_event_date",
+        "ix_seasonalevent_name",
+        "ix_seasonalevent_priority",
+        "ix_seasonalevent_region",
+        "ix_seasonalevent_user_id",
+    },
+    "notificationrule": {
+        "ix_notificationrule_user_id",
+        "ix_notificationrule_created_at",
+    },
+    "automationjob": {
+        "ix_automationjob_next_run",
+        "ix_automationjob_status",
+        "ix_automationjob_user_id",
+    },
 }
 
 

@@ -18,6 +18,9 @@ def _variant_dict(variant: ABVariant, test: ABTest) -> dict:
         "clicks": variant.clicks,
         "conversion_rate": rate,
         "experiment_type": test.experiment_type,
+        "product_id": test.product_id,
+        "status": test.status,
+        "winner_variant_id": test.winner_variant_id,
         "start_time": test.start_time,
         "end_time": test.end_time,
     }
@@ -27,6 +30,7 @@ async def create_test(
     name: str,
     experiment_type: ExperimentType,
     variants: List[dict],
+    product_id: int | None = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
 ) -> dict:
@@ -40,6 +44,7 @@ async def create_test(
         test = ABTest(
             name=name,
             experiment_type=experiment_type,
+            product_id=product_id,
             start_time=start_time,
             end_time=end_time,
         )
@@ -57,6 +62,8 @@ async def create_test(
             "id": test.id,
             "name": test.name,
             "experiment_type": test.experiment_type,
+            "product_id": test.product_id,
+            "status": test.status,
             "start_time": test.start_time,
             "end_time": test.end_time,
             "variants": variant_dicts,
@@ -110,3 +117,96 @@ async def record_impression(variant_id: int) -> Optional[dict]:
         await session.commit()
         await session.refresh(variant)
         return _variant_dict(variant, test)
+
+
+async def pause_test(test_id: int) -> Optional[dict]:
+    async with get_session() as session:
+        test = await session.get(ABTest, test_id)
+        if not test:
+            return None
+        test.status = "paused"
+        session.add(test)
+        await session.commit()
+        await session.refresh(test)
+        return {"id": test.id, "status": test.status}
+
+
+async def end_test(test_id: int) -> Optional[dict]:
+    async with get_session() as session:
+        test = await session.get(ABTest, test_id)
+        if not test:
+            return None
+        variants = (
+            await session.exec(select(ABVariant).where(ABVariant.test_id == test_id))
+        ).all()
+        winner = max(
+            variants,
+            key=lambda item: (
+                (item.clicks / item.impressions) if item.impressions else 0
+            ),
+            default=None,
+        )
+        test.status = "completed"
+        test.end_time = datetime.utcnow()
+        test.winner_variant_id = winner.id if winner else None
+        session.add(test)
+        await session.commit()
+        await session.refresh(test)
+        return {
+            "id": test.id,
+            "status": test.status,
+            "winner_variant_id": test.winner_variant_id,
+        }
+
+
+async def duplicate_test(test_id: int) -> Optional[dict]:
+    async with get_session() as session:
+        test = await session.get(ABTest, test_id)
+        if not test:
+            return None
+        variants = (
+            await session.exec(select(ABVariant).where(ABVariant.test_id == test_id))
+        ).all()
+    return await create_test(
+        f"{test.name} Copy",
+        test.experiment_type,
+        [{"name": variant.name, "weight": variant.weight} for variant in variants],
+        test.product_id,
+        None,
+        None,
+    )
+
+
+async def push_winner(test_id: int) -> Optional[dict]:
+    async with get_session() as session:
+        test = await session.get(ABTest, test_id)
+        if not test:
+            return None
+        if not test.winner_variant_id:
+            variants = (
+                await session.exec(
+                    select(ABVariant).where(ABVariant.test_id == test_id)
+                )
+            ).all()
+            winner = max(
+                variants,
+                key=lambda item: (
+                    (item.clicks / item.impressions) if item.impressions else 0
+                ),
+                default=None,
+            )
+            test.winner_variant_id = winner.id if winner else None
+        if not test.winner_variant_id:
+            return None
+        winner = await session.get(ABVariant, test.winner_variant_id)
+        if not winner:
+            return None
+        test.status = "pushed"
+        session.add(test)
+        await session.commit()
+        return {
+            "test_id": test.id,
+            "winner_variant_id": winner.id,
+            "winner": winner.name,
+            "status": "pushed",
+        }

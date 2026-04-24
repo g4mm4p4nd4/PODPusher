@@ -1,7 +1,10 @@
 import {
+  checkListingDraftCompliance,
   fetchTagSuggestions,
+  generateListingDraft,
   saveDraft,
   loadDraft,
+  scoreListingDraft,
 } from '../services/listings';
 import axios from 'axios';
 
@@ -36,5 +39,22 @@ describe('listing services', () => {
     const d = await loadDraft(1);
     expect(d.id).toBe(1);
     expect(mocked.get).toHaveBeenCalled();
+  });
+
+  it('calls composer generation, score, and compliance APIs', async () => {
+    mocked.post.mockResolvedValueOnce({ data: { title: 'Generated' } });
+    await expect(generateListingDraft({ niche: 'Dog Mom Gifts' })).resolves.toEqual({
+      title: 'Generated',
+    });
+
+    mocked.post.mockResolvedValueOnce({ data: { optimization_score: 92 } });
+    await expect(scoreListingDraft({ title: 'T', description: 'D', tags: [] })).resolves.toEqual({
+      optimization_score: 92,
+    });
+
+    mocked.post.mockResolvedValueOnce({ data: { status: 'compliant' } });
+    await expect(checkListingDraftCompliance({ title: 'T', description: 'D', tags: [] })).resolves.toEqual({
+      status: 'compliant',
+    });
   });
 });
