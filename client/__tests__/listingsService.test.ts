@@ -1,7 +1,9 @@
 import {
   checkListingDraftCompliance,
+  exportDraft,
   fetchTagSuggestions,
   generateListingDraft,
+  queueDraftForPublish,
   saveDraft,
   loadDraft,
   scoreListingDraft,
@@ -56,5 +58,30 @@ describe('listing services', () => {
     await expect(checkListingDraftCompliance({ title: 'T', description: 'D', tags: [] })).resolves.toEqual({
       status: 'compliant',
     });
+  });
+
+  it('queues draft publish and exports draft payloads', async () => {
+    mocked.post.mockResolvedValueOnce({
+      data: { queue_item_id: 7, draft_id: 2, status: 'pending', mode: 'demo' },
+    });
+    await expect(queueDraftForPublish(2)).resolves.toMatchObject({
+      queue_item_id: 7,
+      draft_id: 2,
+      status: 'pending',
+    });
+
+    mocked.get.mockResolvedValueOnce({
+      data: {
+        draft_id: 2,
+        title: 'T',
+        description: 'D',
+        tags: [],
+        metadata: {},
+        score: {},
+        compliance: {},
+        provenance: {},
+      },
+    });
+    await expect(exportDraft(2)).resolves.toMatchObject({ draft_id: 2 });
   });
 });

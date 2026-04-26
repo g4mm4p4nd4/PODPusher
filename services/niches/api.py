@@ -55,12 +55,32 @@ async def save_profile(
 
 
 @app.get("/suggestions")
-async def suggestions(user_id: int | None = Depends(optional_user_id)):
-    return await get_niche_suggestions(user_id)
+async def suggestions(
+    user_id: int | None = Depends(optional_user_id),
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
+    marketplace: str = "etsy",
+    country: str = "US",
+    language: str = "en",
+    category: str | None = None,
+    search: str | None = None,
+):
+    return await get_niche_suggestions(
+        user_id,
+        date_from=date_from,
+        date_to=date_to,
+        store=store,
+        marketplace=marketplace,
+        country=country,
+        language=language,
+        category=category,
+        search=search,
+    )
 
 
 @app.post("/saved")
 async def save(
     payload: SaveNicheRequest, user_id: int | None = Depends(optional_user_id)
 ):
-    return await save_niche(user_id, payload.niche, payload.score)
+    return await save_niche(user_id, payload.niche, payload.score, payload.context)

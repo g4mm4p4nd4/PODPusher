@@ -1,10 +1,13 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
+
+from services.common.database import init_db
 from services.gateway.api import app as gateway_app
 
 
 @pytest.mark.asyncio
 async def test_product_suggestions_endpoint():
+    await init_db()
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/product-suggestions")

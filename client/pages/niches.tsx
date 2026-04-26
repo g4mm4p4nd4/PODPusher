@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 
 import {
@@ -21,18 +22,29 @@ import {
 import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function NicheSuggestionsPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [selected, setSelected] = useState<any>(null);
   const [tone, setTone] = useState('Humorous, Positive');
   const [audience, setAudience] = useState('Adults, Parents');
   const [interest, setInterest] = useState('Pets, Coffee, Outdoors');
+  const [bannedTopics, setBannedTopics] = useState('Politics, Religion');
+  const [preferredProducts, setPreferredProducts] = useState('Apparel, Mugs, Totes');
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('');
 
   const load = async () => {
     setLoading(true);
     const result = await fetchNicheSuggestions();
     setData(result);
     setSelected((result.niches || [])[0] || null);
+    if (result.profile) {
+      setTone(result.profile.tone || tone);
+      setAudience(result.profile.audience || audience);
+      setInterest((result.profile.interests || []).join(', '));
+      setBannedTopics((result.profile.banned_topics || []).join(', '));
+      setPreferredProducts((result.profile.preferred_products || []).join(', '));
+    }
     setLoading(false);
   };
 
@@ -41,18 +53,50 @@ export default function NicheSuggestionsPage() {
   }, []);
 
   const saveProfile = async () => {
+    setStatus('Saving profile...');
     await saveBrandProfile({
       tone,
       audience,
       interests: interest.split(',').map((item) => item.trim()).filter(Boolean),
+      banned_topics: bannedTopics.split(',').map((item) => item.trim()).filter(Boolean),
+      preferred_products: preferredProducts.split(',').map((item) => item.trim()).filter(Boolean),
     });
+    setStatus('Profile saved');
     await load();
   };
 
   const saveSelected = async () => {
     if (!selected) return;
-    await saveNiche(selected.niche, selected.brand_fit_score);
+    setStatus(`Saving ${selected.niche}...`);
+    await saveNiche(selected.niche, selected.brand_fit_score, selected);
+    setStatus(`Saved ${selected.niche}`);
     await load();
+  };
+
+  const composerParams = (item: any) => {
+    const params = new URLSearchParams({
+      source: 'niches',
+      niche: item.niche,
+      keyword: item.keyword || item.niche,
+      product_type: (item.products || preferredProducts.split(','))[0]?.trim() || 'T-Shirt',
+      audience,
+      tags: [item.keyword, item.niche, ...(item.products || [])].filter(Boolean).slice(0, 6).join(','),
+    });
+    return `/listing-composer?${params.toString()}`;
+  };
+
+  const abTestParams = (item: any) => {
+    const params = new URLSearchParams({
+      source: 'niche',
+      niche: item.niche,
+      keyword: item.keyword || item.niche,
+      variable: 'listing_title',
+    });
+    return `/ab-tests?${params.toString()}`;
+  };
+
+  const startABTest = (item: any) => {
+    void router.push(abTestParams(item));
   };
 
   return (
@@ -60,7 +104,12 @@ export default function NicheSuggestionsPage() {
       <PageHeader
         title="Niche Suggestions"
         subtitle="Define your brand profile to get better niche suggestions."
-        actions={<Button onClick={saveProfile} variant="primary">Save Profile</Button>}
+        actions={
+          <>
+            {status ? <span className="text-sm text-emerald-400" role="status">{status}</span> : null}
+            <Button onClick={saveProfile} variant="primary">Save Profile</Button>
+          </>
+        }
       />
       <FilterBar>
         <SelectBox label="Tone" value={tone} onChange={setTone} options={['Humorous, Positive', 'Warm & Inviting', 'Minimal, Calm']} />
@@ -70,6 +119,22 @@ export default function NicheSuggestionsPage() {
           <input
             value={interest}
             onChange={(event) => setInterest(event.target.value)}
+            className="bg-transparent text-sm text-slate-100 outline-none"
+          />
+        </label>
+        <label className="flex min-w-[220px] flex-col gap-1 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+          Banned Topics
+          <input
+            value={bannedTopics}
+            onChange={(event) => setBannedTopics(event.target.value)}
+            className="bg-transparent text-sm text-slate-100 outline-none"
+          />
+        </label>
+        <label className="flex min-w-[220px] flex-col gap-1 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+          Preferred Products
+          <input
+            value={preferredProducts}
+            onChange={(event) => setPreferredProducts(event.target.value)}
             className="bg-transparent text-sm text-slate-100 outline-none"
           />
         </label>
@@ -92,6 +157,7 @@ export default function NicheSuggestionsPage() {
                       <th>Profitability</th>
                       <th>Audience</th>
                       <th>Brand Fit</th>
+                      <th>State</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,6 +193,7 @@ export default function NicheSuggestionsPage() {
                           <span className="font-semibold text-slate-100">{item.brand_fit_score}</span>
                           <span className="ml-2 text-emerald-400">{item.brand_fit_label}</span>
                         </td>
+                        <td>{item.saved ? <Pill tone="green">Saved</Pill> : <Pill>Open</Pill>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -135,13 +202,13 @@ export default function NicheSuggestionsPage() {
             </Panel>
 
             {selected ? (
-              <Panel title="Why this niche?" action={<Button onClick={saveSelected} variant="primary">Save Niche</Button>}>
+              <Panel title="Why this niche?" action={<Pill tone="green">{selected.brand_fit_score} {selected.brand_fit_label}</Pill>}>
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <p className="text-lg font-semibold text-slate-50">{selected.niche}</p>
                     <p className="text-sm text-slate-400">{selected.keyword}</p>
                   </div>
-                  <Pill tone="green">{selected.brand_fit_score} fit</Pill>
+                  <Pill tone={selected.saved ? 'green' : 'blue'}>{selected.saved ? 'Saved niche' : 'Selected'}</Pill>
                 </div>
                 <div className="space-y-3">
                   {selected.why.map((reason: string) => (
@@ -150,10 +217,13 @@ export default function NicheSuggestionsPage() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <Button onClick={saveSelected} variant="primary">Save Niche</Button>
-                  <a href={`/listing-composer?niche=${encodeURIComponent(selected.niche)}`} className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                  <a href={composerParams(selected)} className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                     Create Listing
+                  </a>
+                  <a href={abTestParams(selected)} className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-700">
+                    Start A/B Test
                   </a>
                 </div>
               </Panel>

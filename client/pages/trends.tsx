@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 
 import {
@@ -14,33 +15,118 @@ import {
   SelectBox,
   formatNumber,
 } from '../components/ControlCenter';
-import { DashboardResponse, fetchTrendInsights } from '../services/controlCenter';
+import {
+  DashboardResponse,
+  addTagClusterToWatchlist,
+  fetchTrendInsights,
+  saveTrendKeyword,
+  watchTrendKeyword,
+} from '../services/controlCenter';
 import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function TrendsPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [marketplace, setMarketplace] = useState('etsy');
   const [category, setCategory] = useState('all');
   const [country, setCountry] = useState('US');
   const [language, setLanguage] = useState('en');
+  const [dateRange, setDateRange] = useState('30');
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const [selectedKeyword, setSelectedKeyword] = useState<any>(null);
+  const [actionStatus, setActionStatus] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    setData(
-      await fetchTrendInsights({
+    const result = await fetchTrendInsights({
         marketplace,
         category: category === 'all' ? undefined : category,
         country,
         language,
-      })
-    );
+        lookback_days: Number(dateRange),
+    });
+    setData(result);
+    setSelectedKeyword((current: any) => current || (result.keywords || [])[0] || null);
     setLoading(false);
   };
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [marketplace, category, country, language, dateRange]);
+
+  const composerUrl = (payload: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    return `/listing-composer?${params.toString()}`;
+  };
+
+  const useKeywordInComposer = (item: any) => {
+    void router.push(
+      composerUrl({
+        source: 'trends',
+        keyword: item.keyword,
+        niche: item.keyword,
+        product_type: item.suggested_products?.[0],
+        tags: (item.suggested_products || []).join(','),
+      })
+    );
+  };
+
+  const useIdeaInComposer = (idea: any) => {
+    void router.push(
+      composerUrl({
+        source: 'trend-design-idea',
+        keyword: idea.keyword || idea.title,
+        niche: idea.niche || idea.title,
+        product_type: idea.product_type || 'T-Shirt',
+      })
+    );
+  };
+
+  const saveKeyword = async (item: any) => {
+    setActionStatus(`Saving ${item.keyword}...`);
+    await saveTrendKeyword(item.keyword, item.search_volume || item.growth || 0);
+    setActionStatus(`${item.keyword} saved to niches.`);
+  };
+
+  const watchKeyword = async (item: any) => {
+    setActionStatus(`Watching ${item.keyword}...`);
+    await watchTrendKeyword(item.keyword, item);
+    setActionStatus(`${item.keyword} added to watchlist.`);
+  };
+
+  const addCluster = async (cluster: any) => {
+    setActionStatus(`Adding ${cluster.cluster} cluster...`);
+    await addTagClusterToWatchlist(cluster.cluster, cluster.tags || [], cluster.volume);
+    setActionStatus(`${cluster.cluster} cluster added to watchlist.`);
+  };
+
+  const exportCsv = () => {
+    const rows = data?.keywords || [];
+    const header = ['rank', 'keyword', 'search_volume', 'growth', 'competition', 'opportunity'];
+    const csv = [
+      header.join(','),
+      ...rows.map((row: any) =>
+        header.map((key) => JSON.stringify(row[key] ?? '')).join(',')
+      ),
+    ].join('\n');
+
+    if (typeof window === 'undefined' || typeof Blob === 'undefined' || !URL.createObjectURL) {
+      setActionStatus('CSV export ready; browser download is unavailable in this environment.');
+      return;
+    }
+
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trend-keywords-${dateRange}d.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setActionStatus(`Exported ${rows.length} keyword rows.`);
+  };
 
   return (
     <div className="space-y-4">
@@ -51,10 +137,24 @@ export default function TrendsPage() {
       />
       <FilterBar>
         <SelectBox label="Marketplace" value={marketplace} onChange={setMarketplace} options={['etsy', 'Amazon US']} />
+        <SelectBox label="Date Range" value={dateRange} onChange={setDateRange} options={['7', '30', '90', '180']} />
         <SelectBox label="Category" value={category} onChange={setCategory} options={['all', 'Apparel', 'Drinkware', 'Mugs', 'Bags']} />
         <SelectBox label="Country" value={country} onChange={setCountry} options={['US', 'CA', 'GB', 'DE', 'FR']} />
         <SelectBox label="Language" value={language} onChange={setLanguage} options={['en', 'es', 'fr', 'de']} />
+        <Button onClick={() => setMoreFiltersOpen(!moreFiltersOpen)}>
+          {moreFiltersOpen ? 'Hide Filters' : 'More Filters'}
+        </Button>
       </FilterBar>
+      {moreFiltersOpen ? (
+        <Panel title="More Filters">
+          <div className="grid gap-3 text-sm text-slate-400 md:grid-cols-3">
+            <p>Source status: public trend signals and local estimator fallback.</p>
+            <p>Credential-backed marketplaces are non-blocking in this slice.</p>
+            <p>Selected keyword: {selectedKeyword?.keyword || 'None'}</p>
+          </div>
+        </Panel>
+      ) : null}
+      {actionStatus ? <EmptyState message={actionStatus} /> : null}
 
       {loading || !data ? (
         <LoadingState />
@@ -81,7 +181,7 @@ export default function TrendsPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.4fr_0.85fr]">
-            <Panel title="Trending Keywords" action={<Button>Export CSV</Button>}>
+            <Panel title="Trending Keywords" action={<Button onClick={exportCsv}>Export CSV</Button>}>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="text-left text-slate-500">
@@ -93,13 +193,21 @@ export default function TrendsPage() {
                       <th>Competition</th>
                       <th>Products</th>
                       <th>Opportunity</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(data.keywords || []).map((item: any) => (
-                      <tr key={item.keyword} className="border-t border-slate-800">
+                      <tr
+                        key={item.keyword}
+                        className={`border-t border-slate-800 ${selectedKeyword?.keyword === item.keyword ? 'bg-orange-500/5' : ''}`}
+                      >
                         <td className="py-3 text-slate-500">{item.rank}</td>
-                        <td className="font-medium text-slate-100">{item.keyword}</td>
+                        <td>
+                          <button type="button" onClick={() => setSelectedKeyword(item)} className="font-medium text-slate-100 hover:text-orange-300">
+                            {item.keyword}
+                          </button>
+                        </td>
                         <td>{formatNumber(item.search_volume)}</td>
                         <td className="text-emerald-400">+{item.growth}%</td>
                         <td>{item.competition}/100</td>
@@ -111,11 +219,48 @@ export default function TrendsPage() {
                         <td>
                           <Pill tone={item.opportunity === 'High' ? 'green' : 'orange'}>{item.opportunity}</Pill>
                         </td>
+                        <td>
+                          <div className="flex flex-wrap gap-1">
+                            <button type="button" onClick={() => saveKeyword(item)} className="text-blue-300">Save</button>
+                            <a href={composerUrl({
+                              source: 'trends',
+                              keyword: item.keyword,
+                              niche: item.keyword,
+                              product_type: item.suggested_products?.[0],
+                              tags: (item.suggested_products || []).join(','),
+                            })} className="text-orange-300">Compose</a>
+                            <button type="button" onClick={() => watchKeyword(item)} className="text-emerald-300">Watch</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {selectedKeyword ? (
+                <div className="mt-4 rounded-md border border-slate-800 bg-slate-950 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-100">{selectedKeyword.keyword}</p>
+                      <p className="text-slate-500">
+                        {formatNumber(selectedKeyword.search_volume)} searches, {selectedKeyword.competition}/100 competition.
+                      </p>
+                    </div>
+                    <a
+                      href={composerUrl({
+                        source: 'trends',
+                        keyword: selectedKeyword.keyword,
+                        niche: selectedKeyword.keyword,
+                        product_type: selectedKeyword.suggested_products?.[0],
+                        tags: (selectedKeyword.suggested_products || []).join(','),
+                      })}
+                      className="rounded-md border border-orange-500 bg-orange-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
+                    >
+                      Use in Composer
+                    </a>
+                  </div>
+                </div>
+              ) : null}
             </Panel>
 
             <div className="space-y-4">
@@ -126,7 +271,17 @@ export default function TrendsPage() {
                       <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded bg-slate-800 text-center text-sm font-semibold text-orange-300">
                         {idea.title}
                       </div>
-                      <Pill tone={idea.opportunity === 'High' ? 'green' : 'orange'}>{idea.opportunity} opportunity</Pill>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Pill tone={idea.opportunity === 'High' ? 'green' : 'orange'}>{idea.opportunity} opportunity</Pill>
+                        <a href={composerUrl({
+                          source: 'trend-design-idea',
+                          keyword: idea.keyword || idea.title,
+                          niche: idea.niche || idea.title,
+                          product_type: idea.product_type || 'T-Shirt',
+                        })} className="text-sm text-orange-300">
+                          Use in Composer
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -142,6 +297,9 @@ export default function TrendsPage() {
                       <div className="flex flex-wrap gap-1">
                         {cluster.tags.map((tag: string) => <Pill key={tag}>{tag}</Pill>)}
                       </div>
+                      <button type="button" onClick={() => addCluster(cluster)} className="mt-3 text-sm text-orange-300">
+                        Add cluster
+                      </button>
                     </div>
                   ))}
                 </div>

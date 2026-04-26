@@ -9,7 +9,7 @@
  * - Token expiry warnings
  * - Generation gating on missing connections
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './playwright';
 
 test.describe('OAuth Connect Flow', () => {
   test.beforeEach(async ({ page }) => {

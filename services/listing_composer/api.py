@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
 from ..common.observability import register_observability
@@ -7,7 +7,15 @@ from ..control_center.service import (
     generate_listing_payload,
     score_listing_payload,
 )
-from .service import DraftPayload, get_draft, save_draft
+from .service import (
+    DraftPayload,
+    PublishQueueResponse,
+    build_export_payload,
+    export_payload_to_csv,
+    get_draft,
+    queue_publish_job,
+    save_draft,
+)
 
 app = FastAPI()
 register_observability(app, service_name="listing_composer")
@@ -47,6 +55,36 @@ async def read_draft(draft_id: int):
     if not draft:
         raise HTTPException(status_code=404, detail="draft not found")
     return DraftPayload(**draft.model_dump())
+
+
+@app.post("/drafts/{draft_id}/publish-queue", response_model=PublishQueueResponse)
+async def publish_queue(draft_id: int):
+    queued = await queue_publish_job(draft_id)
+    if not queued:
+        raise HTTPException(status_code=404, detail="draft not found")
+    return queued
+
+
+@app.get("/drafts/{draft_id}/export", response_model=None)
+async def export_draft(
+    draft_id: int,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+):
+    payload = await build_export_payload(draft_id)
+    if not payload:
+        raise HTTPException(status_code=404, detail="draft not found")
+    filename = f"listing-draft-{draft_id}.{format}"
+    if format == "csv":
+        return Response(
+            content=export_payload_to_csv(payload),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    return Response(
+        content=payload.model_dump_json(),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/generate")

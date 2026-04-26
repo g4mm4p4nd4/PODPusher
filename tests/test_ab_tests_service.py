@@ -2,7 +2,12 @@ import pytest
 from datetime import datetime, timedelta
 from services.ab_tests.service import (
     create_test,
+    duplicate_test,
+    end_test,
+    get_dashboard,
     get_metrics,
+    pause_test,
+    push_winner,
     record_click,
     record_impression,
 )
@@ -53,3 +58,49 @@ async def test_scheduling():
     )
     vid = test["variants"][0]["id"]
     assert await record_impression(vid) is None
+
+
+@pytest.mark.asyncio
+async def test_dashboard_filters_and_action_mutations():
+    await init_db()
+    first = await create_test(
+        "Retro title test",
+        ExperimentType.TITLE,
+        [{"name": "Title A", "weight": 0.5}, {"name": "Title B", "weight": 0.5}],
+        product_id=101,
+    )
+    second = await create_test(
+        "Dog mom thumbnail test",
+        ExperimentType.THUMBNAIL,
+        [{"name": "Image A", "weight": 0.5}, {"name": "Image B", "weight": 0.5}],
+        product_id=102,
+    )
+
+    await pause_test(second["id"])
+    dashboard = await get_dashboard(search="retro", status="running")
+    assert [item["id"] for item in dashboard["experiments"]] == [first["id"]]
+    assert dashboard["experiments"][0]["product"] == "Retro Beach Sunset Tee"
+    assert dashboard["experiments"][0]["provenance"]["source"] == "abtest_table"
+
+    paused = await pause_test(first["id"])
+    assert paused["status"] == "paused"
+
+    duplicated = await duplicate_test(first["id"])
+    assert duplicated["name"] == "Retro title test Copy"
+    assert duplicated["product_id"] == 101
+
+    ended = await end_test(first["id"])
+    assert ended["status"] == "completed"
+    assert ended["winner_variant_id"] is not None
+
+    pushed = await push_winner(first["id"])
+    assert pushed["status"] == "pushed"
+    assert pushed["demo_state"] is False
+
+
+@pytest.mark.asyncio
+async def test_demo_actions_return_explicit_demo_state():
+    await init_db()
+    pushed = await push_winner(0)
+    assert pushed["demo_state"] is True
+    assert pushed["integration_status"]["listing_push"] == "demo"

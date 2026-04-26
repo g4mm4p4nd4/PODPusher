@@ -6,13 +6,13 @@ from .service import (
     create_test,
     duplicate_test,
     end_test,
+    get_dashboard,
     get_metrics,
     pause_test,
     push_winner,
     record_click,
     record_impression,
 )
-from ..control_center.service import get_ab_dashboard
 from ..models import ExperimentType
 
 app = FastAPI()
@@ -30,6 +30,18 @@ class TestCreate(BaseModel):
     product_id: int | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
+
+
+def _parse_filter_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        try:
+            return datetime.fromisoformat(f"{value}T00:00:00")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid date filter") from exc
 
 
 @app.post("/")
@@ -53,8 +65,18 @@ async def metrics_all():
 
 
 @app.get("/dashboard")
-async def dashboard():
-    return await get_ab_dashboard()
+async def dashboard(
+    search: str | None = None,
+    status: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
+    return await get_dashboard(
+        search,
+        status,
+        _parse_filter_datetime(start_date),
+        _parse_filter_datetime(end_date),
+    )
 
 
 @app.get("/{test_id}/metrics")

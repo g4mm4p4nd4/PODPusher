@@ -45,6 +45,7 @@ beforeEach(() => {
   mockedAxios.get.mockReset();
   mockedAxios.put.mockReset();
   mockedAxios.post.mockReset();
+  mockedAxios.request.mockReset();
 });
 
 test('marks a notification as read when user confirms it', async () => {
@@ -114,4 +115,89 @@ test('shows validation message for empty schedule message', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Please provide a message');
+});
+
+test('creates a digest schedule from the notifications dashboard', async () => {
+  mockedAxios.get.mockResolvedValue({
+    data: {
+      cards: [],
+      digest_schedule: [
+        {
+          digest: 'Weekly Digest',
+          schedule: 'Mon 9:00 AM',
+          audience: 'All Users',
+          channels: ['Email'],
+          active: true,
+        },
+      ],
+      scheduled_jobs: [],
+      notifications: [],
+      rules: [],
+      upcoming_schedule: [],
+      preferences: {
+        email: { enabled: true },
+        in_app: { enabled: true },
+        slack: { enabled: false, connected: false },
+      },
+    },
+  });
+  mockedAxios.request.mockResolvedValue({ data: { id: 10, status: 'on_track' } });
+
+  render(<Notifications />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Manage Schedules' }));
+  fireEvent.change(screen.getByLabelText('Schedule name'), {
+    target: { value: 'Seasonal Event Sync' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  await waitFor(() =>
+    expect(mockedAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining('/api/notifications/jobs'),
+        data: expect.objectContaining({ name: 'Seasonal Event Sync' }),
+      })
+    )
+  );
+});
+
+test('updates notification preferences with explicit slack placeholder state', async () => {
+  mockedAxios.get.mockResolvedValue({
+    data: {
+      cards: [],
+      digest_schedule: [],
+      scheduled_jobs: [],
+      notifications: [],
+      rules: [],
+      upcoming_schedule: [],
+      preferences: {
+        email: { enabled: true },
+        in_app: { enabled: true },
+        slack: { enabled: false, connected: false },
+      },
+    },
+  });
+  mockedAxios.request.mockResolvedValue({
+    data: {
+      email: { enabled: false },
+      in_app: { enabled: true },
+      slack: { enabled: false, connected: false, status: 'credentials_missing' },
+    },
+  });
+
+  render(<Notifications />);
+
+  await screen.findByText('Notification Preferences');
+  fireEvent.click(screen.getAllByRole('button', { name: 'On' })[0]);
+
+  await waitFor(() =>
+    expect(mockedAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'put',
+        url: expect.stringContaining('/api/notifications/preferences'),
+        data: expect.objectContaining({ email_enabled: false }),
+      })
+    )
+  );
 });

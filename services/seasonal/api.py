@@ -16,19 +16,28 @@ class SaveEventRequest(BaseModel):
 @app.get("/events")
 async def events(
     user_id: int | None = Depends(optional_user_id),
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
     region: str = "US",
+    country: str | None = None,
     language: str = "en",
     marketplace: str = "etsy",
     category: str = "all",
+    search: str | None = None,
     horizon_months: int = 6,
 ):
     return await get_seasonal_events(
         user_id,
-        region=region,
+        region=country or region,
         language=language,
         marketplace=marketplace,
         category=category,
         horizon_months=horizon_months,
+        date_from=date_from,
+        date_to=date_to,
+        store=store,
+        search=search,
     )
 
 

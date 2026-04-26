@@ -47,19 +47,23 @@ const translationTable: Record<string, string> = {
   'settings.connect': 'Connect',
 };
 
+const mockTranslate = (key: string) => translationTable[key] ?? key;
+const mockReplace = jest.fn();
+const mockRouter = {
+  query: {} as Record<string, string | string[] | undefined>,
+  pathname: '/settings',
+  isReady: true,
+  replace: mockReplace,
+};
+
 jest.mock('next-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => translationTable[key] ?? key,
+    t: mockTranslate,
   }),
 }));
 
 jest.mock('next/router', () => ({
-  useRouter: () => ({
-    query: {},
-    pathname: '/settings',
-    isReady: true,
-    replace: jest.fn(),
-  }),
+  useRouter: () => mockRouter,
 }));
 
 jest.mock('../services/userPreferences', () => ({
@@ -80,7 +84,12 @@ const mockedListOAuthProviders = listOAuthProviders as jest.MockedFunction<typeo
 const mockedListOAuthCredentials = listOAuthCredentials as jest.MockedFunction<typeof listOAuthCredentials>;
 
 beforeEach(() => {
+  mockReplace.mockReset();
+  mockRouter.query = {};
+  mockedGetPreferences.mockReset();
   mockedSavePreferences.mockReset();
+  mockedListOAuthProviders.mockReset();
+  mockedListOAuthCredentials.mockReset();
   mockedGetPreferences.mockResolvedValue({
     auto_social: true,
     social_handles: {},
@@ -102,10 +111,19 @@ beforeEach(() => {
   mockedListOAuthCredentials.mockResolvedValue([]);
 });
 
-test('renders translated settings option labels and translated oauth region aria-label', async () => {
+async function renderLoadedSocialSettings() {
   render(<SocialSettings />);
 
-  await waitFor(() => expect(mockedListOAuthProviders).toHaveBeenCalled());
+  await waitFor(() => {
+    expect(mockedGetPreferences).toHaveBeenCalled();
+    expect(mockedListOAuthProviders).toHaveBeenCalled();
+    expect(mockedListOAuthCredentials).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Connect' })).not.toBeDisabled();
+  });
+}
+
+test('renders translated settings option labels and translated oauth region aria-label', async () => {
+  await renderLoadedSocialSettings();
 
   expect(screen.getByRole('option', { name: 'Lang English' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Lang Spanish' })).toBeInTheDocument();
@@ -143,19 +161,17 @@ test('uses translated unknown provider label when provider key is not mapped', a
     },
   ]);
 
-  render(<SocialSettings />);
-
-  await waitFor(() => expect(mockedListOAuthProviders).toHaveBeenCalled());
+  await renderLoadedSocialSettings();
 
   expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.getByText('Connected account')).toBeInTheDocument();
 });
 
 test('shows translated invalid handle message for malformed social handles', async () => {
-  render(<SocialSettings />);
+  await renderLoadedSocialSettings();
 
-  const instagramInput = await screen.findByPlaceholderText('Instagram handle');
+  const instagramInput = screen.getByPlaceholderText('Instagram handle');
   fireEvent.change(instagramInput, { target: { value: 'not valid handle!' } });
 
-  expect(screen.getByText('Invalid handle format')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText('Invalid handle format')).toBeInTheDocument());
 });

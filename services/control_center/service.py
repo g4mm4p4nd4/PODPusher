@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 from math import erf, sqrt
 from typing import Any
@@ -192,6 +193,120 @@ def _provenance(
     }
 
 
+def _normalize_filter(value: str | None, default: str = "all") -> str:
+    value = (value or "").strip()
+    return value or default
+
+
+def _normalize_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return value
+
+
+def _parse_filter_date(value: str | None) -> datetime.date | None:
+    normalized = _normalize_date(value)
+    if not normalized:
+        return None
+    try:
+        return datetime.fromisoformat(normalized).date()
+    except ValueError:
+        return None
+
+
+def _global_filters(
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
+    marketplace: str = "etsy",
+    country: str = "US",
+    language: str = "en",
+    category: str | None = None,
+    search: str | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    filters: dict[str, Any] = {
+        "date_from": _normalize_date(date_from),
+        "date_to": _normalize_date(date_to),
+        "store": _normalize_filter(store),
+        "marketplace": _normalize_filter(marketplace, "etsy"),
+        "country": _normalize_filter(country, "US"),
+        "language": _normalize_filter(language, "en"),
+        "category": _normalize_filter(category),
+        "search": search or "",
+    }
+    filters.update({key: value for key, value in extra.items() if value is not None})
+    return filters
+
+
+async def _integration_status(
+    user_id: int,
+    providers: list[str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    requested = providers or [
+        "etsy",
+        "printify",
+        "stripe",
+        "openai",
+        "slack",
+        "marketplace",
+    ]
+    credential_providers = {"etsy", "printify", "stripe"}
+    connected: set[str] = set()
+    async with get_session() as session:
+        credentials = (
+            await session.exec(
+                select(OAuthCredential).where(OAuthCredential.user_id == user_id)
+            )
+        ).all()
+    for credential in credentials:
+        provider = getattr(credential.provider, "value", credential.provider)
+        connected.add(str(provider))
+
+    env_status = {
+        "openai": bool(os.getenv("OPENAI_API_KEY")),
+        "slack": bool(os.getenv("SLACK_BOT_TOKEN") or os.getenv("SLACK_WEBHOOK_URL")),
+    }
+    statuses: dict[str, dict[str, Any]] = {}
+    for provider in requested:
+        key = "etsy" if provider == "marketplace" else provider
+        is_connected = (
+            key in connected
+            if key in credential_providers
+            else bool(env_status.get(key, False))
+        )
+        statuses[provider] = {
+            "provider": provider,
+            "status": "connected" if is_connected else "demo_fallback",
+            "connected": is_connected,
+            "mode": "live" if is_connected else "demo",
+            "blocking": False,
+            "message": (
+                "Connected credentials available."
+                if is_connected
+                else "Missing credentials; returning demo/fallback data."
+            ),
+            "provenance": _provenance(
+                (
+                    "oauthcredential_table"
+                    if key in credential_providers
+                    else "env_config"
+                ),
+                estimated=not is_connected,
+                confidence=0.96 if is_connected else 0.7,
+            ),
+        }
+    return statuses
+
+
+def _action(name: str, method: str, endpoint: str) -> dict[str, str]:
+    return {"name": name, "method": method, "endpoint": endpoint}
+
+
 def _metric(
     label: str,
     value: int | float | str,
@@ -249,7 +364,10 @@ def _event_payload(
         "priority": priority,
         "opportunity_score": score,
         "recommended_keywords": keywords,
-        "product_categories": PRODUCT_CATEGORIES[:4],
+        "product_categories": [
+            {**category, "provenance": _provenance("category_estimator")}
+            for category in PRODUCT_CATEGORIES[:4]
+        ],
         "niche_angles": [
             f"{fixture['name']} humor",
             f"{fixture['name']} family gifts",
@@ -387,9 +505,35 @@ def _keyword_table_from_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
     return table
 
 
-async def get_overview_dashboard(user_id: int | None = None) -> dict[str, Any]:
+async def get_overview_dashboard(
+    user_id: int | None = None,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
+    marketplace: str = "etsy",
+    country: str = "US",
+    language: str = "en",
+    category: str | None = None,
+    search: str | None = None,
+) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
+    filters = _global_filters(
+        date_from=date_from,
+        date_to=date_to,
+        store=store,
+        marketplace=marketplace,
+        country=country,
+        language=language,
+        category=category,
+        search=search,
+    )
     rows = await _trend_rows()
+    query = (search or "").strip().lower()
+    if category:
+        rows = [row for row in rows if row["category"].lower() == category.lower()]
+    if query:
+        rows = [row for row in rows if query in row["keyword"].lower()]
     quota = await _quota_summary(user_id)
 
     async with get_session() as session:
@@ -418,7 +562,45 @@ async def get_overview_dashboard(user_id: int | None = None) -> dict[str, Any]:
     )
     digest_subscribers = 18652
 
+    top_niches = [
+        {
+            "niche": row["niche"],
+            "growth": row["growth"],
+            "demand": 95 - index * 5,
+            "competition": row["competition"],
+            "competition_label": "Low" if row["competition"] < 40 else "Medium",
+            "provenance": _provenance(),
+        }
+        for index, row in enumerate(KEYWORD_FIXTURES[:5])
+        if (not category or row["category"].lower() == category.lower())
+        and (not query or query in row["keyword"] or query in row["niche"].lower())
+    ]
+    categories = [
+        {**item, "provenance": _provenance("category_estimator")}
+        for item in PRODUCT_CATEGORIES
+        if not category
+        or item["category"].lower() == category.lower()
+        or category.lower() in item["category"].lower()
+    ]
+
     return {
+        "filters": filters,
+        "integration_status": await _integration_status(user_id),
+        "actions_available": [
+            _action("view_trends", "GET", "/api/trends/insights"),
+            _action("open_niche", "GET", "/api/niches/suggestions"),
+            _action("open_seasonal_event", "GET", "/api/seasonal/events"),
+            _action("open_recent_draft", "GET", "/api/listing-composer/drafts/{id}"),
+        ],
+        "next_drilldowns": [
+            {
+                "type": "metric",
+                "target": "/api/trends/insights",
+                "params": ["date_from", "date_to", "marketplace", "category"],
+            },
+            {"type": "draft", "target": "/api/listing-composer"},
+            {"type": "event", "target": "/api/seasonal/events"},
+        ],
         "metrics": [
             _metric(
                 "Trending Keywords",
@@ -452,18 +634,8 @@ async def get_overview_dashboard(user_id: int | None = None) -> dict[str, Any]:
             }
             for i in range(30)
         ],
-        "top_rising_niches": [
-            {
-                "niche": row["niche"],
-                "growth": row["growth"],
-                "demand": 95 - index * 5,
-                "competition": row["competition"],
-                "competition_label": "Low" if row["competition"] < 40 else "Medium",
-                "provenance": _provenance(),
-            }
-            for index, row in enumerate(KEYWORD_FIXTURES[:5])
-        ],
-        "popular_categories": PRODUCT_CATEGORIES,
+        "top_rising_niches": top_niches,
+        "popular_categories": categories,
         "seasonal_events": [_event_payload(item) for item in EVENT_FIXTURES[:5]],
         "recent_drafts": [
             {
@@ -625,9 +797,16 @@ async def get_seasonal_events(
     marketplace: str = "etsy",
     category: str = "all",
     horizon_months: int = 6,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
+    search: str | None = None,
 ) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
     horizon = DEFAULT_NOW() + timedelta(days=max(1, horizon_months) * 31)
+    start_date = _parse_filter_date(date_from)
+    end_date = _parse_filter_date(date_to)
+    query = (search or "").strip().lower()
 
     async with get_session() as session:
         saved = (
@@ -643,15 +822,61 @@ async def get_seasonal_events(
         for item in EVENT_FIXTURES
         if _event_date(int(item["month"]), int(item["day"])) <= horizon
     ]
+    if start_date:
+        events = [
+            event
+            for event in events
+            if datetime.fromisoformat(event["event_date"]).date() >= start_date
+        ]
+    if end_date:
+        events = [
+            event
+            for event in events
+            if datetime.fromisoformat(event["event_date"]).date() <= end_date
+        ]
+    if category and category.lower() != "all":
+        events = [
+            event
+            for event in events
+            if any(
+                category.lower() in product["category"].lower()
+                for product in event["product_categories"]
+            )
+        ]
+    if query:
+        events = [
+            event
+            for event in events
+            if query in event["name"].lower()
+            or any(
+                query in keyword["keyword"] for keyword in event["recommended_keywords"]
+            )
+        ]
     high_priority = [event for event in events if event["priority"] == "high"]
     return {
-        "filters": {
-            "region": region,
-            "language": language,
-            "marketplace": marketplace,
-            "category": category,
-            "horizon_months": horizon_months,
-        },
+        "filters": _global_filters(
+            date_from=date_from,
+            date_to=date_to,
+            store=store,
+            marketplace=marketplace,
+            country=region,
+            language=language,
+            category=category,
+            search=search,
+            horizon_months=horizon_months,
+        ),
+        "integration_status": await _integration_status(
+            user_id, ["etsy", "marketplace"]
+        ),
+        "actions_available": [
+            _action("save_event", "POST", "/api/seasonal/events/save"),
+            _action("use_in_composer", "GET", "/api/listing-composer"),
+            _action("view_event_detail", "GET", "/api/seasonal/events"),
+        ],
+        "next_drilldowns": [
+            {"type": "event", "target": "seasonal_event_detail"},
+            {"type": "composer", "target": "/api/listing-composer"},
+        ],
         "opportunity_score": round(
             sum(event["opportunity_score"] for event in events) / max(1, len(events))
         ),
@@ -669,6 +894,7 @@ async def get_seasonal_events(
                 .isoformat(),
                 "launch_window": "17-47 days before event",
                 "priority": event["priority"],
+                "provenance": _provenance("seasonal_calendar"),
             }
             for event in events
         ],
@@ -714,7 +940,15 @@ async def save_seasonal_event(user_id: int | None, name: str) -> dict[str, Any]:
         session.add(record)
         await session.commit()
         await session.refresh(record)
-    return {"id": record.id, "name": record.name, "saved": record.saved}
+    return {
+        "id": record.id,
+        "name": record.name,
+        "saved": record.saved,
+        "state": "persisted",
+        "provenance": _provenance(
+            "seasonalevent_table", estimated=False, confidence=0.96
+        ),
+    }
 
 
 async def get_brand_profile(user_id: int | None = None) -> dict[str, Any]:
@@ -793,9 +1027,21 @@ async def upsert_brand_profile(
     return await get_brand_profile(user_id)
 
 
-async def get_niche_suggestions(user_id: int | None = None) -> dict[str, Any]:
+async def get_niche_suggestions(
+    user_id: int | None = None,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    store: str | None = None,
+    marketplace: str = "etsy",
+    country: str = "US",
+    language: str = "en",
+    category: str | None = None,
+    search: str | None = None,
+) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
     profile = await get_brand_profile(user_id)
+    query = (search or "").strip().lower()
     async with get_session() as session:
         saved = (
             await session.exec(
@@ -807,6 +1053,14 @@ async def get_niche_suggestions(user_id: int | None = None) -> dict[str, Any]:
 
     niches = []
     for index, item in enumerate(KEYWORD_FIXTURES[:6]):
+        if category and category.lower() != item["category"].lower():
+            continue
+        if (
+            query
+            and query not in item["keyword"]
+            and query not in item["niche"].lower()
+        ):
+            continue
         match_bonus = (
             7
             if any("Pets" in interest for interest in profile["interests"])
@@ -818,6 +1072,7 @@ async def get_niche_suggestions(user_id: int | None = None) -> dict[str, Any]:
             {
                 "niche": item["niche"],
                 "keyword": item["keyword"],
+                "category": item["category"],
                 "demand_trend": _sparkline(item["keyword"], 10),
                 "competition": item["competition"],
                 "profitability": "High" if item["growth"] > 38 else "Medium",
@@ -840,6 +1095,29 @@ async def get_niche_suggestions(user_id: int | None = None) -> dict[str, Any]:
         )
 
     return {
+        "filters": _global_filters(
+            date_from=date_from,
+            date_to=date_to,
+            store=store,
+            marketplace=marketplace,
+            country=country,
+            language=language,
+            category=category,
+            search=search,
+        ),
+        "integration_status": await _integration_status(
+            user_id, ["etsy", "openai", "marketplace"]
+        ),
+        "actions_available": [
+            _action("save_niche", "POST", "/api/niches/saved"),
+            _action("create_listing", "GET", "/api/listing-composer"),
+            _action("start_ab_test", "GET", "/api/ab-tests/dashboard"),
+        ],
+        "next_drilldowns": [
+            {"type": "niche", "target": "niche_detail"},
+            {"type": "composer", "target": "/api/listing-composer"},
+            {"type": "ab_test", "target": "/api/ab-tests/dashboard"},
+        ],
         "profile": profile,
         "cards": [
             _metric("Niche Opportunities", 1248, 18.2),
@@ -889,7 +1167,12 @@ async def get_niche_suggestions(user_id: int | None = None) -> dict[str, Any]:
     }
 
 
-async def save_niche(user_id: int | None, niche: str, score: int = 0) -> dict[str, Any]:
+async def save_niche(
+    user_id: int | None,
+    niche: str,
+    score: int = 0,
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
     async with get_session() as session:
         existing = (
@@ -901,10 +1184,18 @@ async def save_niche(user_id: int | None, niche: str, score: int = 0) -> dict[st
         ).first()
         record = existing or SavedNiche(user_id=user_id, niche=niche, score=score)
         record.score = score or record.score
+        record.context = context or record.context or {}
         session.add(record)
         await session.commit()
         await session.refresh(record)
-    return {"id": record.id, "niche": record.niche, "score": record.score}
+    return {
+        "id": record.id,
+        "niche": record.niche,
+        "score": record.score,
+        "context": record.context or {},
+        "state": "persisted",
+        "provenance": _provenance("savedniche_table", estimated=False, confidence=0.96),
+    }
 
 
 async def get_search_insights(
@@ -912,11 +1203,21 @@ async def get_search_insights(
     q: str | None = None,
     category: str | None = None,
     marketplace: str = "etsy",
+    country: str = "US",
+    language: str = "en",
+    store: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     season: str | None = None,
     niche: str | None = None,
+    search: str | None = None,
+    rating_min: float | None = None,
+    rating_max: float | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
 ) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
-    query = (q or "").strip().lower()
+    query = (q or search or "").strip().lower()
     results = []
     for index, item in enumerate(KEYWORD_FIXTURES):
         if (
@@ -929,18 +1230,38 @@ async def get_search_insights(
             continue
         if niche and niche.lower() not in item["niche"].lower():
             continue
+        rating = round(4.8 - index * 0.06, 1)
+        price = round(18.99 + index * 1.4, 2)
+        if rating_min is not None and rating < rating_min:
+            continue
+        if rating_max is not None and rating > rating_max:
+            continue
+        if price_min is not None and price < price_min:
+            continue
+        if price_max is not None and price > price_max:
+            continue
         results.append(
             {
                 "id": index + 1,
                 "name": f"{item['niche']} {item['products'][0]}",
                 "category": item["category"],
-                "rating": round(4.8 - index * 0.06, 1),
+                "rating": rating,
                 "reviews": 2100 - index * 173,
-                "price": round(18.99 + index * 1.4, 2),
+                "price": price,
                 "trend_score": int(92 - index * 4),
                 "demand_signal": item["opportunity"],
                 "competition": item["competition"],
                 "keyword": item["keyword"],
+                "actions_available": [
+                    "add_to_watchlist",
+                    "send_to_composer",
+                    "generate_tags",
+                    "compare",
+                ],
+                "next_drilldowns": [
+                    {"type": "result", "target": "search_result_detail"},
+                    {"type": "composer", "target": "/api/listing-composer"},
+                ],
                 "provenance": _provenance("search_insights"),
             }
         )
@@ -957,12 +1278,39 @@ async def get_search_insights(
 
     return {
         "filters": {
-            "query": q or "",
-            "category": category or "all",
-            "marketplace": marketplace,
-            "season": season or "all",
-            "niche": niche or "all",
+            **_global_filters(
+                date_from=date_from,
+                date_to=date_to,
+                store=store,
+                marketplace=marketplace,
+                country=country,
+                language=language,
+                category=category,
+                search=q or search,
+                season=season or "all",
+                niche=niche or "all",
+                rating_min=rating_min,
+                rating_max=rating_max,
+                price_min=price_min,
+                price_max=price_max,
+            ),
+            "query": q or search or "",
         },
+        "integration_status": await _integration_status(
+            user_id, ["etsy", "printify", "openai", "marketplace"]
+        ),
+        "actions_available": [
+            _action("add_to_watchlist", "POST", "/api/search/watchlist"),
+            _action("save_search", "POST", "/api/search/saved"),
+            _action("save_search_state", "POST", "/api/search/state"),
+            _action("generate_tags", "POST", "/api/search/generate-tags"),
+            _action("send_to_composer", "GET", "/api/listing-composer"),
+        ],
+        "next_drilldowns": [
+            {"type": "result", "target": "search_result_detail"},
+            {"type": "watchlist", "target": "/api/search/watchlist"},
+            {"type": "composer", "target": "/api/listing-composer"},
+        ],
         "total": len(results),
         "results": results,
         "phrase_suggestions": [
@@ -1020,18 +1368,29 @@ async def get_search_insights(
 
 async def save_search(user_id: int | None, payload: dict[str, Any]) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
+    filters = payload.get("filters") or {}
     async with get_session() as session:
         record = SavedSearch(
             user_id=user_id,
             name=payload.get("name") or payload.get("query") or "Saved Search",
             query=payload.get("query") or "",
-            filters=payload.get("filters") or {},
+            filters=filters,
             result_count=int(payload.get("result_count") or 0),
         )
         session.add(record)
         await session.commit()
         await session.refresh(record)
-    return {"id": record.id, "name": record.name, "query": record.query}
+    return {
+        "id": record.id,
+        "name": record.name,
+        "query": record.query,
+        "filters": record.filters or {},
+        "result_count": record.result_count,
+        "state": "persisted",
+        "provenance": _provenance(
+            "savedsearch_table", estimated=False, confidence=0.96
+        ),
+    }
 
 
 async def add_watchlist_item(
@@ -1048,7 +1407,79 @@ async def add_watchlist_item(
         session.add(record)
         await session.commit()
         await session.refresh(record)
-    return {"id": record.id, "item_type": record.item_type, "name": record.name}
+    return {
+        "id": record.id,
+        "item_type": record.item_type,
+        "name": record.name,
+        "context": record.context or {},
+        "state": "persisted",
+        "provenance": _provenance(
+            "watchlistitem_table", estimated=False, confidence=0.96
+        ),
+    }
+
+
+async def save_search_state(
+    user_id: int | None, payload: dict[str, Any]
+) -> dict[str, Any]:
+    state_payload = {
+        "name": payload.get("name") or "Search State",
+        "query": payload.get("query") or payload.get("search") or "",
+        "filters": {
+            **(payload.get("filters") or {}),
+            "selected_ids": payload.get("selected_ids") or [],
+            "view": payload.get("view") or "results",
+            "sort": payload.get("sort") or "relevance",
+        },
+        "result_count": int(payload.get("result_count") or 0),
+    }
+    saved = await save_search(user_id, state_payload)
+    saved["kind"] = "search_state"
+    return saved
+
+
+async def generate_search_tags(
+    user_id: int | None,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    user_id = _normalize_user_id(user_id)
+    raw_terms = [
+        payload.get("keyword"),
+        payload.get("query"),
+        payload.get("niche"),
+        payload.get("category"),
+        *list(payload.get("seed_tags") or []),
+    ]
+    words: list[str] = []
+    for term in raw_terms:
+        for chunk in str(term or "").replace("-", " ").split():
+            cleaned = "".join(char for char in chunk.lower() if char.isalnum())
+            if len(cleaned) >= 3 and cleaned not in words:
+                words.append(cleaned)
+    if not words:
+        words = ["pod", "gift", "etsy", "trend"]
+    generated = words[:8]
+    tag_record = await save_search_state(
+        user_id,
+        {
+            "name": payload.get("name") or "Generated Tags",
+            "query": payload.get("query") or payload.get("keyword") or "",
+            "filters": {
+                "generated_tags": generated,
+                "source_context": payload.get("context") or {},
+            },
+            "result_count": len(generated),
+        },
+    )
+    return {
+        "tags": generated,
+        "state": "persisted",
+        "saved_state_id": tag_record["id"],
+        "integration_status": await _integration_status(user_id, ["openai"]),
+        "provenance": _provenance(
+            "local_tag_generator", estimated=True, confidence=0.72
+        ),
+    }
 
 
 def score_listing_payload(payload: dict[str, Any]) -> dict[str, Any]:

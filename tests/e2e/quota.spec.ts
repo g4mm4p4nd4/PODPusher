@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect, type APIRequestContext } from './playwright';
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 

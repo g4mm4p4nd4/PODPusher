@@ -43,6 +43,7 @@ describe('overview dashboard', () => {
     expect(screen.getByText('Trending Keywords')).toBeInTheDocument();
     expect(screen.getByText('Dog Mom Gifts')).toBeInTheDocument();
     expect(screen.getByText('Dog Mom Tee')).toBeInTheDocument();
+    expect(screen.getByText('Drill into category')).toHaveAttribute('href', '/search?category=T-Shirts');
   });
 
   it('refreshes overview metrics', async () => {
@@ -64,5 +65,48 @@ describe('overview dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(2));
+  });
+
+  it('reloads when the date range changes and opens event detail', async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        metrics: [],
+        keyword_growth: [],
+        top_rising_niches: [],
+        popular_categories: [{ category: 'Mugs', listings: 8, demand: 70 }],
+        seasonal_events: [
+          {
+            name: "Mother's Day",
+            event_date: '2026-05-10',
+            days_away: 16,
+            priority: 'high',
+            recommended_keywords: [{ keyword: 'mothers day mug', volume: 1200 }],
+          },
+        ],
+        recent_drafts: [],
+        ab_performance: [],
+        notifications: [],
+      },
+    });
+
+    render(<Home />);
+    await screen.findByText('Overview Dashboard');
+
+    fireEvent.change(screen.getByLabelText('Date Range'), { target: { value: '30' } });
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenLastCalledWith(
+        'http://localhost:8000/api/dashboard/overview',
+        expect.objectContaining({
+          params: expect.objectContaining({
+            date_from: expect.any(String),
+            date_to: expect.any(String),
+          }),
+        })
+      )
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Mother's Day/i }));
+    expect(screen.getByText('mothers day mug')).toBeInTheDocument();
+    expect(screen.getByText('Open event detail')).toHaveAttribute('href', "/seasonal-events?event=Mother's%20Day");
   });
 });

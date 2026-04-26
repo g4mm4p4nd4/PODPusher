@@ -1,61 +1,36 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './playwright';
 
-test('ab tests page creates experiment', async ({ page }) => {
-  await page.route('**/ab_tests', async (route) => {
-    if (!route.request().url().startsWith('http://localhost:8000/')) {
-      await route.continue();
-      return;
-    }
+import { setupUiParityApiMocks } from './ui_parity_mocks';
 
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 1,
-          name: 'Test',
-          experiment_type: 'image',
-          start_time: null,
-          end_time: null,
-          variants: [{ id: 10, test_id: 1, name: 'A', weight: 1 }],
-        }),
-      });
-      return;
-    }
+test.beforeEach(async ({ page }) => {
+  await setupUiParityApiMocks(page);
+});
 
-    await route.continue();
-  });
+test('A/B testing lab creates a product experiment from the redesigned form', async ({ page }) => {
+  await page.goto('/ab-tests');
 
-  await page.route('**/ab_tests/*/metrics', async (route) => {
-    if (!route.request().url().startsWith('http://localhost:8000/')) {
-      await route.continue();
-      return;
-    }
+  await expect(page.getByRole('heading', { name: 'A/B Testing Lab' })).toBeVisible();
+  await page.getByPlaceholder('Retro Sunset Tee - Title Test').fill('Dog Mom Title Test');
+  await page.getByLabel('Select Product').selectOption('102');
+  await page.getByRole('button', { name: 'Title' }).click();
+  await page.getByPlaceholder('Control').fill('Title A');
+  await page.getByPlaceholder('Challenger').fill('Title B');
+  await page.getByLabel('Traffic Split').selectOption('60/40');
+  await page.locator('#create-ab-test').getByRole('button', { name: 'Create A/B Test' }).click();
 
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: 10,
-          test_id: 1,
-          name: 'A',
-          weight: 1,
-          impressions: 1,
-          clicks: 1,
-          conversion_rate: 1,
-          experiment_type: 'image',
-          start_time: null,
-          end_time: null,
-        },
-      ]),
-    });
-  });
+  await expect(page.getByRole('status')).toContainText('Created A/B test in local experiment state.');
+  await expect(page.getByRole('cell', { name: /Dog Mom Title Test/ })).toBeVisible();
+  await expect(page.getByText('Title A').first()).toBeVisible();
+  await expect(page.getByText('Title B').first()).toBeVisible();
+});
 
-  await page.goto('/ab_tests');
-  await page.getByPlaceholder('Test Name').fill('MyTest');
-  await page.getByPlaceholder('Variants (comma separated)').fill('A');
-  await page.getByPlaceholder('Traffic Weights (comma separated)').fill('1');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.getByTestId('imp-10')).toBeVisible();
+test('A/B testing lab pushes the selected winner to listing state', async ({ page }) => {
+  await page.goto('/ab-tests');
+
+  await expect(page.getByRole('cell', { name: /Retro Sunset Tee - Thumbnail Test/ })).toBeVisible();
+  await expect(page.getByText('Thumbnail B').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Push Winner to Listing' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Winner pushed into listing draft state.');
+  await expect(page.getByRole('cell', { name: /Retro Sunset Tee - Thumbnail Test/ })).toContainText('#7');
 });

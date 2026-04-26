@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './playwright';
 import path from 'path';
 
 const file = path.join(__dirname, 'fixtures', 'mock_trend.html');

@@ -43,6 +43,10 @@ export function fetchOverview() {
   return get('/api/dashboard/overview');
 }
 
+export function fetchOverviewDashboard(params?: Record<string, unknown>) {
+  return get('/api/dashboard/overview', params);
+}
+
 export function fetchTrendInsights(params?: Record<string, unknown>) {
   return get('/api/trends/insights', params);
 }
@@ -55,6 +59,22 @@ export function saveSeasonalEvent(name: string) {
   return post('/api/seasonal/events/save', { name });
 }
 
+export function saveTrendKeyword(keyword: string, score = 0) {
+  return post('/api/niches/saved', { niche: keyword, score });
+}
+
+export function watchTrendKeyword(keyword: string, context: Record<string, unknown>) {
+  return post('/api/search/watchlist', { item_type: 'trend_keyword', name: keyword, context });
+}
+
+export function addTagClusterToWatchlist(cluster: string, tags: string[], volume?: number) {
+  return post('/api/search/watchlist', {
+    item_type: 'tag_cluster',
+    name: cluster,
+    context: { tags, volume },
+  });
+}
+
 export function fetchNicheSuggestions() {
   return get('/api/niches/suggestions');
 }
@@ -63,8 +83,8 @@ export function saveBrandProfile(payload: Record<string, unknown>) {
   return post('/api/niches/profile', payload);
 }
 
-export function saveNiche(niche: string, score: number) {
-  return post('/api/niches/saved', { niche, score });
+export function saveNiche(niche: string, score: number, context?: Record<string, unknown>) {
+  return post('/api/niches/saved', { niche, score, context });
 }
 
 export function fetchSearchInsights(params?: Record<string, unknown>) {
@@ -79,6 +99,13 @@ export function addToWatchlist(payload: Record<string, unknown>) {
   return post('/api/search/watchlist', payload);
 }
 
+export function generateSearchTags(payload: { title: string; description?: string }) {
+  return post<string[]>('/api/ideation/suggest-tags', {
+    title: payload.title,
+    description: payload.description || payload.title,
+  });
+}
+
 export function generateListing(payload: Record<string, unknown>) {
   return post('/api/listing-composer/generate', payload);
 }
@@ -91,12 +118,16 @@ export function checkListingCompliance(payload: Record<string, unknown>) {
   return post('/api/listing-composer/compliance', payload);
 }
 
-export function fetchABDashboard() {
-  return get('/api/ab-tests/dashboard');
+export function fetchABDashboard(params?: Record<string, unknown>) {
+  return get('/api/ab-tests/dashboard', params);
 }
 
 export function abAction(testId: number, action: 'pause' | 'duplicate' | 'end' | 'push-winner') {
   return post(`/api/ab-tests/${testId}/${action}`, {});
+}
+
+export function createABTest(payload: Record<string, unknown>) {
+  return post('/api/ab-tests/', payload);
 }
 
 export function fetchNotificationsDashboard() {

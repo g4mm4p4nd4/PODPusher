@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from services.auth.service import create_session
 from services.common.database import get_session, init_db
-from services.models import Notification, ScheduledNotification, User
+from services.models import AutomationJob, Notification, NotificationRule, ScheduledNotification, User
 from services.notifications.api import app as notif_app
 from services.notifications.service import (
     dispatch_due_notifications,
@@ -323,3 +323,62 @@ async def test_dispatch_due_notifications_honors_delivery_method_metadata(monkey
 
     assert email_calls == [(1, "Email me", "launch")]
     assert push_calls == [(2, "Push me", "launch")]
+
+
+@pytest.mark.asyncio
+async def test_notification_rule_job_and_preferences_mutations():
+    await init_db()
+    transport = _transport()
+    next_run = datetime.utcnow() + timedelta(days=1)
+
+    async with get_session() as session:
+        rule = NotificationRule(
+            user_id=1,
+            name="Quota warning",
+            metric="image_quota_remaining",
+            threshold=20,
+            channels=["Email"],
+            active=True,
+        )
+        session.add(rule)
+        await session.commit()
+        await session.refresh(rule)
+        rule_id = rule.id
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        rule_resp = await client.patch(
+            f"/rules/{rule_id}",
+            json={"active": False, "channels": ["In-App"]},
+            headers={"X-User-Id": "1"},
+        )
+        assert rule_resp.status_code == 200
+        assert rule_resp.json()["active"] is False
+        assert rule_resp.json()["provenance"]["source"] == "notificationrule_table"
+
+        job_resp = await client.post(
+            "/jobs",
+            json={
+                "name": "Weekly Digest",
+                "frequency": "Weekly",
+                "next_run": next_run.isoformat(),
+                "category": "digest",
+            },
+            headers={"X-User-Id": "1"},
+        )
+        assert job_resp.status_code == 200
+        assert job_resp.json()["status"] == "on_track"
+
+        pref_resp = await client.put(
+            "/preferences",
+            json={"email_enabled": False, "in_app_enabled": True},
+            headers={"X-User-Id": "1"},
+        )
+        assert pref_resp.status_code == 200
+        assert pref_resp.json()["email"]["enabled"] is False
+        assert pref_resp.json()["slack"]["status"] == "credentials_missing"
+
+    async with get_session() as session:
+        saved_job = (await session.exec(select(AutomationJob))).first()
+        saved_user = await session.get(User, 1)
+        assert saved_job is not None
+        assert saved_user.email_notifications is False

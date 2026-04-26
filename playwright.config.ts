@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from './tests/e2e/playwright';
 
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === '1';
 

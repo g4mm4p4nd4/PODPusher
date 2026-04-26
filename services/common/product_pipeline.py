@@ -14,8 +14,11 @@ def assemble_products(ideas: list[dict[str, Any]], images: list[dict[str, Any]])
         if not idea:
             continue
 
-        base_tags = [idea.get("term"), idea.get("category"), image.get("category")]
-        tags = [tag for tag in {tag for tag in base_tags if tag}]
+        base_tags = [idea.get("category"), image.get("category"), idea.get("term")]
+        tags = []
+        for tag in base_tags:
+            if tag and tag not in tags:
+                tags.append(tag)
         products.append(
             {
                 "id": image.get("id"),

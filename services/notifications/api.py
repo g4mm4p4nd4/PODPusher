@@ -13,12 +13,15 @@ from ..control_center.service import (
 from ..auth.service import resolve_session_token
 from .service import (
     cancel_scheduled_notification,
+    create_automation_job,
     create_notification,
     list_notifications,
     list_scheduled_notifications,
     mark_read_for_user,
     schedule_notification,
     start_scheduler,
+    update_notification_preferences,
+    update_notification_rule,
 )
 from ..common.observability import register_observability
 
@@ -56,6 +59,39 @@ class NotificationRuleCreate(BaseModel):
     window: str = "1 day"
     channels: list[str] = Field(default_factory=lambda: ["Email", "In-App"])
     active: bool = True
+
+
+class NotificationRuleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    metric: str | None = None
+    operator: str | None = None
+    threshold: float | None = None
+    window: str | None = None
+    channels: list[str] | None = None
+    active: bool | None = None
+
+
+class AutomationJobCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    frequency: str
+    next_run: datetime
+    category: str = "digest"
+    metadata: Dict[str, Any] | None = None
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email_enabled: bool | None = None
+    in_app_enabled: bool | None = None
+    email_critical: bool = True
+    email_warnings: bool = True
+    email_digest: bool = True
+    email_marketing: bool = True
+    in_app_critical: bool = True
+    in_app_warnings: bool = True
+    in_app_info: bool = True
 
 
 class ScheduledNotificationResponse(BaseModel):
@@ -187,3 +223,46 @@ async def create_rule(
     user_id: int | None = Depends(optional_user_id),
 ):
     return await create_notification_rule(user_id, payload.model_dump())
+
+
+@app.patch("/rules/{rule_id}")
+async def update_rule(
+    rule_id: int,
+    payload: NotificationRuleUpdate,
+    user_id: int | None = Depends(optional_user_id),
+):
+    resolved_user_id = user_id or 1
+    record = await update_notification_rule(
+        resolved_user_id,
+        rule_id,
+        payload.model_dump(exclude_unset=True),
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Notification rule not found")
+    return record
+
+
+@app.post("/jobs")
+async def create_job(
+    payload: AutomationJobCreate,
+    user_id: int | None = Depends(optional_user_id),
+):
+    return await create_automation_job(
+        user_id or 1,
+        payload.name,
+        payload.frequency,
+        next_run=payload.next_run,
+        category=payload.category,
+        metadata=payload.metadata,
+    )
+
+
+@app.put("/preferences")
+async def update_preferences(
+    payload: NotificationPreferencesUpdate,
+    user_id: int | None = Depends(optional_user_id),
+):
+    return await update_notification_preferences(
+        user_id or 1,
+        payload.model_dump(exclude_unset=True),
+    )

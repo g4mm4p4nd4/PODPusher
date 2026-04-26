@@ -9,7 +9,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import select
 
 from ..common.database import get_session
-from ..models import Notification, ScheduledNotification, User
+from ..models import (
+    AutomationJob,
+    Notification,
+    NotificationRule,
+    ScheduledNotification,
+    User,
+)
 from ..trend_scraper.service import fetch_trends, get_product_suggestions
 from packages.integrations.notifications import send_email, send_push
 
@@ -47,6 +53,15 @@ def _scheduled_to_dict(job: ScheduledNotification) -> dict:
         "metadata": job.context or {},
         "created_at": job.created_at.isoformat(),
         "dispatched_at": job.dispatched_at.isoformat() if job.dispatched_at else None,
+    }
+
+
+def _provenance(source: str = "notifications_service", estimated: bool = False) -> dict:
+    return {
+        "source": source,
+        "is_estimated": estimated,
+        "updated_at": datetime.utcnow().isoformat(),
+        "confidence": 0.9 if not estimated else 0.72,
     }
 
 
@@ -144,6 +159,115 @@ async def cancel_scheduled_notification(job_id: int, user_id: int) -> Optional[d
         else:
             await session.refresh(job)
     return _scheduled_to_dict(job)
+
+
+async def create_automation_job(
+    user_id: int,
+    name: str,
+    frequency: str,
+    *,
+    next_run: datetime,
+    category: str = "digest",
+    metadata: Dict[str, Any] | None = None,
+) -> dict:
+    async with get_session() as session:
+        job = AutomationJob(
+            user_id=user_id,
+            name=name,
+            frequency=frequency,
+            next_run=next_run,
+            status="on_track",
+            category=category,
+            metadata_json=metadata or None,
+        )
+        session.add(job)
+        await session.commit()
+        await session.refresh(job)
+    return {
+        "id": job.id,
+        "name": job.name,
+        "frequency": job.frequency,
+        "next_run": job.next_run.isoformat(),
+        "status": job.status,
+        "category": job.category,
+        "metadata": job.metadata_json or {},
+        "provenance": _provenance("automationjob_table"),
+    }
+
+
+async def update_notification_rule(
+    user_id: int,
+    rule_id: int,
+    payload: Dict[str, Any],
+) -> Optional[dict]:
+    async with get_session() as session:
+        record = await session.get(NotificationRule, rule_id)
+        if not record or record.user_id != user_id:
+            return None
+        for field in ("name", "metric", "operator", "window"):
+            if field in payload and payload[field] is not None:
+                setattr(record, field, payload[field])
+        if "threshold" in payload and payload["threshold"] is not None:
+            record.threshold = float(payload["threshold"])
+        if "channels" in payload and payload["channels"] is not None:
+            record.channels = list(payload["channels"])
+        if "active" in payload and payload["active"] is not None:
+            record.active = bool(payload["active"])
+        session.add(record)
+        await session.commit()
+        await session.refresh(record)
+    return {
+        "id": record.id,
+        "name": record.name,
+        "metric": record.metric,
+        "operator": record.operator,
+        "threshold": record.threshold,
+        "window": record.window,
+        "channels": record.channels,
+        "active": record.active,
+        "provenance": _provenance("notificationrule_table"),
+    }
+
+
+async def update_notification_preferences(
+    user_id: int,
+    payload: Dict[str, Any],
+) -> dict:
+    async with get_session() as session:
+        user = await session.get(User, user_id)
+        if not user:
+            user = User(id=user_id)
+        if "email_enabled" in payload:
+            user.email_notifications = bool(payload["email_enabled"])
+        if "in_app_enabled" in payload:
+            user.push_notifications = bool(payload["in_app_enabled"])
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    return {
+        "email": {
+            "enabled": user.email_notifications,
+            "critical": bool(payload.get("email_critical", True)),
+            "warnings": bool(payload.get("email_warnings", True)),
+            "digest": bool(payload.get("email_digest", True)),
+            "marketing": bool(payload.get("email_marketing", True)),
+        },
+        "in_app": {
+            "enabled": user.push_notifications,
+            "critical": bool(payload.get("in_app_critical", True)),
+            "warnings": bool(payload.get("in_app_warnings", True)),
+            "info": bool(payload.get("in_app_info", True)),
+        },
+        "slack": {
+            "enabled": False,
+            "connected": False,
+            "status": "credentials_missing",
+            "is_demo": True,
+            "message": "Slack credentials are not configured; alerts remain available in email and in-app channels.",
+        },
+        "provenance": _provenance("user_preferences"),
+    }
 
 
 async def dispatch_due_notifications() -> None:

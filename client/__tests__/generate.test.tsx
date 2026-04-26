@@ -16,18 +16,20 @@ const translationTable: Record<string, string> = {
   'generate.goToSettings': 'Go to Settings',
 };
 
+const mockTranslate = (key: string, arg?: any) => {
+  const template = translationTable[key] ?? key;
+  if (arg && typeof arg === 'object' && !Array.isArray(arg)) {
+    return Object.entries(arg).reduce(
+      (text, [name, value]) => text.replace(`{{${name}}}`, String(value)),
+      template
+    );
+  }
+  return template;
+};
+
 jest.mock('next-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, arg?: any) => {
-      const template = translationTable[key] ?? key;
-      if (arg && typeof arg === 'object' && !Array.isArray(arg)) {
-        return Object.entries(arg).reduce(
-          (text, [name, value]) => text.replace(`{{${name}}}`, String(value)),
-          template
-        );
-      }
-      return template;
-    },
+    t: mockTranslate,
     i18n: { language: 'en' },
   }),
 }));
@@ -100,10 +102,22 @@ test('uses translated fallback error when generation fails with non-Error value'
     allRequiredConnected: jest.fn(() => true),
   });
   mockedAxios.post.mockRejectedValueOnce('boom');
+  const originalConsoleError = console.error;
+  const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (args.length === 1 && args[0] === 'boom') {
+      return;
+    }
+    originalConsoleError(...args);
+  });
 
-  render(<Generate />);
-  fireEvent.change(screen.getByPlaceholderText('Enter trend term'), { target: { value: 'cats' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+  try {
+    render(<Generate />);
+    fireEvent.change(screen.getByPlaceholderText('Enter trend term'), { target: { value: 'cats' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
 
-  await waitFor(() => expect(screen.getByText('Localized generation failure')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Localized generation failure')).toBeInTheDocument());
+    expect(consoleErrorSpy).toHaveBeenCalledWith('boom');
+  } finally {
+    consoleErrorSpy.mockRestore();
+  }
 });

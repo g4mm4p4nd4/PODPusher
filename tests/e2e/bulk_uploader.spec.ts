@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './playwright';
 
 const csv = 'title,description,price,category,variants,image_urls\nTee,desc,9.99,apparel,"[]","[]"\n';
 

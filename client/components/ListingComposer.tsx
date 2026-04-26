@@ -1,12 +1,15 @@
+import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { Button, Panel, Pill, ProgressBar } from './ControlCenter';
 import {
   DraftData,
   checkListingDraftCompliance,
+  exportDraft,
   fetchTagSuggestions,
   generateListingDraft,
   loadDraft,
+  queueDraftForPublish,
   saveDraft,
   scoreListingDraft,
 } from '../services/listings';
@@ -26,6 +29,7 @@ const steps = [
 ];
 
 export default function ListingComposer({ onPublish }: Props) {
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [niche, setNiche] = useState('Home Decor Wall Art');
   const [primaryKeyword, setPrimaryKeyword] = useState('Boho Sun Wall Art');
@@ -40,9 +44,16 @@ export default function ListingComposer({ onPublish }: Props) {
   const [tags, setTags] = useState<string[]>([]);
   const [suggested, setSuggested] = useState<string[]>([]);
   const [language, setLanguage] = useState('en');
+  const [materials, setMaterials] = useState('Canvas, Pine Wood');
+  const [occasion, setOccasion] = useState('Housewarming');
+  const [holiday, setHoliday] = useState('None');
+  const [recipient, setRecipient] = useState('Home Decor Enthusiast');
+  const [style, setStyle] = useState('Boho, Abstract, Modern');
   const [score, setScore] = useState<any>(null);
   const [compliance, setCompliance] = useState<any>(null);
   const [draftStatus, setDraftStatus] = useState('Draft not saved');
+  const [queueStatus, setQueueStatus] = useState('Publish queue idle');
+  const [exportStatus, setExportStatus] = useState('Export ready');
   const lastLengthsRef = useRef({ title: 0, description: 0 });
 
   const isTitleInvalid = title.length > 140;
@@ -58,9 +69,50 @@ export default function ListingComposer({ onPublish }: Props) {
         setDescription(draft.description);
         setTags(draft.tags);
         setLanguage(draft.language);
+        if (draft.niche) setNiche(draft.niche);
+        if (draft.primary_keyword) setPrimaryKeyword(draft.primary_keyword);
+        if (draft.product_type) setProductType(draft.product_type);
+        if (draft.target_audience) setTargetAudience(draft.target_audience);
+        if (draft.materials) setMaterials(draft.materials);
+        if (draft.occasion) setOccasion(draft.occasion);
+        if (draft.holiday) setHoliday(draft.holiday);
+        if (draft.recipient) setRecipient(draft.recipient);
+        if (draft.style) setStyle(draft.style);
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const queryValue = (name: string) => stringParam(router.query[name]);
+    const nextNiche = queryValue('niche');
+    const nextKeyword = queryValue('keyword') || queryValue('q');
+    const nextProductType = queryValue('product_type') || queryValue('productType');
+    const nextAudience = queryValue('audience');
+    const nextTags = queryValue('tags');
+    const nextTone = queryValue('tone');
+    const nextStyle = queryValue('style');
+    const nextOccasion = queryValue('occasion');
+    const nextHoliday = queryValue('holiday');
+
+    if (nextNiche) setNiche(nextNiche);
+    if (nextKeyword) setPrimaryKeyword(nextKeyword);
+    if (nextProductType) setProductType(nextProductType);
+    if (nextAudience) {
+      setTargetAudience(nextAudience);
+      setRecipient(nextAudience);
+    }
+    if (nextTone) setTone(nextTone);
+    if (nextStyle) setStyle(nextStyle);
+    if (nextOccasion) setOccasion(nextOccasion);
+    if (nextHoliday) setHoliday(nextHoliday);
+    if (nextTags) {
+      setTags(nextTags.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 13));
+    }
+    if (nextNiche || nextKeyword || nextProductType || nextAudience || nextTags) {
+      setDraftStatus(`Prefilled from ${queryValue('source') || 'handoff'}`);
+    }
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -78,6 +130,14 @@ export default function ListingComposer({ onPublish }: Props) {
     return () => clearTimeout(handler);
   }, [title, description]);
 
+  useEffect(() => {
+    if (!title.trim()) return;
+    const handler = setTimeout(() => {
+      refreshScore().catch(() => undefined);
+    }, 900);
+    return () => clearTimeout(handler);
+  }, [title, description, tags, primaryKeyword]);
+
   const regenerate = async () => {
     const generated = await generateListingDraft({
       niche,
@@ -86,6 +146,7 @@ export default function ListingComposer({ onPublish }: Props) {
       tone,
       target_audience: targetAudience,
       brand_rules: brandRules,
+      metadata: { materials, occasion, holiday, recipient, style },
     });
     setTitle(generated.title);
     setDescription(generated.description);
@@ -118,28 +179,84 @@ export default function ListingComposer({ onPublish }: Props) {
     }
   };
 
-  const save = async () => {
+  const persistDraft = async () => {
     const id = await saveDraft({
       id: Number(localStorage.getItem('draftId')) || undefined,
       title,
       description,
       tags,
       language,
+      niche,
+      primary_keyword: primaryKeyword,
+      product_type: productType,
+      target_audience: targetAudience,
+      materials,
+      occasion,
+      holiday,
+      recipient,
+      style,
       field_order: ['product', 'keywords', 'title', 'description', 'tags', 'metadata'],
     });
     localStorage.setItem('draftId', String(id));
     setDraftStatus('Draft saved just now');
     await refreshScore();
+    return id;
   };
 
-  const publish = (event: React.FormEvent) => {
-    event.preventDefault();
+  const save = async () => {
+    await persistDraft();
+  };
+
+  const publish = async () => {
     if (isFormInvalid) return;
-    onPublish?.({ title, description, tags, language, field_order: steps });
+    setQueueStatus('Queue pending...');
+    try {
+      const id = await persistDraft();
+      const queued = await queueDraftForPublish(id);
+      setQueueStatus(`Queue ${queued.status}: draft ${queued.draft_id}, job ${queued.queue_item_id}`);
+      onPublish?.({
+        id,
+        title,
+        description,
+        tags,
+        language,
+        niche,
+        primary_keyword: primaryKeyword,
+        product_type: productType,
+        target_audience: targetAudience,
+        materials,
+        occasion,
+        holiday,
+        recipient,
+        style,
+        field_order: steps,
+      });
+    } catch {
+      setQueueStatus('Queue error: draft was not queued');
+    }
+  };
+
+  const exportCurrentDraft = async () => {
+    if (isFormInvalid) return;
+    setExportStatus('Export pending...');
+    try {
+      const id = await persistDraft();
+      const payload = await exportDraft(id, 'json');
+      downloadExportPayload(id, payload);
+      setExportStatus(`Export ready: draft ${id}`);
+    } catch {
+      setExportStatus('Export error: draft was not exported');
+    }
   };
 
   return (
-    <form onSubmit={publish} className="space-y-4">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void publish();
+      }}
+      className="space-y-4"
+    >
       <div className="grid gap-3 xl:grid-cols-7">
         {steps.map((step, index) => (
           <button
@@ -165,9 +282,9 @@ export default function ListingComposer({ onPublish }: Props) {
           <div className="space-y-3">
             <Field label="Niche" value={niche} onChange={setNiche} />
             <Field label="Primary Keyword" value={primaryKeyword} onChange={setPrimaryKeyword} />
-            <SelectField label="Product Type" value={productType} onChange={setProductType} options={['Canvas Print', 'T-Shirt', 'Mug', 'Tote Bag']} />
+            <SelectField label="Product Type" value={productType} onChange={setProductType} options={withCurrent(productType, ['Canvas Print', 'T-Shirt', 'Mug', 'Tote Bag', 'Apparel', 'Drinkware', 'Bags'])} />
             <SelectField label="Tone" value={tone} onChange={setTone} options={['Warm & Inviting', 'Humorous, Positive', 'Minimal, Calm']} />
-            <SelectField label="Target Audience" value={targetAudience} onChange={setTargetAudience} options={['Home Decor Enthusiasts', 'Dog Lovers', 'Teachers', 'Outdoor Buyers']} />
+            <SelectField label="Target Audience" value={targetAudience} onChange={setTargetAudience} options={withCurrent(targetAudience, ['Home Decor Enthusiasts', 'Dog Lovers', 'Teachers', 'Outdoor Buyers', 'Marketplace Buyers'])} />
             <SelectField label="Language" value={language} onChange={setLanguage} options={['en', 'es']} />
             <label className="block text-sm text-slate-300">
               Brand Rules
@@ -255,6 +372,18 @@ export default function ListingComposer({ onPublish }: Props) {
               ))}
             </div>
           </Panel>
+
+          <Panel title="Metadata">
+            <div className="grid gap-3 md:grid-cols-2">
+              <SelectField label="Materials" value={materials} onChange={setMaterials} options={withCurrent(materials, ['Canvas, Pine Wood', 'Cotton', 'Ceramic', 'Recycled Polyester'])} />
+              <SelectField label="Occasion" value={occasion} onChange={setOccasion} options={withCurrent(occasion, ['Housewarming', 'Birthday', 'Mother\'s Day', 'Graduation', 'Everyday'])} />
+              <SelectField label="Holiday" value={holiday} onChange={setHoliday} options={withCurrent(holiday, ['None', 'Christmas', 'Halloween', 'Valentine\'s Day', 'Mother\'s Day'])} />
+              <SelectField label="Recipient" value={recipient} onChange={setRecipient} options={withCurrent(recipient, ['Home Decor Enthusiast', 'Dog Lovers', 'Teachers', 'Outdoor Buyers', 'Mom', 'Dad'])} />
+              <div className="md:col-span-2">
+                <SelectField label="Style" value={style} onChange={setStyle} options={withCurrent(style, ['Boho, Abstract, Modern', 'Vintage Badge', 'Minimal Line Art', 'Retro Summer'])} />
+              </div>
+            </div>
+          </Panel>
         </div>
 
         <div className="space-y-4">
@@ -301,10 +430,14 @@ export default function ListingComposer({ onPublish }: Props) {
           <Button onClick={regenerate}>Regenerate All</Button>
           <Button onClick={save}>Save Draft</Button>
         </div>
-        <span className="text-sm text-emerald-400">{draftStatus}</span>
+        <div className="space-y-1 text-sm">
+          <p className="text-emerald-400">{draftStatus}</p>
+          <p className={queueStatus.includes('error') ? 'text-red-300' : 'text-slate-400'}>{queueStatus}</p>
+          <p className={exportStatus.includes('error') ? 'text-red-300' : 'text-slate-400'}>{exportStatus}</p>
+        </div>
         <div className="flex gap-2">
           <Button type="submit" variant="primary" disabled={isFormInvalid}>Publish Queue</Button>
-          <Button>Export</Button>
+          <Button onClick={exportCurrentDraft} disabled={isFormInvalid}>Export</Button>
         </div>
       </div>
     </form>
@@ -324,6 +457,7 @@ function Field({
     <label className="block text-sm text-slate-300">
       {label}
       <input
+        aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 outline-none"
@@ -347,6 +481,7 @@ function SelectField({
     <label className="block text-sm text-slate-300">
       {label}
       <select
+        aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 outline-none"
@@ -355,4 +490,31 @@ function SelectField({
       </select>
     </label>
   );
+}
+
+function stringParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] || '';
+  return value || '';
+}
+
+function withCurrent(current: string, options: string[]) {
+  return options.includes(current) ? options : [current, ...options].filter(Boolean);
+}
+
+function downloadExportPayload(draftId: number, payload: unknown) {
+  if (
+    typeof window === 'undefined' ||
+    typeof document === 'undefined' ||
+    typeof URL.createObjectURL !== 'function'
+  ) {
+    return;
+  }
+  const body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+  const blob = new Blob([body], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `listing-draft-${draftId}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }

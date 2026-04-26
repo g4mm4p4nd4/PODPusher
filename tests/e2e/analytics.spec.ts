@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './playwright';
 
 test('analytics page loads chart', async ({ page }) => {
   await page.goto('/analytics');

@@ -95,6 +95,9 @@ class ScheduledNotification(SQLModel, table=True):
 
 class ExperimentType(str, Enum):
     IMAGE = "image"
+    TITLE = "title"
+    THUMBNAIL = "thumbnail"
+    TAGS = "tags"
     DESCRIPTION = "description"
     PRICE = "price"
 

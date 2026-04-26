@@ -1,33 +1,29 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './playwright';
 
-test('listing composer saves draft', async ({ page }) => {
-  await page.route('**/api/listing-composer/drafts', route => {
-    if (route.request().method() === 'POST') {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 1,
-          title: 'T',
-          description: 'D',
-          tags: [],
-          language: 'en',
-          field_order: ['title', 'description', 'tags']
-        })
-      });
-    } else {
-      route.fulfill({
-        status: 404,
-        contentType: 'application/json',
-        body: JSON.stringify({ detail: 'not found' })
-      });
-    }
-  });
+import { setupUiParityApiMocks } from './ui_parity_mocks';
 
-  await page.goto('/listings');
-  await page.getByLabel('Title').fill('T');
-  await page.getByLabel('Description').fill('D');
-  await page.getByRole('button', { name: 'Save' }).click();
-  const id = await page.evaluate(() => window.localStorage.getItem('draftId'));
-  expect(id).toBe('1');
+test.beforeEach(async ({ page }) => {
+  await setupUiParityApiMocks(page);
+});
+
+test('listing composer saves draft id in local storage', async ({ page }) => {
+  await page.goto('/listing-composer');
+
+  await page.getByLabel('Title').fill('Draft Title');
+  await page.getByLabel('Description').fill('Draft description');
+  await page.getByRole('button', { name: 'Save Draft' }).click();
+
+  await expect(page.getByText('Draft saved just now')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('draftId'))).toBe('101');
+});
+
+test('listing composer consumes direct handoff query params', async ({ page }) => {
+  await page.goto('/listing-composer?source=e2e&niche=Dog%20Mom%20Gifts&keyword=dog%20mom&product_type=Mug&audience=Dog%20Lovers&tags=dog%20mom,coffee');
+
+  await expect(page.getByLabel('Niche')).toHaveValue('Dog Mom Gifts');
+  await expect(page.getByLabel('Primary Keyword')).toHaveValue('dog mom');
+  await expect(page.getByLabel('Product Type')).toHaveValue('Mug');
+  await expect(page.getByLabel('Target Audience')).toHaveValue('Dog Lovers');
+  await expect(page.getByText('Prefilled from e2e')).toBeVisible();
+  await expect(page.getByText('coffee')).toBeVisible();
 });
