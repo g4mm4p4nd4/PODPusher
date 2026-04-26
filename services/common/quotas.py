@@ -11,6 +11,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from .database import get_session
+from .time import utcnow
 from ..models import User
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ async def check_quota(user_id: int, resource_type: str, count: int = 1) -> tuple
     """Check if user has quota available for the requested resource."""
     async with get_session() as session:
         user = await session.get(User, user_id)
-        now = datetime.utcnow()
+        now = utcnow()
 
         if not user:
             user = User(id=user_id, last_reset=now)
@@ -169,7 +170,7 @@ async def increment_quota(user_id: int, resource_type: str, count: int = 1) -> d
     """Increment quota usage for a user."""
     async with get_session() as session:
         user = await session.get(User, user_id)
-        now = datetime.utcnow()
+        now = utcnow()
 
         if not user:
             user = User(id=user_id, last_reset=now)

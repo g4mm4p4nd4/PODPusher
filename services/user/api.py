@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
@@ -8,6 +7,7 @@ from ..common.auth import ensure_user_record, require_user_id
 from ..common.database import get_session
 from ..common.observability import register_observability
 from ..common.quotas import ensure_quota_state
+from ..common.time import utcnow
 from ..models import User
 
 router = APIRouter(prefix="/api/user")
@@ -34,7 +34,7 @@ async def increment_quota(
 ):
     async with get_session() as session:
         user = await session.get(User, user_id)
-        now = datetime.utcnow()
+        now = utcnow()
         if not user:
             user = User(id=user_id, last_reset=now)
         if ensure_quota_state(user, now):

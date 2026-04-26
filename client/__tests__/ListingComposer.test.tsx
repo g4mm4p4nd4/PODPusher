@@ -113,7 +113,7 @@ test('automatically fetches suggestions when length threshold is reached', async
 
     expect(services.fetchTagSuggestions).toHaveBeenCalledWith(
       'a'.repeat(12),
-      ''
+      expect.stringContaining('first-paint copy is generated locally')
     );
 
     const suggestionButton = await screen.findByRole('button', { name: 'one' });

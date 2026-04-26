@@ -18,6 +18,7 @@ from sqlmodel import select
 
 from ..common.database import get_session
 from ..common.observability import Counter, Histogram
+from ..common.time import utcnow
 from ..models import TrendSignal
 from .circuit_breaker import scraper_circuit_breaker
 from .scrapegraph_adapter import (
@@ -601,7 +602,7 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
 
 async def refresh_trends() -> Dict[str, Any]:
     """Scrape all platforms and persist top signals."""
-    started_at = datetime.utcnow()
+    started_at = utcnow()
     signals, gather_meta = await _gather_trends()
     mode = str(gather_meta.get("mode") or ("stub" if STUB_ONLY else "live"))
 
@@ -609,7 +610,7 @@ async def refresh_trends() -> Dict[str, Any]:
         _refresh_status.update(
             {
                 "last_started_at": started_at,
-                "last_finished_at": datetime.utcnow(),
+                "last_finished_at": utcnow(),
                 "last_mode": mode,
                 "sources_succeeded": gather_meta.get("sources_succeeded", []),
                 "sources_failed": gather_meta.get("sources_failed", {}),
@@ -650,7 +651,7 @@ async def refresh_trends() -> Dict[str, Any]:
                         keyword=signal["keyword"],
                         engagement_score=signal["engagement_score"],
                         category=signal["category"],
-                        timestamp=datetime.utcnow(),
+                        timestamp=utcnow(),
                     )
                 )
                 SCRAPE_PERSISTED.labels(signal["source"]).inc()
@@ -660,7 +661,7 @@ async def refresh_trends() -> Dict[str, Any]:
     _refresh_status.update(
         {
             "last_started_at": started_at,
-            "last_finished_at": datetime.utcnow(),
+            "last_finished_at": utcnow(),
             "last_mode": mode,
             "sources_succeeded": gather_meta.get("sources_succeeded", []),
             "sources_failed": gather_meta.get("sources_failed", {}),
@@ -684,7 +685,7 @@ async def get_live_trends(
 ) -> Dict[str, List[Dict[str, Any]]]:
     lookback_hours = max(1, lookback_hours)
     per_group_limit = min(max(1, per_group_limit), MAX_LIVE_TRENDS_PER_GROUP)
-    cutoff = datetime.utcnow() - timedelta(hours=lookback_hours)
+    cutoff = utcnow() - timedelta(hours=lookback_hours)
 
     async with get_session() as session:
         stmt = select(TrendSignal).where(TrendSignal.timestamp >= cutoff)

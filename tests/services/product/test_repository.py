@@ -1,7 +1,8 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.models import Product
 from services.product.repository import (
     DEFAULT_REVIEW_LIMIT,
@@ -13,7 +14,7 @@ from services.product.repository import (
 @pytest.mark.asyncio
 async def test_fetch_latest_products_limits_and_orders_desc():
     await init_db()
-    base_time = datetime.utcnow()
+    base_time = utcnow()
 
     async with get_session() as session:
         for index in range(DEFAULT_REVIEW_LIMIT + 10):

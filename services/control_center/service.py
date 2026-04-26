@@ -11,6 +11,7 @@ from sqlmodel import select
 from ..billing.plans import get_plan_limits
 from ..billing.service import get_user_plan_tier
 from ..common.database import get_session
+from ..common.time import utcnow
 from ..models import (
     ABTest,
     ABVariant,
@@ -33,7 +34,7 @@ from ..models import (
 )
 
 DEFAULT_USER_ID = 1
-DEFAULT_NOW = datetime.utcnow
+DEFAULT_NOW = utcnow
 
 KEYWORD_FIXTURES = [
     {

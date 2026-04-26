@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -8,6 +7,7 @@ from sqlmodel import select
 from ..common.auth import optional_user_id
 from ..common.database import get_session
 from ..common.observability import register_observability
+from ..common.time import utcnow
 from ..control_center.service import get_settings_dashboard
 from ..models import BrandProfile, TeamMember, UsageLedger, User
 
@@ -68,7 +68,7 @@ def _provenance(source: str, estimated: bool = False) -> dict[str, Any]:
     return {
         "source": source,
         "is_estimated": estimated,
-        "updated_at": datetime.utcnow().isoformat(),
+        "updated_at": utcnow().isoformat(),
         "confidence": 0.9 if not estimated else 0.72,
     }
 
@@ -122,7 +122,7 @@ async def update_localization(
             profile = BrandProfile(user_id=resolved_user_id, active=True)
         profile.language = payload.default_language
         profile.region = payload.primary_targeting_region
-        profile.updated_at = datetime.utcnow()
+        profile.updated_at = utcnow()
         session.add(profile)
         await session.commit()
         await session.refresh(user)
@@ -165,7 +165,7 @@ async def create_brand_profile(
                 profile.active = False
                 session.add(profile)
         record = BrandProfile(user_id=resolved_user_id, **payload.model_dump())
-        record.updated_at = datetime.utcnow()
+        record.updated_at = utcnow()
         session.add(record)
         await session.commit()
         await session.refresh(record)
@@ -185,7 +185,7 @@ async def update_brand_profile(
             raise HTTPException(status_code=404, detail="Brand profile not found")
         for field, value in payload.model_dump().items():
             setattr(record, field, value)
-        record.updated_at = datetime.utcnow()
+        record.updated_at = utcnow()
         session.add(record)
         await session.commit()
         await session.refresh(record)
@@ -209,7 +209,7 @@ async def set_default_brand_profile(
             raise HTTPException(status_code=404, detail="Brand profile not found")
         for profile in profiles:
             profile.active = profile.id == profile_id
-            profile.updated_at = datetime.utcnow()
+            profile.updated_at = utcnow()
             session.add(profile)
         await session.commit()
         await session.refresh(target)
@@ -237,7 +237,7 @@ async def invite_user(
         record.role = payload.role
         record.permissions = permissions
         record.status = "invited"
-        record.last_active_at = datetime.utcnow()
+        record.last_active_at = utcnow()
         session.add(record)
         await session.commit()
         await session.refresh(record)
@@ -272,7 +272,7 @@ async def update_user_role(
             record.permissions = payload.permissions
         if payload.status is not None:
             record.status = payload.status
-        record.last_active_at = datetime.utcnow()
+        record.last_active_at = utcnow()
         session.add(record)
         await session.commit()
         await session.refresh(record)
@@ -310,7 +310,7 @@ async def usage_ledger(user_id: int | None = Depends(optional_user_id)):
                     "resource_type": "image_generation",
                     "quantity": 17500,
                     "source": "demo_usage_estimate",
-                    "created_at": datetime.utcnow().isoformat(),
+                    "created_at": utcnow().isoformat(),
                     "provenance": _provenance("demo_usage_estimate", estimated=True),
                 }
             ],

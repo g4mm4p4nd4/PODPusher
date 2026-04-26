@@ -13,6 +13,7 @@ import {
   ProvenanceNote,
   SelectBox,
 } from '../components/ControlCenter';
+import { DemoProductArt, variantForText } from '../components/DemoProductArt';
 import {
   DashboardResponse,
   fetchNicheSuggestions,
@@ -152,6 +153,7 @@ export default function NicheSuggestionsPage() {
                   <thead className="text-left text-slate-500">
                     <tr>
                       <th className="py-2">Niche</th>
+                      <th>Demo Asset</th>
                       <th>Demand Trend</th>
                       <th>Competition</th>
                       <th>Profitability</th>
@@ -170,6 +172,15 @@ export default function NicheSuggestionsPage() {
                         }`}
                       >
                         <td className="py-3 font-medium text-slate-100">{item.niche}</td>
+                        <td className="min-w-[140px]">
+                          <DemoProductArt
+                            title={item.niche}
+                            subtitle={(item.products || [])[0] || item.keyword}
+                            productType={(item.products || [])[0]}
+                            variant={variantForText(`${item.niche} ${item.keyword || ''}`)}
+                            compact
+                          />
+                        </td>
                         <td>
                           <div className="flex h-8 items-end gap-1">
                             {item.demand_trend.map((value: number, index: number) => (
@@ -244,9 +255,14 @@ export default function NicheSuggestionsPage() {
             <Panel title="Design Inspiration">
               <div className="grid grid-cols-3 gap-2">
                 {(data.design_inspiration || []).map((idea: any) => (
-                  <div key={idea.title} className="flex aspect-[3/4] items-center justify-center rounded-md border border-slate-800 bg-slate-950 p-2 text-center text-xs text-orange-300">
-                    {idea.title}
-                  </div>
+                  <DemoProductArt
+                    key={idea.title}
+                    title={idea.title}
+                    subtitle={idea.product_type || 'Niche design'}
+                    productType={idea.product_type || 'Product'}
+                    variant={variantForText(idea.title)}
+                    compact
+                  />
                 ))}
               </div>
             </Panel>

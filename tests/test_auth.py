@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
@@ -8,6 +8,7 @@ from services.auth import service as auth_service
 from services.auth.service import create_authorization_url, exchange_code
 from services.integration import service as integration_service
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.models import OAuthCredential, OAuthProvider, OAuthState
 
 
@@ -153,7 +154,7 @@ async def test_refresh_token_rotation(monkeypatch):
             provider=OAuthProvider.PRINTIFY,
             access_token="old-token",
             refresh_token="stale-refresh",
-            expires_at=datetime.utcnow() - timedelta(minutes=10),
+            expires_at=utcnow() - timedelta(minutes=10),
         )
         session.add(credential)
         await session.commit()
@@ -172,7 +173,7 @@ async def test_refresh_token_rotation(monkeypatch):
         assert saved is not None
         assert saved.access_token == "token-refreshed"
         assert saved.refresh_token == "refresh-updated"
-        assert saved.expires_at and saved.expires_at > datetime.utcnow()
+        assert saved.expires_at and saved.expires_at > utcnow()
 
 
 @pytest.mark.asyncio
@@ -190,7 +191,7 @@ async def test_prune_expired_oauth_records(monkeypatch):
                 provider=OAuthProvider.ETSY,
                 code_verifier=None,
                 redirect_uri="https://example.com/return",
-                created_at=datetime.utcnow() - timedelta(minutes=10),
+                created_at=utcnow() - timedelta(minutes=10),
             )
         )
         session.add(
@@ -207,7 +208,7 @@ async def test_prune_expired_oauth_records(monkeypatch):
             provider=OAuthProvider.PRINTIFY,
             access_token="expired",
             refresh_token=None,
-            expires_at=datetime.utcnow() - timedelta(days=10),
+            expires_at=utcnow() - timedelta(days=10),
         )
         session.add(expired_credential)
         session.add(
@@ -216,7 +217,7 @@ async def test_prune_expired_oauth_records(monkeypatch):
                 provider=OAuthProvider.ETSY,
                 access_token="active",
                 refresh_token="keep",
-                expires_at=datetime.utcnow() + timedelta(days=10),
+                expires_at=utcnow() + timedelta(days=10),
             )
         )
         await session.commit()
@@ -273,7 +274,7 @@ async def test_refresh_expiring_credentials(monkeypatch):
             provider=OAuthProvider.ETSY,
             access_token='old-token',
             refresh_token='refresh-token',
-            expires_at=datetime.utcnow() + timedelta(seconds=30),
+            expires_at=utcnow() + timedelta(seconds=30),
             scope='profile',
         )
         session.add(credential)
@@ -281,7 +282,7 @@ async def test_refresh_expiring_credentials(monkeypatch):
 
     async def fake_refresh(session, credential):
         credential.access_token = 'new-token'
-        credential.expires_at = datetime.utcnow() + timedelta(hours=2)
+        credential.expires_at = utcnow() + timedelta(hours=2)
         session.add(credential)
         await session.commit()
         await session.refresh(credential)
@@ -296,7 +297,7 @@ async def test_refresh_expiring_credentials(monkeypatch):
         result = await session.exec(select(OAuthCredential))
         saved = result.one()
         assert saved.access_token == 'new-token'
-        assert saved.expires_at and saved.expires_at > datetime.utcnow()
+        assert saved.expires_at and saved.expires_at > utcnow()
 
 
 @pytest.mark.asyncio

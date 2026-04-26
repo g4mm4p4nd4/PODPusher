@@ -10,6 +10,8 @@ test('settings localization tab scopes editable content and saves changes', asyn
   await page.goto('/settings');
 
   await expect(page.getByRole('heading', { name: 'Settings & Localization' })).toBeVisible();
+  await expect(page.getByText('admin@podpusher.com')).toBeVisible();
+  await page.getByRole('button', { name: 'Localization' }).click();
   await expect(page.getByText('Localization Settings')).toBeVisible();
   await expect(page.getByText('admin@podpusher.com')).toHaveCount(0);
 

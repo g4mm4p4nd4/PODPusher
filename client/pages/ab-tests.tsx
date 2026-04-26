@@ -15,6 +15,7 @@ import {
   SelectBox,
   TextInput,
 } from '../components/ControlCenter';
+import { DemoProductArt, variantForText } from '../components/DemoProductArt';
 import { DashboardResponse, abAction, createABTest, fetchABDashboard } from '../services/controlCenter';
 import { getCommonStaticProps } from '../utils/translationProps';
 
@@ -236,6 +237,7 @@ export default function ABTestingLabPage() {
                     <tr>
                       <th className="py-2">Test Name</th>
                       <th>Product</th>
+                      <th>Asset</th>
                       <th>Variable</th>
                       <th>Start Date</th>
                       <th>Impressions</th>
@@ -259,6 +261,15 @@ export default function ABTestingLabPage() {
                           <span className="block text-xs text-slate-500">#{test.id}</span>
                         </td>
                         <td>{test.product}</td>
+                        <td className="min-w-[140px]">
+                          <DemoProductArt
+                            title={test.product}
+                            subtitle={`${labelForVariable(test.experiment_type)} test`}
+                            productType={labelForVariable(test.experiment_type)}
+                            variant={variantForText(test.product)}
+                            compact
+                          />
+                        </td>
                         <td>{labelForVariable(test.experiment_type)}</td>
                         <td>{formatDate(test.start_time)}</td>
                         <td>{formatNumber(test.impressions)}</td>
@@ -370,6 +381,14 @@ export default function ABTestingLabPage() {
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     {selected.variants.map((variant) => (
                       <div key={`${selected.id}-${variant.name}`} className="rounded-md border border-slate-800 bg-slate-950 p-4">
+                        <DemoProductArt
+                          title={variant.name}
+                          subtitle={`${selected.product} variant`}
+                          productType={labelForVariable(selected.experiment_type)}
+                          variant={variantForText(`${selected.product} ${variant.name}`)}
+                          compact
+                          className="mb-3"
+                        />
                         <div className="mb-2 flex justify-between">
                           <span className="font-medium">{variant.name}</span>
                           <span>{variant.ctr}% CTR</span>

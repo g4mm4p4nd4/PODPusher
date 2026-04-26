@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from services.trend_scraper.api import app as trends_app
-from datetime import datetime
+from services.common.time import utcnow
 
 
 @pytest.mark.asyncio
@@ -14,6 +14,6 @@ async def test_events_endpoint():
         assert data["month"].lower() == "may"
         assert isinstance(data["events"], list)
 
-        current = datetime.utcnow().strftime("%B").lower()
+        current = utcnow().strftime("%B").lower()
         resp = await client.get(f"/events/{current}")
         assert resp.status_code == 200

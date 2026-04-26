@@ -128,14 +128,14 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`rounded-lg border border-slate-800 bg-slate-900/85 ${className}`}>
+    <section className={`rounded-md border border-slate-800 bg-slate-900/85 ${className}`}>
       {title || action ? (
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
           {title ? <h2 className="text-sm font-semibold text-slate-100">{title}</h2> : <span />}
           {action}
         </div>
       ) : null}
-      <div className="p-4">{children}</div>
+      <div className="p-3">{children}</div>
     </section>
   );
 }
@@ -193,7 +193,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
   const delta = Number(metric.delta || 0);
   const isPositive = delta >= 0;
   return (
-    <Panel className="min-h-[132px]">
+    <Panel className="min-h-[112px]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-slate-300">{metric.label}</p>
@@ -206,7 +206,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
           {metric.provenance?.is_estimated ? 'Est' : 'Live'}
         </span>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-2 flex items-center justify-between gap-3">
         <p className={`text-xs ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
           {isPositive ? '+' : ''}
           {delta}

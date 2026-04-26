@@ -1,8 +1,9 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from httpx import AsyncClient, ASGITransport
 from services.ab_tests.api import app as ab_app
 from services.common.database import init_db
+from services.common.time import utcnow
 
 
 @pytest.mark.asyncio
@@ -41,7 +42,7 @@ async def test_api_weight_validation_and_schedule():
         }
         resp = await client.post("/", json=bad)
         assert resp.status_code == 400
-        future = (datetime.utcnow() + timedelta(days=1)).isoformat()
+        future = (utcnow() + timedelta(days=1)).isoformat()
         payload = {
             "name": "Sched",
             "experiment_type": "description",

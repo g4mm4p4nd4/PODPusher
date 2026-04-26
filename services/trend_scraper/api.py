@@ -1,4 +1,3 @@
-from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -11,6 +10,7 @@ from .service import (
 from .events import EVENTS
 from ..tasks import celery_app
 from ..common.observability import register_observability
+from ..common.time import utcnow
 
 
 @asynccontextmanager
@@ -51,7 +51,7 @@ class Suggestion(BaseModel):
 
 @app.get("/events/{month}", response_model=EventsResponse)
 async def get_events(month: str):
-    month_key = month.lower() if month else datetime.utcnow().strftime("%B").lower()
+    month_key = month.lower() if month else utcnow().strftime("%B").lower()
     events = EVENTS.get(month_key, [])
     return {"month": month_key.capitalize(), "events": events}
 

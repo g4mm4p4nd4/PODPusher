@@ -20,12 +20,12 @@ import {
 } from '../services/operations';
 import { getCommonStaticProps } from '../utils/translationProps';
 
-const tabs = ['General', 'Localization', 'Brand Profiles', 'Integrations', 'Quotas', 'Users & Roles'];
+const tabs = ['Overview', 'General', 'Localization', 'Brand Profiles', 'Integrations', 'Quotas', 'Users & Roles'];
 const roles = ['Administrator', 'Manager', 'Editor', 'Viewer'];
 
 export default function SettingsPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
-  const [activeTab, setActiveTab] = useState('Localization');
+  const [activeTab, setActiveTab] = useState('Overview');
   const [statusMessage, setStatusMessage] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
   const [usageLedger, setUsageLedger] = useState<any[] | null>(null);
@@ -213,6 +213,20 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      {activeTab === 'Overview' ? (
+        <SettingsOverviewTab
+          data={data}
+          updateLocalization={updateLocalization}
+          usageLedger={usageLedger}
+          onLoadUsage={loadUsageLedger}
+          onConfigure={configureProvider}
+          onCreateBrand={createBrandProfile}
+          onActivateBrand={activateBrandProfile}
+          onInvite={inviteUser}
+          onRoleChange={changeRole}
+          saving={saving}
+        />
+      ) : null}
       {activeTab === 'General' ? <GeneralTab data={data} /> : null}
       {activeTab === 'Localization' ? (
         <LocalizationTab data={data} updateLocalization={updateLocalization} />
@@ -249,6 +263,64 @@ export default function SettingsPage() {
           saving={saving}
         />
       ) : null}
+    </div>
+  );
+}
+
+function SettingsOverviewTab({
+  data,
+  updateLocalization,
+  usageLedger,
+  onLoadUsage,
+  onConfigure,
+  onCreateBrand,
+  onActivateBrand,
+  onInvite,
+  onRoleChange,
+  saving,
+}: {
+  data: DashboardResponse;
+  updateLocalization: (field: string, value: unknown) => void;
+  usageLedger: any[] | null;
+  onLoadUsage: () => void;
+  onConfigure: (provider: string) => void;
+  onCreateBrand: () => void;
+  onActivateBrand: (profile: any) => void;
+  onInvite: () => void;
+  onRoleChange: (member: any, role: string) => void;
+  saving: string | null;
+}) {
+  return (
+    <div className="space-y-4">
+      <LocalizationTab data={data} updateLocalization={updateLocalization} />
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <BrandProfilesTab
+          profiles={(data.brand_profiles || []).slice(0, 3)}
+          onCreate={onCreateBrand}
+          onActivate={onActivateBrand}
+          saving={saving}
+        />
+        <IntegrationsTab
+          integrations={data.integrations || []}
+          onConfigure={onConfigure}
+          saving={saving}
+        />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+        <QuotasTab
+          quotas={data.quotas || {}}
+          usage={data.usage || {}}
+          usageLedger={usageLedger}
+          onLoadUsage={onLoadUsage}
+          saving={saving === 'usage'}
+        />
+        <UsersTab
+          members={(data.team_members || []).slice(0, 4)}
+          onInvite={onInvite}
+          onRoleChange={onRoleChange}
+          saving={saving}
+        />
+      </div>
     </div>
   );
 }

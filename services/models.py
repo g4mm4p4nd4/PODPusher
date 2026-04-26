@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional
 from enum import Enum
 from datetime import datetime
 
+from .common.time import utcnow
+
 from sqlalchemy import Column, JSON
 from sqlmodel import Field, SQLModel
 
@@ -10,14 +12,14 @@ class Trend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     term: str = Field(index=True)
     category: str = Field(index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class TrendSignal(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     source: str = Field(index=True)
     keyword: str = Field(index=True)
-    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    timestamp: datetime = Field(default_factory=utcnow, index=True)
     engagement_score: int = 0
     category: str = Field(default="other", index=True)
 
@@ -26,7 +28,7 @@ class Idea(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     trend_id: int
     description: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Product(SQLModel, table=True):
@@ -37,14 +39,14 @@ class Product(SQLModel, table=True):
     rating: Optional[int] = None
     tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     flagged: Optional[bool] = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class Listing(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     product_id: int
     etsy_url: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class ListingDraft(SQLModel, table=True):
@@ -54,7 +56,7 @@ class ListingDraft(SQLModel, table=True):
     tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     language: str = "en"
     field_order: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class User(SQLModel, table=True):
@@ -62,7 +64,7 @@ class User(SQLModel, table=True):
     plan: str = "free"
     quota_used: int = 0
     quota_limit: Optional[int] = Field(default=None, nullable=True)
-    last_reset: datetime = Field(default_factory=datetime.utcnow)
+    last_reset: datetime = Field(default_factory=utcnow)
     auto_social: bool = True
     social_handles: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
     email_notifications: bool = True
@@ -77,7 +79,7 @@ class Notification(SQLModel, table=True):
     user_id: int = Field(index=True)
     message: str
     type: str = "info"
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
     read_status: bool = False
 
 
@@ -89,7 +91,7 @@ class ScheduledNotification(SQLModel, table=True):
     scheduled_for: datetime = Field(index=True)
     status: str = Field(default="pending")
     context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     dispatched_at: datetime | None = Field(default=None, nullable=True)
 
 
@@ -113,7 +115,7 @@ class ABTest(SQLModel, table=True):
     winner_variant_id: Optional[int] = Field(default=None, nullable=True)
     start_time: datetime | None = None
     end_time: datetime | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class ABVariant(SQLModel, table=True):
@@ -143,7 +145,7 @@ class AnalyticsEvent(SQLModel, table=True):
     meta: Dict[str, Any] | None = Field(
         default=None, sa_column=Column("metadata", JSON)
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class OAuthProvider(str, Enum):
@@ -158,7 +160,7 @@ class OAuthState(SQLModel, table=True):
     provider: OAuthProvider
     code_verifier: str | None = None
     redirect_uri: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class OAuthCredential(SQLModel, table=True):
@@ -171,8 +173,8 @@ class OAuthCredential(SQLModel, table=True):
     scope: Optional[str] = None
     account_id: Optional[str] = None
     account_name: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class UserSession(SQLModel, table=True):
@@ -180,7 +182,7 @@ class UserSession(SQLModel, table=True):
     user_id: int
     token_hash: str = Field(index=True, unique=True, max_length=128)
     expires_at: datetime
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Store(SQLModel, table=True):
@@ -191,7 +193,7 @@ class Store(SQLModel, table=True):
     region: str = "US"
     currency: str = "USD"
     is_default: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class BrandProfile(SQLModel, table=True):
@@ -206,7 +208,7 @@ class BrandProfile(SQLModel, table=True):
     region: str = "US"
     language: str = "en"
     active: bool = True
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class SavedNiche(SQLModel, table=True):
@@ -215,7 +217,7 @@ class SavedNiche(SQLModel, table=True):
     niche: str = Field(index=True)
     score: int = 0
     context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class SavedSearch(SQLModel, table=True):
@@ -225,7 +227,7 @@ class SavedSearch(SQLModel, table=True):
     query: str
     filters: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     result_count: int = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class WatchlistItem(SQLModel, table=True):
@@ -234,7 +236,7 @@ class WatchlistItem(SQLModel, table=True):
     item_type: str = Field(index=True)
     name: str = Field(index=True)
     context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class SeasonalEvent(SQLModel, table=True):
@@ -253,7 +255,7 @@ class SeasonalEvent(SQLModel, table=True):
         default_factory=list, sa_column=Column(JSON)
     )
     saved: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class ListingDraftRevision(SQLModel, table=True):
@@ -263,7 +265,7 @@ class ListingDraftRevision(SQLModel, table=True):
     description: str
     tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     metadata_json: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class ListingOptimization(SQLModel, table=True):
@@ -276,7 +278,7 @@ class ListingOptimization(SQLModel, table=True):
     source: str = "local_estimator"
     is_estimated: bool = True
     confidence: float = 0.74
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class ABExperimentEvent(SQLModel, table=True):
@@ -286,7 +288,7 @@ class ABExperimentEvent(SQLModel, table=True):
     event_type: str = Field(index=True)
     value: int = 1
     context: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class NotificationRule(SQLModel, table=True):
@@ -299,7 +301,7 @@ class NotificationRule(SQLModel, table=True):
     window: str = "1 day"
     channels: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class AutomationJob(SQLModel, table=True):
@@ -311,7 +313,7 @@ class AutomationJob(SQLModel, table=True):
     status: str = Field(default="on_track", index=True)
     category: str = "system"
     metadata_json: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class UsageLedger(SQLModel, table=True):
@@ -320,7 +322,7 @@ class UsageLedger(SQLModel, table=True):
     resource_type: str = Field(index=True)
     quantity: int = 0
     source: str = "local"
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
 class TeamMember(SQLModel, table=True):
@@ -331,5 +333,5 @@ class TeamMember(SQLModel, table=True):
     role: str = "viewer"
     permissions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     status: str = "active"
-    last_active_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_active_at: datetime = Field(default_factory=utcnow, index=True)
+    created_at: datetime = Field(default_factory=utcnow)

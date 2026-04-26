@@ -137,16 +137,21 @@ export default function SeasonalEventsPage() {
                 </div>
               }
             >
-              <div className="mb-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-md border border-slate-800 bg-slate-950 p-4">
+              <div className="mb-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-md border border-slate-800 bg-slate-950 p-3">
                   <p className="text-sm text-slate-400">Seasonal Opportunity Score</p>
-                  <div className="mt-2 text-4xl font-semibold text-emerald-400">{data.opportunity_score}/100</div>
+                  <div className="mt-1 text-3xl font-semibold text-emerald-400">{data.opportunity_score}/100</div>
                   <ProgressBar value={data.opportunity_score} tone="green" />
                 </div>
-                <div className="rounded-md border border-slate-800 bg-slate-950 p-4">
+                <div className="rounded-md border border-slate-800 bg-slate-950 p-3">
                   <p className="text-sm text-slate-400">Listings to Prepare</p>
-                  <div className="mt-2 text-4xl font-semibold text-slate-50">{data.listings_to_prepare}</div>
+                  <div className="mt-1 text-3xl font-semibold text-slate-50">{data.listings_to_prepare}</div>
                   <p className="mt-2 text-sm text-slate-500">High-priority seasonal opportunities</p>
+                </div>
+                <div className="rounded-md border border-slate-800 bg-slate-950 p-3">
+                  <p className="text-sm text-slate-400">Calendar Density</p>
+                  <div className="mt-1 text-3xl font-semibold text-slate-50">{(data.events || []).length}</div>
+                  <p className="mt-2 text-sm text-slate-500">Tracked events in horizon</p>
                 </div>
               </div>
               <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -169,7 +174,7 @@ export default function SeasonalEventsPage() {
                       key={date.toISOString()}
                       type="button"
                       onClick={() => event && setSelected(event)}
-                      className={`min-h-[84px] border-b border-r border-slate-800 p-2 text-left hover:bg-slate-900 ${
+                      className={`min-h-[72px] border-b border-r border-slate-800 p-2 text-left hover:bg-slate-900 ${
                         selected?.name === event?.name ? 'bg-orange-500/10' : ''
                       }`}
                     >

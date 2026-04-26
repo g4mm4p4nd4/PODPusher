@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 from sqlmodel import select
 
 from ..common.database import get_session
+from ..common.time import utcnow
 from ..models import ABTest, ABVariant, ExperimentType
 
 
@@ -18,7 +19,7 @@ PRODUCT_OPTIONS = [
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return utcnow()
 
 
 def _provenance(source: str, estimated: bool = False) -> dict[str, Any]:
@@ -357,7 +358,7 @@ async def record_click(variant_id: int) -> Optional[dict]:
         if not variant:
             return None
         test = await session.get(ABTest, variant.test_id)
-        now = datetime.utcnow()
+        now = utcnow()
         if (test.start_time and now < test.start_time) or (
             test.end_time and now > test.end_time
         ):
@@ -376,7 +377,7 @@ async def record_impression(variant_id: int) -> Optional[dict]:
         if not variant:
             return None
         test = await session.get(ABTest, variant.test_id)
-        now = datetime.utcnow()
+        now = utcnow()
         if (test.start_time and now < test.start_time) or (
             test.end_time and now > test.end_time
         ):
@@ -425,7 +426,7 @@ async def end_test(test_id: int) -> Optional[dict]:
             default=None,
         )
         test.status = "completed"
-        test.end_time = datetime.utcnow()
+        test.end_time = utcnow()
         test.winner_variant_id = winner.id if winner else None
         session.add(test)
         await session.commit()

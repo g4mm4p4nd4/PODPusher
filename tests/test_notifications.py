@@ -1,10 +1,11 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
 from services.auth.service import create_session
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.models import AutomationJob, Notification, NotificationRule, ScheduledNotification, User
 from services.notifications.api import app as notif_app
 from services.notifications.service import (
@@ -135,7 +136,7 @@ async def test_notification_endpoints_reject_invalid_bearer_session():
 async def test_notification_endpoints_reject_payload_user_id_override():
     await init_db()
     transport = _transport()
-    schedule_time = datetime.utcnow() + timedelta(minutes=5)
+    schedule_time = utcnow() + timedelta(minutes=5)
 
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         create_resp = await client.post(
@@ -189,7 +190,7 @@ async def test_scheduler_jobs(monkeypatch):
 async def test_scheduled_notification_api():
     await init_db()
     transport = _transport()
-    schedule_time = datetime.utcnow() + timedelta(minutes=10)
+    schedule_time = utcnow() + timedelta(minutes=10)
 
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post(
@@ -227,7 +228,7 @@ async def test_scheduled_notification_api():
 async def test_scheduled_cancel_denies_other_user():
     await init_db()
     transport = _transport()
-    schedule_time = datetime.utcnow() + timedelta(minutes=10)
+    schedule_time = utcnow() + timedelta(minutes=10)
 
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         create_resp = await client.post(
@@ -251,7 +252,7 @@ async def test_scheduled_cancel_denies_other_user():
 @pytest.mark.asyncio
 async def test_dispatch_due_notifications():
     await init_db()
-    due_time = datetime.utcnow() - timedelta(minutes=5)
+    due_time = utcnow() - timedelta(minutes=5)
     await schedule_notification(
         user_id=1,
         message="Launch now",
@@ -296,7 +297,7 @@ async def test_dispatch_due_notifications_honors_delivery_method_metadata(monkey
         lambda user_id, message, notif_type: push_calls.append((user_id, message, notif_type)),
     )
 
-    due_time = datetime.utcnow() - timedelta(minutes=1)
+    due_time = utcnow() - timedelta(minutes=1)
     await schedule_notification(
         user_id=1,
         message="Email me",
@@ -329,7 +330,7 @@ async def test_dispatch_due_notifications_honors_delivery_method_metadata(monkey
 async def test_notification_rule_job_and_preferences_mutations():
     await init_db()
     transport = _transport()
-    next_run = datetime.utcnow() + timedelta(days=1)
+    next_run = utcnow() + timedelta(days=1)
 
     async with get_session() as session:
         rule = NotificationRule(

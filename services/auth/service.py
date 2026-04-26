@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..common.database import get_session
 from ..common.quotas import ensure_quota_state
+from ..common.time import utcnow
 from ..models import (
     OAuthCredential,
     OAuthProvider,
@@ -103,11 +104,11 @@ def _hash_sha256(value: str) -> str:
 async def create_session(user_id: int, ttl_hours: int = 24) -> tuple[str, datetime]:
     token = secrets.token_urlsafe(32)
     token_hash = _hash_sha256(token)
-    expires_at = datetime.utcnow() + timedelta(hours=ttl_hours)
+    expires_at = utcnow() + timedelta(hours=ttl_hours)
 
     async with get_session() as session:
         user = await session.get(User, user_id)
-        now = datetime.utcnow()
+        now = utcnow()
         if not user:
             user = User(id=user_id, last_reset=now)
             ensure_quota_state(user, now)
@@ -133,7 +134,7 @@ async def resolve_session_token(token: str) -> Optional[int]:
         record = result.first()
         if not record:
             return None
-        if record.expires_at < datetime.utcnow():
+        if record.expires_at < utcnow():
             await session.delete(record)
             await session.commit()
             return None
@@ -254,7 +255,7 @@ async def exchange_code(
 
         expires_in = payload.get("expires_in")
         expires_at = (
-            datetime.utcnow() + timedelta(seconds=int(expires_in))
+            utcnow() + timedelta(seconds=int(expires_in))
             if expires_in
             else None
         )
@@ -299,7 +300,7 @@ async def exchange_code(
             credential.scope = scope
             credential.account_id = account_id
             credential.account_name = account_name
-            credential.updated_at = datetime.utcnow()
+            credential.updated_at = utcnow()
             session.add(credential)
 
         await session.delete(state_record)
@@ -354,7 +355,7 @@ def _credential_requires_refresh(credential: OAuthCredential) -> bool:
     if not credential.refresh_token or credential.expires_at is None:
         return False
     window = credential.expires_at - timedelta(seconds=REFRESH_LEEWAY_SECONDS)
-    return window <= datetime.utcnow()
+    return window <= utcnow()
 
 
 async def _refresh_access_token(
@@ -392,14 +393,14 @@ async def _refresh_access_token(
         credential.refresh_token = new_refresh
     expires_in = payload.get("expires_in")
     credential.expires_at = (
-        datetime.utcnow() + timedelta(seconds=int(expires_in))
+        utcnow() + timedelta(seconds=int(expires_in))
         if expires_in
         else None
     )
     scope = payload.get("scope")
     if scope:
         credential.scope = scope
-    credential.updated_at = datetime.utcnow()
+    credential.updated_at = utcnow()
     session.add(credential)
     await session.commit()
     await session.refresh(credential)
@@ -472,7 +473,7 @@ async def _run_oauth_maintenance() -> None:
 
 
 async def prune_expired_oauth_records() -> None:
-    now = datetime.utcnow()
+    now = utcnow()
     async with get_session() as session:
         if STATE_TTL_MINUTES > 0:
             state_cutoff = now - timedelta(minutes=STATE_TTL_MINUTES)

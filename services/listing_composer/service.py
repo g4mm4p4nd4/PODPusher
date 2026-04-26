@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 from sqlmodel import select
+
+from ..common.time import utcnow
 from ..control_center.service import compliance_payload, score_listing_payload
 from ..models import (
     AutomationJob,
@@ -69,7 +71,7 @@ async def save_draft(data: DraftPayload) -> ListingDraft:
                 existing.tags = data.tags
                 existing.language = data.language
                 existing.field_order = data.field_order
-                existing.updated_at = datetime.utcnow()
+                existing.updated_at = utcnow()
                 await session.commit()
                 await session.refresh(existing)
                 session.add(
@@ -166,7 +168,7 @@ async def queue_publish_job(
             user_id=user_id,
             name=f"Composer Publish Queue Draft {draft.id}",
             frequency="once",
-            next_run=datetime.utcnow() + timedelta(minutes=5),
+            next_run=utcnow() + timedelta(minutes=5),
             status="pending",
             category="listing_publish",
             metadata_json={
@@ -235,7 +237,7 @@ async def build_export_payload(draft_id: int) -> ExportPayload | None:
             "is_estimated": optimization.is_estimated if optimization else True,
             "confidence": optimization.confidence if optimization else 0.74,
             "updated_at": (
-                optimization.updated_at if optimization else datetime.utcnow()
+                optimization.updated_at if optimization else utcnow()
             ).isoformat(),
             "export_status": "ready",
             "mode": "download",

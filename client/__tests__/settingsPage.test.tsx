@@ -72,6 +72,9 @@ describe('settings page', () => {
 
     expect(await screen.findByText('Settings & Localization')).toBeInTheDocument();
     expect(screen.getByText('Localization Settings')).toBeInTheDocument();
+    expect(screen.getByText('admin@podpusher.com')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'General' }));
     expect(screen.queryByText('admin@podpusher.com')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Users & Roles' }));

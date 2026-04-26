@@ -1,8 +1,8 @@
 from typing import List, Dict, Union
 import asyncio
-from datetime import datetime
 from ..models import Idea, Trend
 from ..common.database import get_session
+from ..common.time import utcnow
 from ..trend_scraper.events import EVENTS
 from packages.integrations import openai
 
@@ -48,7 +48,7 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
         else:
             normalized.append({"id": None, "term": t, "category": "general"})
 
-    month = datetime.utcnow().strftime("%B").lower()
+    month = utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])
     prompt_events = ", ".join(events)
     prompts = [

@@ -72,17 +72,17 @@ export default function Home() {
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
         <Panel title="Keyword Growth Trend" action={<Pill>Last 30 Days</Pill>}>
-          <div className="h-64">
+          <div className="h-56">
             <TrendArea data={data.keyword_growth || []} />
           </div>
         </Panel>
         <Panel title="Top Rising Niches" action={<a className="text-sm text-blue-400" href="/niches">View all</a>}>
           <div className="space-y-3">
-            {(data.top_rising_niches || []).map((item: any) => (
+            {(data.top_rising_niches || []).slice(0, 7).map((item: any) => (
               <a
                 key={item.niche}
                 href={`/niches?niche=${encodeURIComponent(item.niche)}`}
-                className="grid grid-cols-[1fr_80px_110px] items-center gap-3 rounded-md px-2 py-1 text-sm hover:bg-slate-800"
+                className="grid grid-cols-[1fr_64px_92px] items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-slate-800"
               >
                 <span className="font-medium text-slate-100">{item.niche}</span>
                 <span className="text-emerald-400">+{item.growth}%</span>
@@ -96,7 +96,7 @@ export default function Home() {
       <div className="grid gap-4 xl:grid-cols-4">
         <Panel title="Popular Product Categories">
           <div className="space-y-3">
-            {(data.popular_categories || []).slice(0, 5).map((item: any) => (
+            {(data.popular_categories || []).slice(0, 6).map((item: any) => (
               <button
                 key={item.category}
                 type="button"
@@ -218,8 +218,15 @@ function TrendArea({ data }: { data: Array<{ date: string; value: number }> }) {
     .join(' ');
   return (
     <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <polyline points={points} fill="none" stroke="rgb(249 115 22)" strokeWidth="1.6" />
+      {[20, 40, 60, 80].map((line) => (
+        <line key={line} x1="0" x2="100" y1={line} y2={line} stroke="rgba(148,163,184,0.18)" strokeWidth="0.35" />
+      ))}
       <polygon points={`0,100 ${points} 100,100`} fill="rgba(249,115,22,0.18)" />
+      <polyline points={points} fill="none" stroke="rgb(249 115 22)" strokeWidth="1.8" />
+      {points.split(' ').filter(Boolean).map((point, index) => {
+        const [x, y] = point.split(',');
+        return <circle key={`${point}-${index}`} cx={x} cy={y} r="1.1" fill="rgb(251 146 60)" />;
+      })}
     </svg>
   );
 }

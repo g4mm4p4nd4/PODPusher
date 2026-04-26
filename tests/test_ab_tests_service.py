@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
+from services.common.time import utcnow
 from services.ab_tests.service import (
     create_test,
     duplicate_test,
@@ -49,7 +50,7 @@ async def test_weight_validation():
 @pytest.mark.asyncio
 async def test_scheduling():
     await init_db()
-    future = datetime.utcnow() + timedelta(days=1)
+    future = utcnow() + timedelta(days=1)
     test = await create_test(
         "Sched",
         ExperimentType.DESCRIPTION,

@@ -1,10 +1,9 @@
-from datetime import datetime
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.gateway.api import app as gateway_app
 from services.models import BrandProfile, TrendSignal
 
@@ -19,7 +18,7 @@ async def test_overview_and_trend_insights_include_provenance():
                 keyword="dog mom",
                 category="Apparel",
                 engagement_score=1000,
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
             )
         )
         await session.commit()

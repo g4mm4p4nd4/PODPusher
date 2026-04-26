@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -17,6 +16,7 @@ from ..common.observability import register_observability
 from ..common.product_pipeline import assemble_products
 from ..common.quotas import check_quota, increment_quota, quota_exceeded_response
 from ..common.rate_limit import register_rate_limiting
+from ..common.time import utcnow
 from ..control_center.service import get_trend_insights
 from ..dashboard.api import app as dashboard_app
 from ..ideation.api import app as ideation_app
@@ -133,7 +133,7 @@ async def generate(
         if listing_url:
             listing["listing_url"] = listing_url
 
-    month = datetime.utcnow().strftime("%B").lower()
+    month = utcnow().strftime("%B").lower()
     events = EVENTS.get(month, [])
 
     response = {
@@ -211,7 +211,7 @@ async def list_trends(category: str | None = None):
 
 @app.get("/events/{month}")
 async def list_events(month: str):
-    month_key = (month or datetime.utcnow().strftime("%B")).lower()
+    month_key = (month or utcnow().strftime("%B")).lower()
     events = EVENTS.get(month_key, [])
     return {"month": month_key.capitalize(), "events": events}
 

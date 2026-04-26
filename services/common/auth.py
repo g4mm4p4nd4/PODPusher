@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, Request, status
@@ -9,6 +8,7 @@ from ..auth import service as auth_service
 from ..models import User
 from .database import get_session
 from .quotas import ensure_quota_state
+from .time import utcnow
 
 INVALID_AUTH_HEADER_DETAIL = "Invalid Authorization header"
 
@@ -81,7 +81,7 @@ async def optional_user_id(request: Request) -> Optional[int]:
 
 async def ensure_user_record(user_id: int) -> User:
     async with get_session() as session:
-        now = datetime.utcnow()
+        now = utcnow()
         user = await session.get(User, user_id)
         if not user:
             user = User(id=user_id, last_reset=now)

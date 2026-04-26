@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict
 
 import httpx
@@ -8,6 +8,7 @@ from sqlmodel import select
 
 from .repository import aggregate_metrics, create_event, fetch_events
 from ..common.database import get_session
+from ..common.time import utcnow
 from ..models import AnalyticsEvent, EventType, Trend, TrendSignal
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
@@ -85,7 +86,7 @@ def _normalize_keyword(value: str | None) -> str:
 
 async def get_trending_keywords(limit: int = 10, lookback_hours: int = 24 * 7):
     """Return top keywords from live trend signals with a Trend table fallback."""
-    cutoff = datetime.utcnow() - timedelta(hours=max(1, lookback_hours))
+    cutoff = utcnow() - timedelta(hours=max(1, lookback_hours))
     keyword_scores: dict[str, int] = {}
 
     async with get_session() as session:

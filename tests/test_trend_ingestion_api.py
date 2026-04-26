@@ -1,9 +1,10 @@
-﻿from datetime import datetime, timedelta
+﻿from datetime import timedelta
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.gateway.api import app as gateway_app
 from services.models import TrendSignal
 
@@ -11,7 +12,7 @@ from services.models import TrendSignal
 @pytest.mark.asyncio
 async def test_live_trends_endpoint():
     await init_db()
-    now = datetime.utcnow()
+    now = utcnow()
     async with get_session() as session:
         session.add(
             TrendSignal(

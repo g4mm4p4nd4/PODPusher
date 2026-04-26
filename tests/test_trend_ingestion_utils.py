@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
 from services.common.database import get_session, init_db
+from services.common.time import utcnow
 from services.models import TrendSignal
 from services.trend_ingestion import service as ingestion_service
 from services.trend_ingestion.circuit_breaker import CircuitBreaker, CircuitState
@@ -90,7 +91,7 @@ async def test_stub_gather_trends(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_live_trends_applies_source_dedup_recency_and_limit():
     await init_db()
-    now = datetime.utcnow()
+    now = utcnow()
     async with get_session() as session:
         session.add(
             TrendSignal(

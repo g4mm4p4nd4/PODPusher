@@ -15,6 +15,7 @@ import {
   SelectBox,
   formatNumber,
 } from '../components/ControlCenter';
+import { DemoProductArt, variantForText } from '../components/DemoProductArt';
 import {
   DashboardResponse,
   addTagClusterToWatchlist,
@@ -188,6 +189,7 @@ export default function TrendsPage() {
                     <tr>
                       <th className="py-2">#</th>
                       <th>Keyword</th>
+                      <th>Demo Asset</th>
                       <th>Search Volume</th>
                       <th>Growth</th>
                       <th>Competition</th>
@@ -207,6 +209,15 @@ export default function TrendsPage() {
                           <button type="button" onClick={() => setSelectedKeyword(item)} className="font-medium text-slate-100 hover:text-orange-300">
                             {item.keyword}
                           </button>
+                        </td>
+                        <td className="min-w-[150px]">
+                          <DemoProductArt
+                            title={item.keyword}
+                            subtitle={(item.suggested_products || [])[0] || 'Trend product'}
+                            productType={(item.suggested_products || [])[0]}
+                            variant={variantForText(item.keyword)}
+                            compact
+                          />
                         </td>
                         <td>{formatNumber(item.search_volume)}</td>
                         <td className="text-emerald-400">+{item.growth}%</td>
@@ -268,9 +279,14 @@ export default function TrendsPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(data.design_ideas || []).map((idea: any) => (
                     <div key={idea.title} className="rounded-md border border-slate-800 bg-slate-950 p-3">
-                      <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded bg-slate-800 text-center text-sm font-semibold text-orange-300">
-                        {idea.title}
-                      </div>
+                      <DemoProductArt
+                        title={idea.title}
+                        subtitle={idea.product_type || 'Design concept'}
+                        productType={idea.product_type || 'T-Shirt'}
+                        variant={variantForText(`${idea.title} ${idea.keyword || ''}`)}
+                        className="mb-3"
+                      />
+                      <span className="sr-only">{idea.title}</span>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Pill tone={idea.opportunity === 'High' ? 'green' : 'orange'}>{idea.opportunity} opportunity</Pill>
                         <a href={composerUrl({
@@ -315,26 +331,41 @@ export default function TrendsPage() {
 
 function MomentumChart({ data }: { data: Array<Record<string, number | string>> }) {
   if (!data.length) return <EmptyState message="No momentum data yet." />;
-  const series = ['etsy_search_volume', 'google_trends', 'internal_trend_score'];
+  const series = [
+    { key: 'etsy_search_volume', label: 'Etsy search', color: 'rgb(249 115 22)' },
+    { key: 'google_trends', label: 'Google trends', color: 'rgb(34 197 94)' },
+    { key: 'internal_trend_score', label: 'Internal score', color: 'rgb(59 130 246)' },
+  ];
+  const max = Math.max(
+    ...series.flatMap((item) => data.map((row) => Number(row[item.key]) || 0)),
+    1
+  );
+  const lineFor = (key: string) =>
+    data
+      .map((item, index) => {
+        const x = 4 + (index / Math.max(1, data.length - 1)) * 92;
+        const y = 92 - ((Number(item[key]) || 0) / max) * 76;
+        return `${x},${y}`;
+      })
+      .join(' ');
   return (
-    <div className="grid gap-3">
-      {series.map((key) => {
-        const max = Math.max(...data.map((item) => Number(item[key]) || 0), 1);
-        return (
-          <div key={key}>
-            <div className="mb-1 text-xs text-slate-500">{key.replace(/_/g, ' ')}</div>
-            <div className="flex h-10 items-end gap-1">
-              {data.map((item, index) => (
-                <span
-                  key={`${key}-${index}`}
-                  className="flex-1 rounded-t bg-orange-500/70"
-                  style={{ height: `${Math.max(6, (Number(item[key]) / max) * 40)}px` }}
-                />
-              ))}
-            </div>
+    <div className="space-y-3">
+      <svg className="h-48 w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {[20, 40, 60, 80].map((line) => (
+          <line key={line} x1="0" x2="100" y1={line} y2={line} stroke="rgba(148,163,184,0.16)" strokeWidth="0.35" />
+        ))}
+        {series.map((item) => (
+          <polyline key={item.key} points={lineFor(item.key)} fill="none" stroke={item.color} strokeWidth="1.7" />
+        ))}
+      </svg>
+      <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-3">
+        {series.map((item) => (
+          <div key={item.key} className="flex items-center gap-2">
+            <span className="h-2 w-6 rounded-full" style={{ backgroundColor: item.color }} />
+            {item.label}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }

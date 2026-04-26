@@ -2,6 +2,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { Button, Panel, Pill, ProgressBar } from './ControlCenter';
+import { DemoProductArt, variantForText } from './DemoProductArt';
 import {
   DraftData,
   checkListingDraftCompliance,
@@ -28,6 +29,19 @@ const steps = [
   'Review',
 ];
 
+const defaultDemoDraft = buildDemoListingDraft({
+  niche: 'Home Decor Wall Art',
+  primaryKeyword: 'Boho Sun Wall Art',
+  productType: 'Canvas Print',
+  tone: 'Warm & Inviting',
+  targetAudience: 'Home Decor Enthusiasts',
+  materials: 'Canvas, Pine Wood',
+  occasion: 'Housewarming',
+  holiday: 'None',
+  recipient: 'Home Decor Enthusiast',
+  style: 'Boho, Abstract, Modern',
+});
+
 export default function ListingComposer({ onPublish }: Props) {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
@@ -39,19 +53,19 @@ export default function ListingComposer({ onPublish }: Props) {
   const [brandRules, setBrandRules] = useState(
     'Use eco-friendly links, premium materials, and original designs.'
   );
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [suggested, setSuggested] = useState<string[]>([]);
+  const [title, setTitle] = useState(defaultDemoDraft.title);
+  const [description, setDescription] = useState(defaultDemoDraft.description);
+  const [tags, setTags] = useState<string[]>(defaultDemoDraft.tags);
+  const [suggested, setSuggested] = useState<string[]>(defaultDemoDraft.suggested);
   const [language, setLanguage] = useState('en');
   const [materials, setMaterials] = useState('Canvas, Pine Wood');
   const [occasion, setOccasion] = useState('Housewarming');
   const [holiday, setHoliday] = useState('None');
   const [recipient, setRecipient] = useState('Home Decor Enthusiast');
   const [style, setStyle] = useState('Boho, Abstract, Modern');
-  const [score, setScore] = useState<any>(null);
-  const [compliance, setCompliance] = useState<any>(null);
-  const [draftStatus, setDraftStatus] = useState('Draft not saved');
+  const [score, setScore] = useState<any>(defaultDemoDraft.score);
+  const [compliance, setCompliance] = useState<any>(defaultDemoDraft.compliance);
+  const [draftStatus, setDraftStatus] = useState('Demo/local draft loaded');
   const [queueStatus, setQueueStatus] = useState('Publish queue idle');
   const [exportStatus, setExportStatus] = useState('Export ready');
   const lastLengthsRef = useRef({ title: 0, description: 0 });
@@ -65,9 +79,9 @@ export default function ListingComposer({ onPublish }: Props) {
     if (!id) return;
     loadDraft(Number(id))
       .then((draft: DraftData) => {
-        setTitle(draft.title);
-        setDescription(draft.description);
-        setTags(draft.tags);
+        if (draft.title) setTitle(draft.title);
+        if (draft.description) setDescription(draft.description);
+        if (draft.tags?.length) setTags(draft.tags);
         setLanguage(draft.language);
         if (draft.niche) setNiche(draft.niche);
         if (draft.primary_keyword) setPrimaryKeyword(draft.primary_keyword);
@@ -110,6 +124,24 @@ export default function ListingComposer({ onPublish }: Props) {
       setTags(nextTags.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 13));
     }
     if (nextNiche || nextKeyword || nextProductType || nextAudience || nextTags) {
+      const demo = buildDemoListingDraft({
+        niche: nextNiche || niche,
+        primaryKeyword: nextKeyword || primaryKeyword,
+        productType: nextProductType || productType,
+        tone: nextTone || tone,
+        targetAudience: nextAudience || targetAudience,
+        materials,
+        occasion: nextOccasion || occasion,
+        holiday: nextHoliday || holiday,
+        recipient: nextAudience || recipient,
+        style: nextStyle || style,
+        incomingTags: nextTags,
+      });
+      setTitle((current) => (current === defaultDemoDraft.title ? demo.title : current));
+      setDescription((current) => (current === defaultDemoDraft.description ? demo.description : current));
+      setSuggested(demo.suggested);
+      setScore(demo.score);
+      setCompliance(demo.compliance);
       setDraftStatus(`Prefilled from ${queryValue('source') || 'handoff'}`);
     }
   }, [router.isReady, router.query]);
@@ -278,9 +310,12 @@ export default function ListingComposer({ onPublish }: Props) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.75fr_1.6fr_0.95fr]">
-        <Panel title="Product Inputs">
-          <div className="space-y-3">
-            <Field label="Niche" value={niche} onChange={setNiche} />
+          <Panel title="Product Inputs">
+            <div className="space-y-3">
+              <div className="rounded-md border border-blue-500/30 bg-blue-950/30 p-3 text-xs text-blue-100">
+                Default copy and thumbnails are local demo evidence. Live Etsy, Printify, OpenAI, and marketplace generation stay non-blocking until credentials are connected.
+              </div>
+              <Field label="Niche" value={niche} onChange={setNiche} />
             <Field label="Primary Keyword" value={primaryKeyword} onChange={setPrimaryKeyword} />
             <SelectField label="Product Type" value={productType} onChange={setProductType} options={withCurrent(productType, ['Canvas Print', 'T-Shirt', 'Mug', 'Tote Bag', 'Apparel', 'Drinkware', 'Bags'])} />
             <SelectField label="Tone" value={tone} onChange={setTone} options={['Warm & Inviting', 'Humorous, Positive', 'Minimal, Calm']} />
@@ -388,9 +423,13 @@ export default function ListingComposer({ onPublish }: Props) {
 
         <div className="space-y-4">
           <Panel title="Listing Preview">
-            <div className="mb-3 flex aspect-square items-center justify-center rounded-md bg-slate-800 p-4 text-center text-sm text-orange-300">
-              {title || 'Generated product preview'}
-            </div>
+            <DemoProductArt
+              title={title || primaryKeyword}
+              subtitle={`${productType} preview - ${niche}`}
+              productType={productType}
+              variant={variantForText(`${title} ${primaryKeyword} ${style}`)}
+              className="mb-3"
+            />
             <h3 className="text-lg font-semibold text-slate-50">{title || 'Untitled listing'}</h3>
             <p className="mt-2 text-2xl font-semibold">$34.99+</p>
             <p className="text-sm text-slate-500">Free shipping eligible</p>
@@ -417,6 +456,7 @@ export default function ListingComposer({ onPublish }: Props) {
 
           <Panel title="Quick Tips">
             <div className="space-y-3 text-sm text-slate-400">
+              <p className="text-blue-200">Preview source: local demo thumbnail, confidence 72%, updated on first paint.</p>
               <p>Use lifestyle mockups to boost conversion.</p>
               <p>Add a short video to increase trust.</p>
               <p>Refresh tags weekly as trends shift.</p>
@@ -499,6 +539,89 @@ function stringParam(value: string | string[] | undefined) {
 
 function withCurrent(current: string, options: string[]) {
   return options.includes(current) ? options : [current, ...options].filter(Boolean);
+}
+
+function buildDemoListingDraft({
+  niche,
+  primaryKeyword,
+  productType,
+  tone,
+  targetAudience,
+  materials,
+  occasion,
+  holiday,
+  recipient,
+  style,
+  incomingTags,
+}: {
+  niche: string;
+  primaryKeyword: string;
+  productType: string;
+  tone: string;
+  targetAudience: string;
+  materials: string;
+  occasion: string;
+  holiday: string;
+  recipient: string;
+  style: string;
+  incomingTags?: string;
+}) {
+  const baseTags = [
+    primaryKeyword,
+    niche,
+    productType,
+    occasion,
+    holiday !== 'None' ? holiday : '',
+    recipient,
+    style.split(',')[0],
+    'gift idea',
+    'wall decor',
+    'made to order',
+    'local demo',
+  ]
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
+  const tags = (incomingTags ? incomingTags.split(',') : baseTags)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 13);
+  const uniqueTags = Array.from(new Set(tags));
+
+  return {
+    title: `${primaryKeyword} ${productType} for ${targetAudience}`,
+    description: [
+      `Bring a ${tone.toLowerCase()} look to your shop with this ${productType.toLowerCase()} concept built around ${primaryKeyword}.`,
+      `The demo draft is tuned for ${niche}, ${occasion.toLowerCase()} gifting, and ${style.toLowerCase()} styling.`,
+      `Materials: ${materials}. Recipient: ${recipient}. This first-paint copy is generated locally for UI review and can be replaced by credential-backed generation when providers are connected.`,
+    ].join('\n\n'),
+    tags: uniqueTags,
+    suggested: ['etsy seo', 'print on demand', 'seasonal gift', 'shop launch', 'wall art gift'].filter(
+      (tag) => !uniqueTags.includes(tag)
+    ),
+    score: {
+      optimization_score: 84,
+      seo_score: 82,
+      checks: {
+        title_length: true,
+        tag_count: true,
+        keyword_in_title: true,
+      },
+      provenance: {
+        source: 'local_demo_first_paint',
+        is_estimated: true,
+        updated_at: '2026-04-26T00:00:00Z',
+        confidence: 0.72,
+      },
+    },
+    compliance: {
+      status: 'compliant',
+      checks: [
+        { label: 'No restricted credential-backed marketplace action', passed: true },
+        { label: 'Local demo copy is labeled', passed: true },
+        { label: 'Title within Etsy limit', passed: true },
+      ],
+    },
+  };
 }
 
 function downloadExportPayload(draftId: number, payload: unknown) {

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from services.auth.service import create_session
 from services.common.database import get_session, init_db
 from services.common.quotas import plan_limit
+from services.common.time import utcnow
 from services.models import User
 from services.user.api import app as user_app
 
@@ -80,7 +81,7 @@ async def test_increment_quota_allows_unlimited_pro():
 @pytest.mark.asyncio
 async def test_missing_limit_is_migrated_and_reset():
     await init_db()
-    past = datetime.utcnow() - timedelta(days=40)
+    past = utcnow() - timedelta(days=40)
     async with get_session() as session:
         user = User(
             id=4,

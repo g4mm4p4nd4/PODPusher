@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import select
 
 from ..common.database import get_session
+from ..common.time import utcnow
 from ..models import (
     AutomationJob,
     Notification,
@@ -60,7 +61,7 @@ def _provenance(source: str = "notifications_service", estimated: bool = False) 
     return {
         "source": source,
         "is_estimated": estimated,
-        "updated_at": datetime.utcnow().isoformat(),
+        "updated_at": utcnow().isoformat(),
         "confidence": 0.9 if not estimated else 0.72,
     }
 
@@ -271,7 +272,7 @@ async def update_notification_preferences(
 
 
 async def dispatch_due_notifications() -> None:
-    now = datetime.utcnow()
+    now = utcnow()
     async with get_session() as session:
         result = await session.exec(
             select(ScheduledNotification)
@@ -294,7 +295,7 @@ async def dispatch_due_notifications() -> None:
 
 
 async def reset_monthly_quotas() -> None:
-    now = datetime.utcnow()
+    now = utcnow()
     async with get_session() as session:
         result = await session.exec(select(User))
         users = result.all()

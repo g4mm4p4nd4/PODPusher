@@ -12,6 +12,7 @@ import {
   TextInput,
   formatNumber,
 } from '../components/ControlCenter';
+import { DemoProductArt, variantForText } from '../components/DemoProductArt';
 import {
   DashboardResponse,
   addToWatchlist,
@@ -173,6 +174,7 @@ export default function SearchPage() {
                   <thead className="text-left text-slate-500">
                     <tr>
                       <th className="py-2">Product</th>
+                      <th>Thumbnail</th>
                       <th>Select</th>
                       <th>Category</th>
                       <th>Rating</th>
@@ -189,6 +191,15 @@ export default function SearchPage() {
                         className={`cursor-pointer border-t border-slate-800 ${selectedItem?.name === item.name ? 'bg-blue-500/10' : ''}`}
                       >
                         <td className="py-3 font-medium text-slate-100">{item.name}</td>
+                        <td className="min-w-[150px]">
+                          <DemoProductArt
+                            title={item.name}
+                            subtitle={`${item.category || 'Product'} - $${item.price || '19.99'}`}
+                            productType={item.category}
+                            variant={variantForText(`${item.name} ${item.keyword || ''}`)}
+                            compact
+                          />
+                        </td>
                         <td>
                           <input
                             aria-label={`Select ${item.name}`}
@@ -243,10 +254,18 @@ export default function SearchPage() {
                 <div>
                   <p className="mb-2 text-sm font-medium">Design Inspiration</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {(data.design_inspiration || []).slice(0, 4).map((idea: any) => (
-                      <div key={idea.title} className="flex aspect-square items-center justify-center rounded-md border border-slate-800 bg-slate-950 p-2 text-center text-xs text-orange-300">
-                        {idea.title}
-                      </div>
+                    {((data.design_inspiration || []).length
+                      ? data.design_inspiration
+                      : results.map((item) => ({ title: item.name, product_type: item.category }))
+                    ).slice(0, 4).map((idea: any) => (
+                      <DemoProductArt
+                        key={idea.title}
+                        title={idea.title}
+                        subtitle={idea.product_type || 'Search concept'}
+                        productType={idea.product_type || 'Product'}
+                        variant={variantForText(idea.title)}
+                        compact
+                      />
                     ))}
                   </div>
                 </div>
@@ -300,6 +319,14 @@ export default function SearchPage() {
               <div className="grid grid-cols-3 gap-2">
                 {(selectedItems.length ? selectedItems : data.comparison || results).slice(0, 3).map((item: any, index: number) => (
                   <div key={`${item.id}-${index}`} className="rounded-md border border-slate-800 bg-slate-950 p-3 text-xs">
+                    <DemoProductArt
+                      title={item.name}
+                      subtitle={item.category || 'Compared result'}
+                      productType={item.category}
+                      variant={variantForText(`${item.name} ${item.keyword || ''}`)}
+                      compact
+                      className="mb-2"
+                    />
                     <Pill tone="orange">#{index + 1}</Pill>
                     <p className="mt-2 font-medium text-slate-100">{item.name}</p>
                     <p className="text-emerald-400">Score {item.trend_score || 80}</p>
