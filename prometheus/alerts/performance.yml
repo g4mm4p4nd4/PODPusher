@@ -109,3 +109,42 @@ groups:
           description: >
             The gateway service has not reported any request metrics
             in 10 minutes. The service may be down or unreachable.
+
+      # ---------------------------------------------------------------
+      # Composer Publish Queue Failures
+      # ---------------------------------------------------------------
+      - alert: ComposerPublishQueueFailures
+        expr: >
+          sum(rate(pod_request_total{path=~".*/drafts/\\{draft_id\\}/publish-queue|/drafts/\\{draft_id\\}/publish-queue",status=~"5.."}[15m]))
+          by (service)
+          > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Composer publish queue is returning 5xx responses"
+          description: >
+            Listing drafts should be able to queue locally without Etsy or
+            Printify credentials. A 5xx on the publish queue indicates a local
+            workflow regression, not a credential issue.
+
+      # ---------------------------------------------------------------
+      # Composer Queue Latency
+      # ---------------------------------------------------------------
+      - alert: ComposerPublishQueueLatencyHigh
+        expr: >
+          histogram_quantile(
+            0.95,
+            rate(pod_request_latency_seconds_bucket{path=~".*/drafts/\\{draft_id\\}/publish-queue|/drafts/\\{draft_id\\}/publish-queue"}[10m])
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Composer publish queue p95 latency > 500ms"
+          description: >
+            Local publish queue insertion is slower than expected. Inspect
+            AutomationJob writes and database readiness before checking external
+            marketplace credentials.

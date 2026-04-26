@@ -58,12 +58,20 @@ async def test_live_trends_endpoint():
 
         resp = await client.get(
             "/api/trends/live",
-            params={"source": "tiktok", "lookback_hours": 48, "limit": 1},
+            params={
+                "source": "tiktok",
+                "lookback_hours": 48,
+                "limit": 1,
+                "include_meta": True,
+                "sort_by": "timestamp",
+            },
         )
         assert resp.status_code == 200
         filtered = resp.json()
-        assert list(filtered.keys()) == ["animals"]
-        assert filtered["animals"][0]["source"] == "tiktok"
+        assert list(filtered["items_by_category"].keys()) == ["animals"]
+        assert filtered["items_by_category"]["animals"][0]["source"] == "tiktok"
+        assert filtered["items_by_category"]["animals"][0]["provenance"]["source"] == "tiktok"
+        assert filtered["pagination"]["sort_by"] == "timestamp"
 
 
 @pytest.mark.asyncio
@@ -98,6 +106,15 @@ async def test_refresh_and_status_endpoint(monkeypatch):
             "last_mode": "live",
             "sources_succeeded": ["etsy"],
             "sources_failed": {},
+            "source_methods": {"etsy": "selector_fallback"},
+            "source_diagnostics": {
+                "etsy": {
+                    "status": "success",
+                    "method": "selector_fallback",
+                    "collected": 1,
+                    "persisted": 1,
+                }
+            },
             "signals_collected": 1,
             "signals_persisted": 1,
         }
@@ -111,6 +128,15 @@ async def test_refresh_and_status_endpoint(monkeypatch):
             "last_mode": "live",
             "sources_succeeded": ["etsy"],
             "sources_failed": {},
+            "source_methods": {"etsy": "selector_fallback"},
+            "source_diagnostics": {
+                "etsy": {
+                    "status": "success",
+                    "method": "selector_fallback",
+                    "collected": 1,
+                    "persisted": 1,
+                }
+            },
             "signals_collected": 1,
             "signals_persisted": 1,
         },
@@ -128,6 +154,7 @@ async def test_refresh_and_status_endpoint(monkeypatch):
         assert status.status_code == 200
         status_data = status.json()
         assert status_data["last_mode"] == "live"
+        assert status_data["source_diagnostics"]["etsy"]["persisted"] == 1
 
         live = await client.get("/api/trends/live", params={"lookback_hours": 240})
         data = live.json()

@@ -237,6 +237,11 @@ async def live_trends(
     source: str | None = None,
     lookback_hours: int = Query(default=72, ge=1, le=24 * 14),
     limit: int = Query(default=5, ge=1, le=50),
+    page: int = Query(default=1, ge=1),
+    page_size: int | None = Query(default=None, ge=1, le=50),
+    sort_by: str = Query(default="engagement_score", pattern="^(engagement_score|timestamp|keyword)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    include_meta: bool = False,
 ):
     ck = cache_key(
         "live_trends",
@@ -244,6 +249,11 @@ async def live_trends(
         source or "all",
         str(lookback_hours),
         str(limit),
+        str(page),
+        str(page_size or ""),
+        sort_by,
+        sort_order,
+        str(include_meta),
     )
     cached = cache_get(ck)
     if cached is not None:
@@ -253,6 +263,11 @@ async def live_trends(
         source=source,
         lookback_hours=lookback_hours,
         per_group_limit=limit,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        include_meta=include_meta,
     )
     cache_set(ck, result, CACHE_TTL_TRENDS)
     return result
@@ -275,6 +290,10 @@ async def trend_insights(
     country: str = "US",
     language: str = "en",
     lookback_days: int = Query(default=30, ge=1, le=180),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    sort_by: str = Query(default="search_volume", pattern="^(search_volume|growth|competition|keyword|opportunity)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
 ):
     return await get_trend_insights(
         marketplace=marketplace,
@@ -282,4 +301,8 @@ async def trend_insights(
         country=country,
         language=language,
         lookback_days=lookback_days,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )

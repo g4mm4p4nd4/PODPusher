@@ -38,6 +38,7 @@ async def test_overview_and_trend_insights_include_provenance():
         trend_body = trends.json()
         assert trend_body["keywords"]
         assert "provenance" in trend_body["keywords"][0]
+        assert trend_body["pagination"]["total"] >= len(trend_body["keywords"])
 
 
 @pytest.mark.asyncio
@@ -108,10 +109,12 @@ async def test_seasonal_search_ab_notifications_and_settings_dashboards():
         search = await client.get("/api/search/insights", params={"q": "dog"})
         assert search.status_code == 200
         assert search.json()["results"]
+        assert search.json()["pagination"]["page"] == 1
 
         ab = await client.get("/api/ab-tests/dashboard")
         assert ab.status_code == 200
         assert ab.json()["experiments"]
+        assert ab.json()["pagination"]["total"] >= len(ab.json()["experiments"])
 
         notifications = await client.get(
             "/api/notifications/dashboard", headers={"X-User-Id": "1"}
@@ -199,6 +202,10 @@ async def test_page_filters_are_reflected_and_shape_backend_data():
                 "category": "Apparel",
                 "rating_min": 4.7,
                 "price_max": 20,
+                "page": 1,
+                "page_size": 1,
+                "sort_by": "price",
+                "sort_order": "asc",
                 "marketplace": "etsy",
                 "country": "US",
                 "language": "en",
@@ -209,7 +216,10 @@ async def test_page_filters_are_reflected_and_shape_backend_data():
         search_body = search.json()
         assert search_body["filters"]["rating_min"] == 4.7
         assert search_body["filters"]["price_max"] == 20
+        assert search_body["pagination"]["page_size"] == 1
+        assert search_body["pagination"]["sort_by"] == "price"
         assert search_body["actions_available"]
+        assert len(search_body["results"]) == 1
         assert all(result["rating"] >= 4.7 for result in search_body["results"])
         assert all(result["price"] <= 20 for result in search_body["results"])
 

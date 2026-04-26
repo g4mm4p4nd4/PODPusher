@@ -125,3 +125,43 @@ groups:
             zero keywords. The target site may have changed its DOM structure,
             requiring selector updates in sources.py.
           runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # Fallback Spike
+      # ---------------------------------------------------------------
+      - alert: ScraperFallbackSpike
+        expr: >
+          sum(rate(pod_scrape_fallback_total[15m])) by (platform) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Scraper fallback spike for {{ $labels.platform }}"
+          description: >
+            Platform {{ $labels.platform }} is moving from ScrapeGraphAI to
+            selector fallback more than expected. Inspect /api/trends/live/status
+            source_diagnostics for fallback_from, fallback_to, and reason fields.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"
+
+      # ---------------------------------------------------------------
+      # RSS Fallback Only
+      # ---------------------------------------------------------------
+      - alert: ScraperRssFallbackDominant
+        expr: >
+          sum(rate(pod_scrape_method_total{method="rss_fallback",outcome="success"}[30m]))
+          /
+          clamp_min(sum(rate(pod_scrape_method_total{outcome="success"}[30m])), 0.001)
+          > 0.8
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "RSS fallback is carrying most trend ingestion"
+          description: >
+            Google Trends RSS is producing more than 80% of successful trend
+            extraction events. This is non-blocking for local mode, but public
+            source selectors or ScrapeGraphAI/Ollama should be inspected before
+            treating trend coverage as manually proven.
+          runbook_url: "https://github.com/your-org/PODPusher/blob/main/docs/runbooks/scraper-outage.md"

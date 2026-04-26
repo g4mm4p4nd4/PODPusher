@@ -103,11 +103,14 @@ _refresh_status: Dict[str, Any] = {
     "sources_failed": {},
     "source_methods": {},
     "sources_skipped": [],
+    "source_diagnostics": {},
+    "sources_blocked": [],
     "signals_collected": 0,
     "signals_persisted": 0,
     "failed_count": 0,
     "fallback_count": 0,
     "skipped_count": 0,
+    "blocked_count": 0,
 }
 
 
@@ -123,9 +126,34 @@ def compute_engagement(likes: int, shares: int, comments: int) -> int:
 
 
 CATEGORIES: Dict[str, List[str]] = {
-    "animals": ["cat", "dog", "pet", "animal"],
-    "activism": ["protest", "climate", "justice", "rights"],
-    "sports": ["game", "soccer", "basketball", "tennis"],
+    "animals": ["cat", "dog", "pet", "animal", "paw", "fur"],
+    "activism": ["protest", "climate", "justice", "rights", "awareness"],
+    "sports": ["game", "soccer", "basketball", "tennis", "pickleball", "baseball"],
+    "apparel": ["shirt", "tee", "hoodie", "sweatshirt", "hat", "cap"],
+    "drinkware": ["mug", "tumbler", "cup", "coffee"],
+    "home_decor": ["decor", "wall art", "poster", "print", "canvas"],
+    "bags": ["tote", "bag", "backpack"],
+    "gifts": ["gift", "birthday", "mother", "father", "teacher", "holiday"],
+}
+
+CATEGORY_ALIASES = {
+    "pet": "animals",
+    "pets": "animals",
+    "animal": "animals",
+    "climate": "activism",
+    "awareness": "activism",
+    "apparel": "apparel",
+    "clothing": "apparel",
+    "tshirts": "apparel",
+    "t shirts": "apparel",
+    "mugs": "drinkware",
+    "drinkware": "drinkware",
+    "home": "home_decor",
+    "home decor": "home_decor",
+    "wall art": "home_decor",
+    "bags": "bags",
+    "gifting": "gifts",
+    "gift": "gifts",
 }
 
 
@@ -134,6 +162,73 @@ def categorize(keyword: str) -> str:
         if any(key in keyword for key in keys):
             return category
     return "other"
+
+
+def normalize_category(raw_category: str | None, keyword: str) -> str:
+    cleaned = normalize_text(str(raw_category or "")).replace(" ", "_")
+    alias = CATEGORY_ALIASES.get(cleaned.replace("_", " "))
+    if alias:
+        return alias
+    if cleaned in CATEGORIES:
+        return cleaned
+    inferred = categorize(keyword)
+    return inferred if inferred != "other" else "uncategorized"
+
+
+def _signal_confidence(method: str | None, keyword: str, engagement_score: int) -> float:
+    base = {
+        "scrapegraph": 0.86,
+        "selector_fallback": 0.78,
+        "rss_fallback": 0.72,
+        "stub": 0.58,
+    }.get(method or "", 0.68)
+    word_count = len(keyword.split())
+    if word_count >= 2:
+        base += 0.04
+    if engagement_score > 0:
+        base += 0.03
+    return round(min(base, 0.94), 2)
+
+
+def normalize_signal(
+    signal: Dict[str, Any],
+    *,
+    default_source: str | None = None,
+    default_method: str | None = None,
+) -> Dict[str, Any] | None:
+    keyword = normalize_text(str(signal.get("keyword") or signal.get("term") or ""))
+    if len(keyword) < 3:
+        return None
+    raw_score = signal.get("engagement_score") or signal.get("score") or 0
+    if isinstance(raw_score, str):
+        engagement_score = _parse_metric(raw_score)
+    else:
+        try:
+            engagement_score = int(raw_score)
+        except (TypeError, ValueError):
+            engagement_score = 0
+    engagement_score = max(0, engagement_score)
+    method = str(signal.get("method") or default_method or "unknown")
+    source = str(signal.get("source") or default_source or "unknown")
+    category = normalize_category(str(signal.get("category") or ""), keyword)
+    confidence = float(
+        signal.get("confidence")
+        or _signal_confidence(method, keyword, engagement_score)
+    )
+    return {
+        **signal,
+        "source": source,
+        "keyword": keyword,
+        "engagement_score": engagement_score,
+        "category": category,
+        "method": method,
+        "provenance": {
+            "source": source,
+            "is_estimated": method in {"rss_fallback", "stub", "unknown"},
+            "updated_at": utcnow().isoformat(),
+            "confidence": confidence,
+        },
+    }
 
 
 def _stub_signals() -> List[Dict[str, Any]]:
@@ -145,15 +240,16 @@ def _stub_signals() -> List[Dict[str, Any]]:
     ]
     signals: List[Dict[str, Any]] = []
     for source, phrase, engagement in samples:
-        keyword = normalize_text(phrase)
-        signals.append(
+        signal = normalize_signal(
             {
                 "source": source,
-                "keyword": keyword,
+                "keyword": phrase,
                 "engagement_score": engagement,
-                "category": categorize(keyword),
-            }
+            },
+            default_method="stub",
         )
+        if signal:
+            signals.append(signal)
     return signals
 
 
@@ -172,11 +268,14 @@ def get_refresh_status() -> Dict[str, Any]:
         "sources_failed": dict(_refresh_status.get("sources_failed", {})),
         "source_methods": dict(_refresh_status.get("source_methods", {})),
         "sources_skipped": list(_refresh_status.get("sources_skipped", [])),
+        "source_diagnostics": dict(_refresh_status.get("source_diagnostics", {})),
+        "sources_blocked": list(_refresh_status.get("sources_blocked", [])),
         "signals_collected": int(_refresh_status.get("signals_collected", 0)),
         "signals_persisted": int(_refresh_status.get("signals_persisted", 0)),
         "failed_count": int(_refresh_status.get("failed_count", 0)),
         "fallback_count": int(_refresh_status.get("fallback_count", 0)),
         "skipped_count": int(_refresh_status.get("skipped_count", 0)),
+        "blocked_count": int(_refresh_status.get("blocked_count", 0)),
     }
 
 
@@ -322,14 +421,16 @@ async def _scrape_source(
                 _parse_metric(shares_text),
                 _parse_metric(comments_text),
             )
-            results.append(
+            signal = normalize_signal(
                 {
                     "source": name,
                     "keyword": keyword,
                     "engagement_score": engagement,
-                    "category": categorize(keyword),
-                }
+                },
+                default_method="selector_fallback",
             )
+            if signal:
+                results.append(signal)
     finally:
         await context.close()
         await browser.close()
@@ -461,14 +562,16 @@ def _extract_rss_signals(xml_text: str) -> List[Dict[str, Any]]:
         if not keyword:
             continue
         score = max(10, 100 - (index * 3))
-        signals.append(
+        signal = normalize_signal(
             {
                 "source": "google_trends_rss",
                 "keyword": keyword,
                 "engagement_score": score,
-                "category": categorize(keyword),
-            }
+            },
+            default_method="rss_fallback",
         )
+        if signal:
+            signals.append(signal)
     return signals
 
 
@@ -477,6 +580,37 @@ async def _fetch_rss_signals() -> List[Dict[str, Any]]:
         response = await client.get(TREND_RSS_URL)
         response.raise_for_status()
     return _extract_rss_signals(response.text)
+
+
+def _diagnostic(
+    *,
+    status: str,
+    method: str | None = None,
+    collected: int = 0,
+    persisted: int = 0,
+    fallback_from: str | None = None,
+    fallback_to: str | None = None,
+    reason: str | None = None,
+) -> Dict[str, Any]:
+    return {
+        "status": status,
+        "method": method,
+        "collected": collected,
+        "persisted": persisted,
+        "fallback_from": fallback_from,
+        "fallback_to": fallback_to,
+        "reason": reason,
+        "updated_at": utcnow().isoformat(),
+    }
+
+
+def _normalize_signal_batch(signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for signal in signals:
+        normalized_signal = normalize_signal(signal)
+        if normalized_signal:
+            normalized.append(normalized_signal)
+    return normalized
 
 
 async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
@@ -488,9 +622,18 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "sources_failed": {},
             "source_methods": {"stub_seed": "stub"},
             "sources_skipped": [],
+            "source_diagnostics": {
+                "stub_seed": _diagnostic(
+                    status="success",
+                    method="stub",
+                    collected=len(signals),
+                )
+            },
+            "sources_blocked": [],
             "fallback_count": 0,
             "failed_count": 0,
             "skipped_count": 0,
+            "blocked_count": 0,
         }
 
     validate_public_only_config()
@@ -501,6 +644,8 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
     sources_failed: Dict[str, str] = {}
     source_methods: Dict[str, str] = {}
     sources_skipped: List[str] = []
+    source_diagnostics: Dict[str, Dict[str, Any]] = {}
+    sources_blocked: List[str] = []
     allowed_source_names: List[str] = []
     fallback_count = 0
 
@@ -514,8 +659,14 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
                     SCRAPE_TOTAL.labels(name, "circuit_open").inc()
                     SCRAPE_METHOD_TOTAL.labels(name, "circuit", "skipped").inc()
                     sources_failed[name] = "Circuit breaker open"
-                    source_methods[name] = "failed"
+                    source_methods[name] = "skipped"
                     sources_skipped.append(name)
+                    sources_blocked.append(name)
+                    source_diagnostics[name] = _diagnostic(
+                        status="skipped",
+                        method="circuit",
+                        reason="Circuit breaker open",
+                    )
                     continue
                 allowed_source_names.append(name)
                 profile = build_scrape_profile(config, rng)
@@ -528,6 +679,11 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             scraper_circuit_breaker.record_failure(name)
         sources_failed["playwright"] = str(exc)
         source_methods["playwright"] = "failed"
+        source_diagnostics["playwright"] = _diagnostic(
+            status="failed",
+            method="playwright",
+            reason=str(exc),
+        )
         logger.warning("Playwright trend collection failed: %s", exc)
     else:
         for name, result in zip(allowed_source_names, results):
@@ -535,31 +691,60 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
                 scraper_circuit_breaker.record_failure(name)
                 sources_failed[name] = str(result)
                 source_methods[name] = "failed"
+                source_diagnostics[name] = _diagnostic(
+                    status="failed",
+                    method="unknown",
+                    reason=str(result),
+                )
                 logger.warning("Trend scrape failed for %s: %s", name, result)
                 continue
             source_results, method, upstream_error = result
             if upstream_error:
                 fallback_count += 1
             if source_results and method:
+                source_results = _normalize_signal_batch(source_results)
                 scraper_circuit_breaker.record_success(name)
                 aggregated.extend(source_results)
                 sources_succeeded.append(name)
                 source_methods[name] = method
+                source_diagnostics[name] = _diagnostic(
+                    status="success",
+                    method=method,
+                    collected=len(source_results),
+                    fallback_from="scrapegraph" if upstream_error else None,
+                    fallback_to=method if upstream_error else None,
+                    reason=upstream_error,
+                )
                 continue
             scraper_circuit_breaker.record_failure(name)
             SCRAPE_TOTAL.labels(name, "failure").inc()
             SCRAPE_METHOD_TOTAL.labels(name, "selector_fallback", "failure").inc()
             source_methods[name] = "failed"
             sources_failed[name] = upstream_error or "No trend items collected"
+            source_diagnostics[name] = _diagnostic(
+                status="failed",
+                method="selector_fallback",
+                reason=upstream_error or "No trend items collected",
+            )
 
     try:
         rss_signals = await _fetch_rss_signals()
         if rss_signals:
+            rss_signals = _normalize_signal_batch(rss_signals)
             for signal in rss_signals:
                 signal.setdefault("method", "rss_fallback")
             aggregated.extend(rss_signals)
             sources_succeeded.append("google_trends_rss")
             source_methods["google_trends_rss"] = "rss_fallback"
+            source_diagnostics["google_trends_rss"] = _diagnostic(
+                status="success",
+                method="rss_fallback",
+                collected=len(rss_signals),
+                fallback_from="public_sources"
+                if any(method == "failed" for method in source_methods.values())
+                else None,
+                fallback_to="rss_fallback",
+            )
             SCRAPE_TOTAL.labels("google_trends_rss", "success").inc()
             SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "success").inc()
             SCRAPE_KEYWORDS.labels("google_trends_rss").inc(len(rss_signals))
@@ -568,10 +753,20 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
         else:
             sources_failed["google_trends_rss"] = "No RSS trend items collected"
             source_methods["google_trends_rss"] = "failed"
+            source_diagnostics["google_trends_rss"] = _diagnostic(
+                status="failed",
+                method="rss_fallback",
+                reason="No RSS trend items collected",
+            )
             SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
     except Exception as exc:
         sources_failed["google_trends_rss"] = str(exc)
         source_methods["google_trends_rss"] = "failed"
+        source_diagnostics["google_trends_rss"] = _diagnostic(
+            status="failed",
+            method="rss_fallback",
+            reason=str(exc),
+        )
         SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
 
     if not aggregated:
@@ -583,9 +778,14 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "sources_failed": sources_failed,
             "source_methods": source_methods,
             "sources_skipped": sources_skipped,
+            "source_diagnostics": source_diagnostics,
+            "sources_blocked": sources_blocked,
             "fallback_count": fallback_count,
-            "failed_count": len(sources_failed),
+            "failed_count": len(
+                [source for source in sources_failed if source not in sources_blocked]
+            ),
             "skipped_count": len(sources_skipped),
+            "blocked_count": len(sources_blocked),
         }
 
     return aggregated, {
@@ -594,9 +794,14 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
         "sources_failed": sources_failed,
         "source_methods": source_methods,
         "sources_skipped": sources_skipped,
+        "source_diagnostics": source_diagnostics,
+        "sources_blocked": sources_blocked,
         "fallback_count": fallback_count,
-        "failed_count": len(sources_failed),
+        "failed_count": len(
+            [source for source in sources_failed if source not in sources_blocked]
+        ),
         "skipped_count": len(sources_skipped),
+        "blocked_count": len(sources_blocked),
     }
 
 
@@ -616,16 +821,20 @@ async def refresh_trends() -> Dict[str, Any]:
                 "sources_failed": gather_meta.get("sources_failed", {}),
                 "source_methods": gather_meta.get("source_methods", {}),
                 "sources_skipped": gather_meta.get("sources_skipped", []),
+                "source_diagnostics": gather_meta.get("source_diagnostics", {}),
+                "sources_blocked": gather_meta.get("sources_blocked", []),
                 "signals_collected": 0,
                 "signals_persisted": 0,
                 "failed_count": gather_meta.get("failed_count", 0),
                 "fallback_count": gather_meta.get("fallback_count", 0),
                 "skipped_count": gather_meta.get("skipped_count", 0),
+                "blocked_count": gather_meta.get("blocked_count", 0),
             }
         )
         return get_refresh_status()
 
     persisted = 0
+    diagnostics = dict(gather_meta.get("source_diagnostics", {}))
     async with get_session() as session:
         for source in {signal["source"] for signal in signals}:
             top_candidates = sorted(
@@ -636,11 +845,14 @@ async def refresh_trends() -> Dict[str, Any]:
             seen_keywords: set[str] = set()
             top_signals: List[Dict[str, Any]] = []
             for signal in top_candidates:
-                dedupe_key = normalize_text(str(signal.get("keyword") or ""))
+                normalized_signal = normalize_signal(signal)
+                if not normalized_signal:
+                    continue
+                dedupe_key = normalized_signal["keyword"]
                 if not dedupe_key or dedupe_key in seen_keywords:
                     continue
                 seen_keywords.add(dedupe_key)
-                top_signals.append(signal)
+                top_signals.append(normalized_signal)
                 if len(top_signals) >= TOP_K:
                     break
 
@@ -656,6 +868,8 @@ async def refresh_trends() -> Dict[str, Any]:
                 )
                 SCRAPE_PERSISTED.labels(signal["source"]).inc()
                 persisted += 1
+            if source in diagnostics:
+                diagnostics[source]["persisted"] = len(top_signals)
         await session.commit()
 
     _refresh_status.update(
@@ -667,11 +881,14 @@ async def refresh_trends() -> Dict[str, Any]:
             "sources_failed": gather_meta.get("sources_failed", {}),
             "source_methods": gather_meta.get("source_methods", {}),
             "sources_skipped": gather_meta.get("sources_skipped", []),
+            "source_diagnostics": diagnostics,
+            "sources_blocked": gather_meta.get("sources_blocked", []),
             "signals_collected": len(signals),
             "signals_persisted": persisted,
             "failed_count": gather_meta.get("failed_count", 0),
             "fallback_count": gather_meta.get("fallback_count", 0),
             "skipped_count": gather_meta.get("skipped_count", 0),
+            "blocked_count": gather_meta.get("blocked_count", 0),
         }
     )
     return get_refresh_status()
@@ -682,9 +899,16 @@ async def get_live_trends(
     source: str | None = None,
     lookback_hours: int = DEFAULT_LOOKBACK_HOURS,
     per_group_limit: int = TOP_K,
-) -> Dict[str, List[Dict[str, Any]]]:
+    page: int = 1,
+    page_size: int | None = None,
+    sort_by: str = "engagement_score",
+    sort_order: str = "desc",
+    include_meta: bool = False,
+) -> Dict[str, Any]:
     lookback_hours = max(1, lookback_hours)
     per_group_limit = min(max(1, per_group_limit), MAX_LIVE_TRENDS_PER_GROUP)
+    page = max(1, page)
+    page_size = min(max(1, page_size or per_group_limit), MAX_LIVE_TRENDS_PER_GROUP)
     cutoff = utcnow() - timedelta(hours=lookback_hours)
 
     async with get_session() as session:
@@ -710,24 +934,63 @@ async def get_live_trends(
         ):
             deduped_rows[key] = row
 
-    sorted_rows = sorted(
-        deduped_rows.values(),
-        key=lambda row: (row.category, -row.engagement_score, -row.timestamp.timestamp()),
-    )
+    reverse = sort_order.lower() != "asc"
+    if sort_by == "timestamp":
+        sorted_rows = sorted(deduped_rows.values(), key=lambda row: row.timestamp, reverse=reverse)
+    elif sort_by == "keyword":
+        sorted_rows = sorted(deduped_rows.values(), key=lambda row: row.keyword.lower(), reverse=reverse)
+    else:
+        sorted_rows = sorted(
+            deduped_rows.values(),
+            key=lambda row: row.engagement_score,
+            reverse=reverse,
+        )
 
     grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    total_by_category: Dict[str, int] = defaultdict(int)
+    offset = (page - 1) * page_size
     for row in sorted_rows:
-        if len(grouped[row.category]) >= per_group_limit:
+        total_by_category[row.category] += 1
+        category_index = total_by_category[row.category] - 1
+        if category_index < offset:
+            continue
+        if len(grouped[row.category]) >= min(per_group_limit, page_size):
             continue
         grouped[row.category].append(
             {
                 "source": row.source,
                 "keyword": row.keyword,
+                "category": row.category,
                 "engagement_score": row.engagement_score,
                 "timestamp": row.timestamp.isoformat(),
+                "provenance": {
+                    "source": row.source,
+                    "is_estimated": row.source in {"google_trends_rss", "stub_seed"},
+                    "updated_at": row.timestamp.isoformat(),
+                    "confidence": 0.72 if row.source == "google_trends_rss" else 0.86,
+                },
             }
         )
-    return grouped
+    if not include_meta:
+        return grouped
+    return {
+        "items_by_category": grouped,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "per_group_limit": per_group_limit,
+            "total": sum(total_by_category.values()),
+            "total_by_category": dict(total_by_category),
+            "sort_by": sort_by,
+            "sort_order": "desc" if reverse else "asc",
+        },
+        "provenance": {
+            "source": "trendsignal_table",
+            "is_estimated": False,
+            "updated_at": utcnow().isoformat(),
+            "confidence": 0.86,
+        },
+    }
 
 
 async def _periodic_refresh_wrapper() -> None:

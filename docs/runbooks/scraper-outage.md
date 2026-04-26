@@ -1,7 +1,7 @@
 # Scraper Outage Runbook
 
 **Owner:** DevOps-Engineer (DO)
-**Last Updated:** February 2026
+**Last Updated:** April 2026
 **Reference:** `agents_dev_ops_engineer.md` §5, `agents_data_seeder.md` §6.1
 
 ---
@@ -24,6 +24,8 @@ This runbook covers diagnosing and resolving scraper outages.
 | `ScraperNoActivity` | No scrape metrics for 30m | Warning |
 | `ScraperSlowDuration` | p95 latency > 20s | Warning |
 | `ScraperLowKeywordExtraction` | Successful scrapes but 0 keywords extracted | Warning |
+| `ScraperFallbackSpike` | ScrapeGraphAI falls back to selectors repeatedly | Warning |
+| `ScraperRssFallbackDominant` | Google Trends RSS supplies most successful trends | Warning |
 
 Alert rules are defined in `prometheus/alerts/scraper.yml`. Grafana dashboard: **Scraper Health** (`grafana/dashboards/scraper-health.json`).
 
@@ -74,11 +76,14 @@ Expected response:
 ### Step 1: Check Service Health
 
 ```bash
-# Verify the trend_ingestion service is running
+# Through the gateway
 curl -s http://localhost:8000/healthz
 
-# Check application logs
-journalctl -u podpusher-trend-ingestion --since "1 hour ago" | grep -i "circuit\|scrape\|error"
+# Direct trend ingestion service in Docker Compose
+curl -s http://localhost:8007/healthz
+
+# Check local Compose logs
+docker compose logs --since=1h trend_ingestion | grep -i "circuit\|scrape\|error\|fallback"
 ```
 
 ### Step 2: Check Circuit Breaker States
@@ -89,26 +94,42 @@ curl -s http://localhost:8000/trends/scraper-status
 
 If all platforms show `"open"`, the issue is likely systemic (proxy down, network issue). If only one platform is open, the issue is platform-specific.
 
-### Step 3: Review Prometheus Metrics
+### Step 3: Review Refresh Diagnostics
+
+```bash
+curl -s http://localhost:8000/api/trends/live/status | python -m json.tool
+```
+
+Check:
+
+1. `last_mode` should be `live` for manual smoke.
+2. `source_methods` should show `scrapegraph`, `selector_fallback`, or `rss_fallback`; `stub` means the live path was bypassed.
+3. `source_diagnostics` should show per-source `status`, `method`, `collected`, `persisted`, and `updated_at`.
+4. Fallbacks should include `fallback_from`, `fallback_to`, and `reason`.
+5. Circuit-open sources should be listed in `sources_blocked` and `sources_skipped`; they increment `blocked_count` and `skipped_count` rather than being treated as fresh scrape failures.
+
+### Step 4: Review Prometheus Metrics
 
 Open the **Scraper Health** Grafana dashboard and check:
 
 1. **Scrape Success vs Failure Rate** — identify which platform(s) are failing
 2. **Scrape Duration (p50/p95/p99)** — look for latency spikes preceding failures
 3. **Keywords Extracted** — if scrapes succeed but extract 0 keywords, selectors may need updating
-4. **Circuit Breaker Open Events** — correlate with failure spikes
+4. **Fallback Transitions** — `pod_scrape_fallback_total` shows source/method fallback pressure
+5. **Circuit Breaker Open Events** — correlate with failure spikes
 
-### Step 4: Check Logs for Root Cause
+### Step 5: Check Logs for Root Cause
 
 ```bash
 # Filter for specific platform
-journalctl -u podpusher-trend-ingestion | grep "tiktok" | tail -50
+docker compose logs trend_ingestion | grep "tiktok" | tail -50
 
 # Common error patterns:
 # - "TimeoutError" → site slow or blocking
 # - "net::ERR_PROXY_CONNECTION_FAILED" → proxy down
 # - "Navigation failed" → URL changed or site down
 # - "Circuit breaker OPEN" → threshold exceeded
+# - "ScrapeGraphAI failed" → local Ollama/ScrapeGraphAI path unavailable
 ```
 
 ---
@@ -118,12 +139,7 @@ journalctl -u podpusher-trend-ingestion | grep "tiktok" | tail -50
 Trigger an immediate scrape cycle (requires authentication):
 
 ```bash
-# Replace <TOKEN> with a valid Bearer token or use X-User-Id header
-curl -X POST http://localhost:8000/trends/refresh \
-  -H "Authorization: Bearer <TOKEN>"
-
-# Or with X-User-Id header
-curl -X POST http://localhost:8000/trends/refresh \
+curl -X POST http://localhost:8000/api/trends/refresh \
   -H "X-User-Id: 1"
 ```
 
@@ -186,12 +202,12 @@ curl -x $PLAYWRIGHT_PROXY https://httpbin.org/ip
 
 2. **Restart the trend_ingestion service** to pick up the new proxy:
    ```bash
-   systemctl restart podpusher-trend-ingestion
+   docker compose restart trend_ingestion
    ```
 
 3. **Verify** with a manual refresh:
    ```bash
-   curl -X POST http://localhost:8000/trends/refresh -H "X-User-Id: 1"
+   curl -X POST http://localhost:8000/api/trends/refresh -H "X-User-Id: 1"
    ```
 
 4. **Monitor** the Grafana dashboard for improved success rates.
@@ -202,7 +218,7 @@ If no proxy is needed (e.g., development environment):
 
 ```bash
 unset PLAYWRIGHT_PROXY
-systemctl restart podpusher-trend-ingestion
+docker compose restart trend_ingestion
 ```
 
 ---
@@ -235,7 +251,8 @@ If scrapes succeed but extract zero keywords (`ScraperLowKeywordExtraction` aler
    TREND_INGESTION_STUB=0 python -c "
    import asyncio
    from services.trend_ingestion.service import _gather_trends
-   results = asyncio.run(_gather_trends())
+   results, meta = asyncio.run(_gather_trends())
+   print(meta)
    print(f'Extracted {len(results)} trends')
    for r in results[:5]:
        print(f'  {r[\"source\"]}: {r[\"keyword\"]} (engagement: {r[\"engagement_score\"]})')
@@ -254,7 +271,7 @@ If scrapes succeed but extract zero keywords (`ScraperLowKeywordExtraction` aler
 | `PLAYWRIGHT_PROXY` | (unset) | Proxy URL for Playwright browser (e.g., `http://proxy:8080`) |
 | `TREND_INGESTION_TOP_K` | `5` | Max trends to persist per platform per cycle |
 | `TREND_INGESTION_TIMEOUT_MS` | `15000` | Page load timeout in milliseconds |
-| `TREND_INGESTION_STUB` | `1` | Set to `0` to enable live scraping |
+| `TREND_INGESTION_STUB` | `0` in local Compose | Set to `1` only for explicit stub mode |
 
 ---
 

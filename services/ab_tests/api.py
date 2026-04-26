@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -70,12 +70,20 @@ async def dashboard(
     status: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    sort_by: str = Query(default="created", pattern="^(created|confidence|ctr_lift|impressions|ctr|name|product|status|experiment_type)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
 ):
     return await get_dashboard(
         search,
         status,
         _parse_filter_datetime(start_date),
         _parse_filter_datetime(end_date),
+        page,
+        page_size,
+        sort_by,
+        sort_order,
     )
 
 

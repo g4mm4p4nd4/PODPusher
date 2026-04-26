@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import Depends, FastAPI
+from fastapi import Query
 from pydantic import BaseModel, Field
 
 from ..common.auth import optional_user_id
@@ -106,6 +107,11 @@ async def insights(
     rating_max: float | None = None,
     price_min: float | None = None,
     price_max: float | None = None,
+    price_band: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    sort_by: str = Query(default="trend_score", pattern="^(trend_score|rating|price|name|category|keyword)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
     user_id: int | None = Depends(optional_user_id),
 ):
     return await get_search_insights(
@@ -125,6 +131,11 @@ async def insights(
         rating_max=rating_max,
         price_min=price_min,
         price_max=price_max,
+        price_band=price_band,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 

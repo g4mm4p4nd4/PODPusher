@@ -80,6 +80,15 @@ async def test_refresh_trends_persists_and_updates_status(monkeypatch):
             "mode": "live",
             "sources_succeeded": ["rss"],
             "sources_failed": {},
+            "source_methods": {"rss": "rss_fallback"},
+            "source_diagnostics": {
+                "rss": {
+                    "status": "success",
+                    "method": "rss_fallback",
+                    "collected": 1,
+                    "persisted": 0,
+                }
+            },
         }
 
     monkeypatch.setattr(service, "_gather_trends", fake_gather)
@@ -89,6 +98,7 @@ async def test_refresh_trends_persists_and_updates_status(monkeypatch):
     assert result["last_mode"] == "live"
     assert result["signals_collected"] == 1
     assert result["signals_persisted"] == 1
+    assert result["source_diagnostics"]["rss"]["persisted"] == 1
     assert result["last_finished_at"] is not None
     assert result["failed_count"] == 0
 
@@ -136,6 +146,7 @@ async def test_gather_trends_falls_back_when_playwright_boot_fails(monkeypatch):
 
     assert metadata["mode"] == "fallback_stub"
     assert metadata["sources_failed"]["playwright"] == "playwright unavailable"
+    assert metadata["source_diagnostics"]["playwright"]["status"] == "failed"
     assert signals
 
 
@@ -189,6 +200,7 @@ async def test_gather_trends_uses_scrapegraph_before_selector(monkeypatch):
 
     assert signals[0]["keyword"] == "public trend"
     assert metadata["source_methods"]["public"] == "scrapegraph"
+    assert metadata["source_diagnostics"]["public"]["collected"] == 1
     assert metadata["source_methods"]["google_trends_rss"] == "failed"
     assert metadata["fallback_count"] == 0
 
@@ -243,5 +255,6 @@ async def test_gather_trends_falls_back_from_scrapegraph_to_selector(monkeypatch
     assert signals[0]["keyword"] == "selector trend"
     assert signals[0]["method"] == "selector_fallback"
     assert metadata["source_methods"]["public"] == "selector_fallback"
+    assert metadata["source_diagnostics"]["public"]["fallback_from"] == "scrapegraph"
     assert metadata["source_methods"]["google_trends_rss"] == "failed"
     assert metadata["fallback_count"] == 1

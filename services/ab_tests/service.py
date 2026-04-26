@@ -242,6 +242,10 @@ async def get_dashboard(
     status: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str = "created",
+    sort_order: str = "desc",
 ) -> dict[str, Any]:
     async with get_session() as session:
         rows = (
@@ -286,6 +290,30 @@ async def get_dashboard(
         for item in experiments
         if _matches_filters(item, search, status, start_date, end_date)
     ]
+    reverse = sort_order.lower() != "asc"
+    if sort_by in {"name", "product", "status", "experiment_type"}:
+        filtered = sorted(
+            filtered,
+            key=lambda item: str(item.get(sort_by, "")),
+            reverse=reverse,
+        )
+    elif sort_by in {"confidence", "ctr_lift", "impressions", "ctr"}:
+        filtered = sorted(
+            filtered,
+            key=lambda item: item.get(sort_by, 0),
+            reverse=reverse,
+        )
+    else:
+        filtered = sorted(
+            filtered,
+            key=lambda item: str(item.get("start_time") or ""),
+            reverse=reverse,
+        )
+    total = len(filtered)
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+    start = (page - 1) * page_size
+    paged = filtered[start:start + page_size]
     denominator = max(1, len(filtered))
     return {
         "cards": [
@@ -323,7 +351,16 @@ async def get_dashboard(
                 "provenance": _provenance("abtest_table", estimated=not grouped),
             },
         ],
-        "experiments": filtered,
+        "experiments": paged,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "has_next": start + page_size < total,
+            "has_previous": page > 1,
+            "sort_by": sort_by,
+            "sort_order": "desc" if reverse else "asc",
+        },
         "product_options": PRODUCT_OPTIONS,
         "filters": {
             "search": search or "",

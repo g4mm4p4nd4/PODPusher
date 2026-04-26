@@ -244,6 +244,41 @@ def _global_filters(
     return filters
 
 
+def _page_slice(
+    items: list[dict[str, Any]],
+    *,
+    page: int = 1,
+    page_size: int = 25,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+    total = len(items)
+    start = (page - 1) * page_size
+    return items[start:start + page_size], {
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "has_next": start + page_size < total,
+        "has_previous": page > 1,
+    }
+
+
+def _parse_price_band(price_band: str) -> tuple[float | None, float | None]:
+    value = price_band.replace("$", "").strip()
+    if value.endswith("+"):
+        try:
+            return float(value[:-1]), None
+        except ValueError:
+            return None, None
+    if "-" not in value:
+        return None, None
+    lower, upper = value.split("-", maxsplit=1)
+    try:
+        return float(lower), float(upper)
+    except ValueError:
+        return None, None
+
+
 async def _integration_status(
     user_id: int,
     providers: list[str] | None = None,
@@ -730,6 +765,10 @@ async def get_trend_insights(
     country: str = "US",
     language: str = "en",
     lookback_days: int = 30,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str = "search_volume",
+    sort_order: str = "desc",
 ) -> dict[str, Any]:
     rows = await _trend_rows()
     table = _keyword_table_from_rows(rows)
@@ -737,6 +776,13 @@ async def get_trend_insights(
         table = [
             item for item in table if item["category"].lower() == category.lower()
         ] or table
+    reverse = sort_order.lower() != "asc"
+    if sort_by in {"keyword", "opportunity"}:
+        table = sorted(table, key=lambda item: str(item.get(sort_by, "")), reverse=reverse)
+    else:
+        table = sorted(table, key=lambda item: item.get(sort_by, 0), reverse=reverse)
+    page_items, pagination = _page_slice(table, page=page, page_size=page_size)
+    pagination.update({"sort_by": sort_by, "sort_order": "desc" if reverse else "asc"})
 
     return {
         "filters": {
@@ -745,6 +791,10 @@ async def get_trend_insights(
             "country": country,
             "language": language,
             "lookback_days": lookback_days,
+            "page": page,
+            "page_size": page_size,
+            "sort_by": sort_by,
+            "sort_order": "desc" if reverse else "asc",
         },
         "cards": [
             _metric("Rising Keywords", len(table) * 284, 18.6, source="trend_signals"),
@@ -767,7 +817,8 @@ async def get_trend_insights(
             }
             for i in range(lookback_days)
         ],
-        "keywords": table,
+        "keywords": page_items,
+        "pagination": pagination,
         "product_categories": PRODUCT_CATEGORIES,
         "design_ideas": DESIGN_IDEAS,
         "tag_clusters": [
@@ -1039,6 +1090,10 @@ async def get_niche_suggestions(
     language: str = "en",
     category: str | None = None,
     search: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str = "brand_fit_score",
+    sort_order: str = "desc",
 ) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
     profile = await get_brand_profile(user_id)
@@ -1094,6 +1149,13 @@ async def get_niche_suggestions(
                 "provenance": _provenance(),
             }
         )
+    reverse = sort_order.lower() != "asc"
+    if sort_by in {"niche", "keyword", "category"}:
+        niches = sorted(niches, key=lambda item: str(item.get(sort_by, "")), reverse=reverse)
+    else:
+        niches = sorted(niches, key=lambda item: item.get(sort_by, 0), reverse=reverse)
+    paged_niches, pagination = _page_slice(niches, page=page, page_size=page_size)
+    pagination.update({"sort_by": sort_by, "sort_order": "desc" if reverse else "asc"})
 
     return {
         "filters": _global_filters(
@@ -1105,6 +1167,10 @@ async def get_niche_suggestions(
             language=language,
             category=category,
             search=search,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_order="desc" if reverse else "asc",
         ),
         "integration_status": await _integration_status(
             user_id, ["etsy", "openai", "marketplace"]
@@ -1126,7 +1192,8 @@ async def get_niche_suggestions(
             _metric("Brand Match Score (Avg)", 78, 6.4, unit="%"),
             _metric("Saved Niches", len(saved), len(saved)),
         ],
-        "niches": niches,
+        "niches": paged_niches,
+        "pagination": pagination,
         "suggested_phrases": [
             {"phrase": "adventure is calling", "demand": "High"},
             {"phrase": "take the scenic route", "demand": "High"},
@@ -1216,9 +1283,16 @@ async def get_search_insights(
     rating_max: float | None = None,
     price_min: float | None = None,
     price_max: float | None = None,
+    price_band: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str = "trend_score",
+    sort_order: str = "desc",
 ) -> dict[str, Any]:
     user_id = _normalize_user_id(user_id)
     query = (q or search or "").strip().lower()
+    if price_band and price_band != "all" and price_min is None and price_max is None:
+        price_min, price_max = _parse_price_band(price_band)
     results = []
     for index, item in enumerate(KEYWORD_FIXTURES):
         if (
@@ -1266,6 +1340,13 @@ async def get_search_insights(
                 "provenance": _provenance("search_insights"),
             }
         )
+    reverse = sort_order.lower() != "asc"
+    if sort_by in {"name", "category", "keyword"}:
+        results = sorted(results, key=lambda item: str(item.get(sort_by, "")), reverse=reverse)
+    else:
+        results = sorted(results, key=lambda item: item.get(sort_by, 0), reverse=reverse)
+    paged_results, pagination = _page_slice(results, page=page, page_size=page_size)
+    pagination.update({"sort_by": sort_by, "sort_order": "desc" if reverse else "asc"})
 
     async with get_session() as session:
         saved_searches = (
@@ -1294,6 +1375,11 @@ async def get_search_insights(
                 rating_max=rating_max,
                 price_min=price_min,
                 price_max=price_max,
+                price_band=price_band,
+                page=page,
+                page_size=page_size,
+                sort_by=sort_by,
+                sort_order="desc" if reverse else "asc",
             ),
             "query": q or search or "",
         },
@@ -1313,7 +1399,8 @@ async def get_search_insights(
             {"type": "composer", "target": "/api/listing-composer"},
         ],
         "total": len(results),
-        "results": results,
+        "results": paged_results,
+        "pagination": pagination,
         "phrase_suggestions": [
             "dog mom summer vibes",
             "retro beach dog",

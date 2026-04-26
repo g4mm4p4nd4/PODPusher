@@ -14,6 +14,8 @@ from services.trend_ingestion.service import (
     categorize,
     compute_engagement,
     get_live_trends,
+    normalize_category,
+    normalize_signal,
     normalize_text,
 )
 from services.trend_ingestion.sources import SourceConfig, SelectorSet
@@ -31,6 +33,23 @@ def test_compute_engagement_sum():
 def test_categorize_keyword():
     assert categorize("funny cat video") == "animals"
     assert categorize("unknown term") == "other"
+
+
+def test_normalize_signal_improves_category_and_provenance():
+    signal = normalize_signal(
+        {
+            "source": "etsy",
+            "keyword": "Vintage Teacher Mug Gift",
+            "engagement_score": "123",
+            "method": "rss_fallback",
+        }
+    )
+
+    assert signal["keyword"] == "vintage teacher mug gift"
+    assert signal["category"] == "drinkware"
+    assert signal["provenance"]["source"] == "etsy"
+    assert signal["provenance"]["is_estimated"] is True
+    assert normalize_category("Home Decor", "sun wall art") == "home_decor"
 
 
 def test_parse_metric_parses_suffixes():
@@ -136,6 +155,19 @@ async def test_get_live_trends_applies_source_dedup_recency_and_limit():
     assert len(trends["animals"]) == 1
     assert trends["animals"][0]["keyword"] == "Funny Cat"
     assert trends["animals"][0]["source"] == "tiktok"
+    assert trends["animals"][0]["provenance"]["source"] == "tiktok"
+
+    paged = await get_live_trends(
+        source="tiktok",
+        lookback_hours=72,
+        per_group_limit=2,
+        page=1,
+        page_size=1,
+        sort_by="timestamp",
+        include_meta=True,
+    )
+    assert paged["pagination"]["total"] == 1
+    assert paged["items_by_category"]["animals"][0]["keyword"] == "Funny Cat"
 
 
 @pytest.mark.asyncio
@@ -171,6 +203,10 @@ async def test_gather_trends_skips_open_circuit(monkeypatch):
 
     assert called["scrape"] == 0
     assert metadata["sources_failed"]["blocked"] == "Circuit breaker open"
+    assert metadata["source_methods"]["blocked"] == "skipped"
+    assert metadata["sources_blocked"] == ["blocked"]
+    assert metadata["source_diagnostics"]["blocked"]["status"] == "skipped"
+    assert metadata["blocked_count"] == 1
 
 
 @pytest.mark.asyncio

@@ -16,16 +16,29 @@ async def test_listing_draft_crud():
             "tags": ["x"],
             "language": "en",
             "field_order": ["title", "description", "tags"],
+            "niche": "Dog Lovers",
+            "primary_keyword": "dog mom",
         }
         resp = await client.post("/api/listing-composer/drafts", json=payload)
         assert resp.status_code == 200
         data = resp.json()
         draft_id = data["id"]
+        assert data["revision_count"] == 1
+        assert data["provenance"]["source"] == "listingdraft_table"
 
         resp = await client.get(f"/api/listing-composer/drafts/{draft_id}")
         assert resp.status_code == 200
         body = resp.json()
         assert body["title"] == "T"
+        assert body["niche"] == "Dog Lovers"
+
+        list_resp = await client.get("/api/listing-composer/drafts")
+        assert list_resp.status_code == 200
+        assert list_resp.json()["total"] == 1
+
+        history = await client.get(f"/api/listing-composer/drafts/{draft_id}/history")
+        assert history.status_code == 200
+        assert history.json()[0]["metadata"]["primary_keyword"] == "dog mom"
 
         resp = await client.get("/api/listing-composer/drafts/999")
         assert resp.status_code == 404
@@ -57,6 +70,11 @@ async def test_publish_queue_creates_demo_job_and_retains_draft_id():
         assert body["status"] == "pending"
         assert body["mode"] == "demo"
         assert body["integration_status"]["etsy"]["status"] == "demo"
+        assert body["integration_status"]["etsy"]["blocking"] is False
+
+        queue = await client.get("/api/listing-composer/publish-queue")
+        assert queue.status_code == 200
+        assert queue.json()["items"][0]["draft_id"] == draft_id
 
 
 @pytest.mark.asyncio
@@ -92,6 +110,8 @@ async def test_export_payload_shape_for_json_and_csv():
         assert body["description"] == payload["description"]
         assert body["tags"] == payload["tags"]
         assert body["metadata"]["language"] == "en"
+        assert body["metadata"]["revision_count"] == 1
+        assert body["metadata"]["integration_contract"]["etsy"] == "credential_gated_non_blocking"
         assert "optimization_score" in body["score"]
         assert "status" in body["compliance"]
         assert body["provenance"]["source"] == "local_estimator"

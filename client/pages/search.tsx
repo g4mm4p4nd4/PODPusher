@@ -170,17 +170,16 @@ export default function SearchPage() {
           <div className="grid gap-4 xl:grid-cols-[1.35fr_0.75fr]">
             <Panel title={`Search Results (${formatNumber(data.total || results.length)} results)`}>
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full table-fixed text-sm">
                   <thead className="text-left text-slate-500">
                     <tr>
-                      <th className="py-2">Product</th>
-                      <th>Thumbnail</th>
-                      <th>Select</th>
-                      <th>Category</th>
-                      <th>Rating</th>
-                      <th>Trend Score</th>
-                      <th>Demand Signal</th>
-                      <th>Quick Actions</th>
+                      <th className="w-[42%] py-2">Product</th>
+                      <th className="w-[8%]">Select</th>
+                      <th className="w-[12%]">Category</th>
+                      <th className="hidden w-[10%] 2xl:table-cell">Rating</th>
+                      <th className="w-[12%]">Trend</th>
+                      <th className="hidden w-[12%] xl:table-cell">Demand</th>
+                      <th className="w-[14%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -190,15 +189,22 @@ export default function SearchPage() {
                         onClick={() => setSelectedItem(item)}
                         className={`cursor-pointer border-t border-slate-800 ${selectedItem?.name === item.name ? 'bg-blue-500/10' : ''}`}
                       >
-                        <td className="py-3 font-medium text-slate-100">{item.name}</td>
-                        <td className="min-w-[150px]">
-                          <DemoProductArt
-                            title={item.name}
-                            subtitle={`${item.category || 'Product'} - $${item.price || '19.99'}`}
-                            productType={item.category}
-                            variant={variantForText(`${item.name} ${item.keyword || ''}`)}
-                            compact
-                          />
+                        <td className="py-2 pr-3" aria-label={item.name}>
+                          <div className="flex min-w-0 items-center gap-3">
+                            <DemoProductArt
+                              title={item.name}
+                              subtitle={`${item.category || 'Product'} - $${item.price || '19.99'}`}
+                              productType={item.category}
+                              variant={variantForText(`${item.name} ${item.keyword || ''}`)}
+                              compact
+                              className="hidden w-28 shrink-0 lg:block"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-slate-100">{item.name}</p>
+                              <p className="truncate text-xs text-slate-500">{item.keyword || item.category}</p>
+                              <p className="text-xs text-slate-500">${item.price || '19.99'}</p>
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <input
@@ -210,14 +216,15 @@ export default function SearchPage() {
                           />
                         </td>
                         <td>{item.category}</td>
-                        <td>{item.rating ? `${item.rating} stars` : 'Unrated'}</td>
+                        <td className="hidden 2xl:table-cell">{item.rating ? `${item.rating} stars` : 'Unrated'}</td>
                         <td className="text-emerald-400">{item.trend_score || 72}</td>
-                        <td>
+                        <td className="hidden xl:table-cell">
                           <Pill tone={(item.demand_signal || 'High') === 'High' ? 'green' : 'orange'}>
                             {item.demand_signal || 'High'}
                           </Pill>
                         </td>
-                        <td className="space-x-2">
+                        <td>
+                          <div className="flex flex-wrap gap-x-2 gap-y-1">
                           <button type="button" onClick={() => watch(item)} className="text-blue-400">
                             Watch
                           </button>
@@ -227,6 +234,7 @@ export default function SearchPage() {
                           <button type="button" onClick={() => generateTags(item)} className="text-emerald-300">
                             Tags
                           </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

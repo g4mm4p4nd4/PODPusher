@@ -8,11 +8,18 @@ from ..control_center.service import (
     score_listing_payload,
 )
 from .service import (
+    DraftListResponse,
     DraftPayload,
+    DraftRevisionPayload,
+    PublishQueueListResponse,
     PublishQueueResponse,
     build_export_payload,
+    draft_to_payload,
     export_payload_to_csv,
     get_draft,
+    get_draft_history,
+    list_drafts,
+    list_publish_queue,
     queue_publish_job,
     save_draft,
 )
@@ -46,7 +53,24 @@ class ComposerComplianceRequest(BaseModel):
 @app.post("/drafts", response_model=DraftPayload)
 async def create_draft(payload: DraftPayload):
     draft = await save_draft(payload)
-    return DraftPayload(**draft.model_dump())
+    return await draft_to_payload(draft)
+
+
+@app.get("/drafts", response_model=DraftListResponse)
+async def read_drafts(
+    search: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    sort_by: str = Query(default="updated_at", pattern="^(updated_at|title)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+):
+    return await list_drafts(
+        search=search,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
 
 @app.get("/drafts/{draft_id}", response_model=DraftPayload)
@@ -54,7 +78,24 @@ async def read_draft(draft_id: int):
     draft = await get_draft(draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="draft not found")
-    return DraftPayload(**draft.model_dump())
+    return await draft_to_payload(draft)
+
+
+@app.get("/drafts/{draft_id}/history", response_model=list[DraftRevisionPayload])
+async def read_draft_history(draft_id: int):
+    history = await get_draft_history(draft_id)
+    if history is None:
+        raise HTTPException(status_code=404, detail="draft not found")
+    return history
+
+
+@app.get("/publish-queue", response_model=PublishQueueListResponse)
+async def read_publish_queue(
+    status: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+):
+    return await list_publish_queue(status=status, page=page, page_size=page_size)
 
 
 @app.post("/drafts/{draft_id}/publish-queue", response_model=PublishQueueResponse)
