@@ -169,3 +169,61 @@ Additional product research and workflow APIs include:
 ## Development Boundary
 
 Current priority is validating public trend discovery and observability in Docker Desktop. Etsy, Printify, Stripe, OAuth, and OpenAI credential-backed workflows should stay stubbed or non-blocking until the trend coverage has been manually verified.
+
+
+## Overview & Purpose
+PODPusher provides a local development environment for POD Automator AI, a print-on-demand automation platform. The repository lets developers validate the trend discovery and publishing pipeline end to end before enabling integrations with external marketplaces and credential-based services like Etsy, Printify, Stripe, and OpenAI.
+
+## Features & Tech Stack
+
+**Key features**:
+
+- Local Docker stack to run gateway, trend ingestion, frontend, monitoring, and supporting services.
+- Deterministic trend discovery using ScrapeGraphAI with Playwright and local Ollama models.
+- Grafana and Prometheus dashboards for observability of scrape attempts, method usage, and failures.
+- Preconfigured Postgres and Redis instances with migration scripts.
+- Stubs and test harnesses for third-party marketplace and payment integrations.
+- Frontend dashboard to view trend results and trigger refreshes.
+
+**Tech stack**:
+
+| Component       | Technology/Notes                    |
+|-----------------|--------------------------------------|
+| Backend         | Python 3 (FastAPI) and ScrapeGraphAI |
+| Frontend        | React with Node.js                   |
+| Data stores     | PostgreSQL, Redis                    |
+| Observability   | Prometheus, Grafana                  |
+| Deployment      | Docker Compose                       |
+| LLM Integration | Ollama with Llama 3.2 models         |
+
+## Installation & Usage
+
+Follow these steps to run the project locally:
+
+```bash
+# Clone the repository and enter the directory
+git clone https://github.com/g4mm4p4nd4/PODPusher.git
+cd PODPusher
+
+# Start the full local stack using Docker Compose
+# This brings up the gateway, trend ingestion, frontend, database, and monitoring services
+docker compose --profile default up --build
+
+# (Optional) To develop the frontend separately
+cd client
+npm install
+npm run dev
+
+# (Optional) To run Python tests and linting
+pip install -r requirements.txt
+pytest
+flake8
+```
+
+## Business & Entrepreneurial Value
+
+PODPusher demonstrates how businesses can automate product research and publishing workflows in the print-on-demand space. By encapsulating trend discovery, design generation, and marketplace integration in a single platform, organizations can license the technology to merchants as a subscription service or offer premium tiers for advanced analytics and bulk publishing. The modular architecture allows integration with multiple storefronts and payment providers, creating opportunities for partnerships, upsells, and bespoke solutions. Efficient automation reduces operational overhead and accelerates time-to-market, unlocking new revenue streams.
+
+## Consumer Value
+
+End users benefit from a streamlined, transparent workflow that removes the manual effort of monitoring trends, designing products, and managing listings across marketplaces. The local dashboard and API surface make it easy to refresh trends, view analytics, and customize settings without dealing with API keys during early development. Once integrated with marketplaces, consumers can deploy new products faster, respond to emerging trends, and enjoy greater flexibility in customizing their storefronts while maintaining data privacy and control.
