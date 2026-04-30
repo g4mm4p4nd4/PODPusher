@@ -129,8 +129,11 @@ def _prompt_for(source_name: str) -> str:
         "Extract current public trend signals from this page for print-on-demand "
         "product research. Return JSON with a top-level `trends` array. Each item "
         "must include `keyword` as a short phrase, optional `engagement_score` as "
-        "an integer, and optional `category`. Do not include personal data, account "
-        f"data, login-only data, or raw page content. Source name: {source_name}."
+        "an integer, optional `category`, and optional `market_examples` with "
+        "`title`, `source_url`, and `image_url` when public product examples or "
+        "visual references are visible. Do not include personal data, account data, "
+        "login-only data, raw page content, cookies, or browser session data. "
+        f"Source name: {source_name}."
     )
 
 
@@ -171,6 +174,7 @@ def normalize_scrapegraph_result(
             keyword = item
             score = max(10, 100 - index)
             category = "other"
+            raw_examples = []
         elif isinstance(item, dict):
             keyword = (
                 item.get("keyword")
@@ -182,6 +186,7 @@ def normalize_scrapegraph_result(
                 item.get("engagement_score") or item.get("score"), max(10, 100 - index)
             )
             category = str(item.get("category") or "other").strip().lower() or "other"
+            raw_examples = item.get("market_examples") or item.get("examples") or []
         else:
             continue
 
@@ -199,8 +204,73 @@ def normalize_scrapegraph_result(
                 "engagement_score": score,
                 "category": category,
                 "method": "scrapegraph",
+                "market_examples": _coerce_market_examples(
+                    source_name,
+                    keyword_text,
+                    score,
+                    raw_examples if isinstance(raw_examples, list) else [],
+                    item if isinstance(item, dict) else {},
+                ),
             }
         )
+    return normalized
+
+
+def _coerce_market_examples(
+    source_name: str,
+    keyword: str,
+    score: int,
+    examples: List[Any],
+    item: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    candidates: List[Any] = [*examples]
+    if item:
+        candidates.append(
+            {
+                "title": (
+                    item.get("example_title")
+                    or item.get("product_title")
+                    or item.get("title")
+                    or keyword
+                ),
+                "source_url": item.get("source_url") or item.get("url") or item.get("link"),
+                "image_url": (
+                    item.get("image_url")
+                    or item.get("thumbnail_url")
+                    or item.get("image")
+                ),
+            }
+        )
+    for raw in candidates:
+        if isinstance(raw, str):
+            title = raw
+            source_url = None
+            image_url = None
+        elif isinstance(raw, dict):
+            title = raw.get("title") or raw.get("keyword") or raw.get("name") or keyword
+            source_url = raw.get("source_url") or raw.get("url") or raw.get("link")
+            image_url = raw.get("image_url") or raw.get("thumbnail_url") or raw.get("image")
+        else:
+            continue
+        title_text = " ".join(str(title or "").split()).strip()
+        if not title_text:
+            continue
+        normalized.append(
+            {
+                "title": title_text[:180],
+                "keyword": keyword,
+                "source": source_name,
+                "source_url": source_url if isinstance(source_url, str) else None,
+                "image_url": image_url if isinstance(image_url, str) else None,
+                "engagement_score": score,
+                "example_type": (
+                    "source_product" if source_name in {"amazon", "etsy"} else "source_trend"
+                ),
+            }
+        )
+        if len(normalized) >= 5:
+            break
     return normalized
 
 

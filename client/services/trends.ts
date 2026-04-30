@@ -8,6 +8,24 @@ export interface LiveTrendSignal {
   category: string;
   engagement_score: number;
   timestamp: string;
+  method?: string;
+  market_examples?: MarketExample[];
+  provenance?: {
+    source: string;
+    is_estimated: boolean;
+    updated_at: string;
+    confidence: number;
+  };
+}
+
+export interface MarketExample {
+  title: string;
+  keyword: string;
+  source: string;
+  source_url?: string | null;
+  image_url?: string | null;
+  engagement_score?: number;
+  example_type?: string;
   provenance?: {
     source: string;
     is_estimated: boolean;

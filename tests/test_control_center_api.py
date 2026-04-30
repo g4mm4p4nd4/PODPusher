@@ -19,6 +19,26 @@ async def test_overview_and_trend_insights_include_provenance():
                 category="Apparel",
                 engagement_score=1000,
                 timestamp=utcnow(),
+                metadata_json={
+                    "method": "selector_fallback",
+                    "provenance": {
+                        "source": "unit",
+                        "is_estimated": False,
+                        "updated_at": utcnow().isoformat(),
+                        "confidence": 0.91,
+                    },
+                    "market_examples": [
+                        {
+                            "title": "Dog Mom Shirt Bestseller",
+                            "keyword": "dog mom",
+                            "source": "unit",
+                            "source_url": "https://example.com/dog-mom-shirt",
+                            "image_url": "https://example.com/dog-mom-shirt.jpg",
+                            "engagement_score": 1000,
+                            "example_type": "source_product",
+                        }
+                    ],
+                },
             )
         )
         await session.commit()
@@ -37,7 +57,12 @@ async def test_overview_and_trend_insights_include_provenance():
         assert trends.status_code == 200
         trend_body = trends.json()
         assert trend_body["keywords"]
-        assert "provenance" in trend_body["keywords"][0]
+        dog_row = next(
+            item for item in trend_body["keywords"] if item["keyword"] == "dog mom"
+        )
+        assert "provenance" in dog_row
+        assert dog_row["market_examples"][0]["title"] == "Dog Mom Shirt Bestseller"
+        assert dog_row["strategy"]["anti_patterns"]
         assert trend_body["pagination"]["total"] >= len(trend_body["keywords"])
 
 
@@ -155,7 +180,10 @@ async def test_page_filters_are_reflected_and_shape_backend_data():
         assert overview_body["integration_status"]["etsy"]["status"] in {
             "connected",
             "demo_fallback",
+            "needs_implementation",
         }
+        if overview_body["integration_status"]["etsy"]["status"] == "needs_implementation":
+            assert overview_body["integration_status"]["etsy"]["blocking"] is False
         assert overview_body["actions_available"]
         assert overview_body["next_drilldowns"]
         assert all(
@@ -287,4 +315,7 @@ async def test_search_and_saved_state_mutations_persist_demo_state():
         assert tag_body["integration_status"]["openai"]["status"] in {
             "connected",
             "demo_fallback",
+            "needs_implementation",
         }
+        if tag_body["integration_status"]["openai"]["status"] == "needs_implementation":
+            assert tag_body["integration_status"]["openai"]["blocking"] is False

@@ -21,6 +21,26 @@ async def test_live_trends_endpoint():
                 engagement_score=5,
                 category="animals",
                 timestamp=now,
+                metadata_json={
+                    "method": "selector_fallback",
+                    "market_examples": [
+                        {
+                            "title": "Funny Cat Shirt Example",
+                            "keyword": "funny cat",
+                            "source": "tiktok",
+                            "source_url": "https://example.com/funny-cat",
+                            "image_url": "https://example.com/funny-cat.jpg",
+                            "engagement_score": 5,
+                            "example_type": "source_trend",
+                            "provenance": {
+                                "source": "tiktok",
+                                "is_estimated": False,
+                                "updated_at": now.isoformat(),
+                                "confidence": 0.82,
+                            },
+                        }
+                    ],
+                },
             )
         )
         session.add(
@@ -71,6 +91,11 @@ async def test_live_trends_endpoint():
         assert list(filtered["items_by_category"].keys()) == ["animals"]
         assert filtered["items_by_category"]["animals"][0]["source"] == "tiktok"
         assert filtered["items_by_category"]["animals"][0]["provenance"]["source"] == "tiktok"
+        assert (
+            filtered["items_by_category"]["animals"][0]["market_examples"][0]["title"]
+            == "Funny Cat Shirt Example"
+        )
+        assert filtered["items_by_category"]["animals"][0]["method"] == "selector_fallback"
         assert filtered["pagination"]["sort_by"] == "timestamp"
 
 

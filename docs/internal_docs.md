@@ -139,7 +139,10 @@ flowchart LR
 ## Trend Ingestion Service
 
 The `trend_ingestion` service scrapes public trending pages, normalises text and
-stores the highest scoring signals for the API.
+stores the highest scoring signals for the API. Persisted signals may include
+source-backed `market_examples` containing a public example title, source URL,
+optional image URL, extraction method, and provenance. Raw page bodies, cookies,
+sessions, login data, and account-backed content are out of scope.
 
 ```mermaid
 flowchart LR
@@ -184,6 +187,21 @@ resumed, and listings can be composed in multiple languages.
 - **POST `/api/listing-composer/drafts`** â€“ save or update a draft. Body
   includes `title`, `description`, `tags`, `language` and `field_order`.
 - **GET `/api/listing-composer/drafts/{id}`** â€“ fetch a previously saved draft.
+- **GET `/api/listing-composer/drafts`** â€“ list persisted drafts with
+  `page`, `page_size`, `search`, `sort_by`, and `sort_order` controls. The
+  response includes source provenance fields: `source`, `is_estimated`,
+  `updated_at`, and `confidence`.
+- **GET `/api/listing-composer/drafts/{id}/history`** â€“ fetch the revision
+  trail for a draft, including revision metadata and provenance.
+- **POST `/api/listing-composer/drafts/{id}/publish-queue`** â€“ persist a local
+  publish queue job. Live Etsy and Printify publish paths remain
+  credential-gated and non-blocking; the local queue record is still returned.
+- **GET `/api/listing-composer/publish-queue`** â€“ list queue jobs with
+  `page`, `page_size`, and optional `status` filtering. Queue list and item
+  payloads include automation-job provenance.
+- **GET `/api/listing-composer/drafts/{id}/export`** â€“ export JSON or CSV with
+  title, description, tags, metadata, score, compliance, queue history, and
+  provenance.
 
 The tag suggestion endpoint now ranks suggestions using historical sales and
 search frequency data for improved relevance.

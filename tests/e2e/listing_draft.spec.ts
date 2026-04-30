@@ -20,10 +20,10 @@ test('listing composer saves draft id in local storage', async ({ page }) => {
 test('listing composer consumes direct handoff query params', async ({ page }) => {
   await page.goto('/listing-composer?source=e2e&niche=Dog%20Mom%20Gifts&keyword=dog%20mom&product_type=Mug&audience=Dog%20Lovers&tags=dog%20mom,coffee');
 
-  await expect(page.getByLabel('Niche')).toHaveValue('Dog Mom Gifts');
+  await expect(page.getByLabel('Niche', { exact: true })).toHaveValue('Dog Mom Gifts');
   await expect(page.getByLabel('Primary Keyword')).toHaveValue('dog mom');
   await expect(page.getByLabel('Product Type')).toHaveValue('Mug');
   await expect(page.getByLabel('Target Audience')).toHaveValue('Dog Lovers');
   await expect(page.getByText('Prefilled from e2e')).toBeVisible();
-  await expect(page.getByText('coffee')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'coffee' })).toBeVisible();
 });

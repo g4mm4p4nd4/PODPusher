@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { getApiBase, resolveApiUrl } from './apiBase';
-
-const api = getApiBase();
+import { resolveApiUrl } from './apiBase';
 
 export async function fetchTagSuggestions(title: string, description: string): Promise<string[]> {
   const res = await axios.post<string[]>(resolveApiUrl('/api/ideation/suggest-tags'), { title, description });
@@ -24,8 +22,18 @@ export interface DraftData {
   holiday?: string;
   recipient?: string;
   style?: string;
+  market_evidence?: MarketEvidence;
   updated_at?: string;
   revision_count?: number;
+  provenance?: Provenance;
+}
+
+export interface MarketEvidence {
+  title: string;
+  source: string;
+  source_url?: string | null;
+  image_url?: string | null;
+  example_type?: string | null;
   provenance?: Provenance;
 }
 
@@ -65,6 +73,7 @@ export interface PublishQueueResult {
   message: string;
   integration_status: Record<string, unknown>;
   created_at: string;
+  provenance?: Provenance;
 }
 
 export interface PublishQueueListResponse {
@@ -87,12 +96,12 @@ export interface ExportResult {
 }
 
 export async function saveDraft(data: DraftData): Promise<number> {
-  const res = await axios.post(`${api}/api/listing-composer/drafts`, data);
+  const res = await axios.post(resolveApiUrl('/api/listing-composer/drafts'), data);
   return res.data.id;
 }
 
 export async function loadDraft(id: number): Promise<DraftData> {
-  const res = await axios.get(`${api}/api/listing-composer/drafts/${id}`);
+  const res = await axios.get(resolveApiUrl(`/api/listing-composer/drafts/${id}`));
   return res.data as DraftData;
 }
 

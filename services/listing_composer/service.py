@@ -32,6 +32,7 @@ class DraftPayload(BaseModel):
     holiday: str | None = None
     recipient: str | None = None
     style: str | None = None
+    market_evidence: dict[str, Any] | None = None
     updated_at: datetime | None = None
     revision_count: int = 0
     provenance: dict[str, Any] | None = None
@@ -66,6 +67,7 @@ class PublishQueueResponse(BaseModel):
     message: str
     integration_status: dict[str, Any]
     created_at: datetime
+    provenance: dict[str, Any]
 
 
 class ExportPayload(BaseModel):
@@ -102,6 +104,15 @@ def _provenance(
     }
 
 
+def _automation_job_provenance(job: AutomationJob) -> dict[str, Any]:
+    return _provenance(
+        "automationjob_table",
+        estimated=False,
+        confidence=0.94,
+        updated_at=job.created_at,
+    )
+
+
 def _context_metadata(data: DraftPayload) -> dict[str, Any]:
     return {
         "language": data.language,
@@ -115,6 +126,7 @@ def _context_metadata(data: DraftPayload) -> dict[str, Any]:
         "holiday": data.holiday,
         "recipient": data.recipient,
         "style": data.style,
+        "market_evidence": data.market_evidence,
     }
 
 
@@ -239,6 +251,7 @@ async def draft_to_payload(draft: ListingDraft) -> DraftPayload:
         holiday=(metadata or {}).get("holiday"),
         recipient=(metadata or {}).get("recipient"),
         style=(metadata or {}).get("style"),
+        market_evidence=(metadata or {}).get("market_evidence"),
         updated_at=draft.updated_at,
         revision_count=len(revisions),
         provenance=_provenance(
@@ -279,6 +292,11 @@ async def list_drafts(
     else:
         rows = sorted(rows, key=lambda draft: draft.updated_at, reverse=reverse)
     total = len(rows)
+    if total == 0:
+        page = 1
+    else:
+        last_page = ((total - 1) // page_size) + 1
+        page = min(page, last_page)
     start = (page - 1) * page_size
     payloads = [await draft_to_payload(draft) for draft in rows[start:start + page_size]]
     return DraftListResponse(
@@ -335,15 +353,15 @@ async def queue_publish_job(
         integration_status = {
             "etsy": {
                 "status": "needs_implementation",
-                "blocking": True,
+                "blocking": False,
                 "credential_required_for_live_publish": True,
-                "message": "Live Etsy draft publishing is not implemented/configured for this environment.",
+                "message": "Local queueing continues; live Etsy draft publishing needs implementation/configuration.",
             },
             "printify": {
                 "status": "needs_implementation",
-                "blocking": True,
+                "blocking": False,
                 "credential_required_for_live_publish": True,
-                "message": "Live Printify product creation is not implemented/configured for this environment.",
+                "message": "Local queueing continues; live Printify product creation needs implementation/configuration.",
             },
             "openai": {
                 "status": "not_required",
@@ -377,6 +395,7 @@ async def queue_publish_job(
             message="Draft saved locally only. Live marketplace publishing still needs Etsy and Printify implementation/configuration.",
             integration_status=integration_status,
             created_at=job.created_at,
+            provenance=_automation_job_provenance(job),
         )
 
 
@@ -399,6 +418,11 @@ async def list_publish_queue(
     if status and status != "all":
         rows = [job for job in rows if job.status == status]
     total = len(rows)
+    if total == 0:
+        page = 1
+    else:
+        last_page = ((total - 1) // page_size) + 1
+        page = min(page, last_page)
     start = (page - 1) * page_size
     items = []
     for job in rows[start:start + page_size]:
@@ -415,6 +439,7 @@ async def list_publish_queue(
                 ),
                 integration_status=integration_status,
                 created_at=job.created_at,
+                provenance=_automation_job_provenance(job),
             )
         )
     return PublishQueueListResponse(
@@ -509,12 +534,23 @@ async def build_export_payload(draft_id: int) -> ExportPayload | None:
                 "latest_revision_metadata": (
                     revisions[0].metadata_json if revisions else {}
                 ),
+                "latest_revision_provenance": (
+                    _provenance(
+                        "listingdraftrevision_table",
+                        estimated=False,
+                        confidence=0.96,
+                        updated_at=revisions[0].created_at,
+                    )
+                    if revisions
+                    else None
+                ),
                 "publish_queue": [
                     {
                         "queue_item_id": job.id,
                         "status": job.status,
                         "mode": (job.metadata_json or {}).get("mode") or "implementation_required",
                         "created_at": job.created_at.isoformat(),
+                        "provenance": _automation_job_provenance(job),
                     }
                     for job in draft_jobs[:5]
                 ],

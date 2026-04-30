@@ -134,7 +134,7 @@ services:
       - frontend-node-modules:/app/node_modules
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-    command: sh -c "npm ci && npm run build && npm start"
+    command: sh -c "npm ci && npm run build && npm run start -- --hostname 0.0.0.0 --port 3000"
     ports:
       - "3000:3000"
     depends_on:

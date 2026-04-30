@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 
@@ -14,6 +14,8 @@ class SelectorSet:
     likes: List[str]
     shares: List[str]
     comments: List[str]
+    image: List[str] = field(default_factory=list)
+    link: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -64,6 +66,11 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             ],
             shares=["strong[data-e2e='share-count']"],
             comments=["strong[data-e2e='comment-count']"],
+            image=["img"],
+            link=[
+                "a[href*='creativecenter/hashtag']",
+                "a[href*='creativecenter/inspiration']",
+            ],
         ),
         wait_for_selector="div",
         scroll_iterations=2,
@@ -90,6 +97,8 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             likes=["span[aria-label*='likes']"],
             shares=["span[aria-label*='shares']"],
             comments=["span[aria-label*='comments']"],
+            image=["img"],
+            link=["a[href*='/p/']", "a[href*='/reel/']", "a[href*='/explore/tags/']"],
         ),
         wait_for_selector="body",
         scroll_iterations=1,
@@ -103,6 +112,8 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             likes=["div[data-testid='like'] span"],
             shares=["div[data-testid='retweet'] span"],
             comments=["div[data-testid='reply'] span"],
+            image=["img"],
+            link=["a[href*='/status/']", "a[role='link'][href*='/hashtag']"],
         ),
         wait_for_selector="article[data-testid='tweet']",
         scroll_iterations=1,
@@ -119,6 +130,8 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             ],
             shares=["span[data-test-id='repin-count']"],
             comments=["span[data-test-id='comment-count']"],
+            image=["img"],
+            link=["a[href*='/pin/']", "a[href*='/search/pins/']"],
         ),
         wait_for_selector="div[data-test-id='pin']",
         scroll_iterations=2,
@@ -152,6 +165,8 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             likes=["span[data-bestseller]", "span[data-favorites]"],
             shares=["span[data-favorites]"],
             comments=["span[data-reviews-count]"],
+            image=["img"],
+            link=["a[href*='/listing/']", "a[href*='/market/']"],
         ),
         wait_for_selector="li.wt-list-unstyled.wt-show-lg",
         scroll_iterations=0,
@@ -181,6 +196,8 @@ PLATFORM_CONFIG: Dict[str, SourceConfig] = {
             likes=["span.a-icon-alt"],
             shares=["span.a-icon-alt"],
             comments=["span.a-size-small"],
+            image=["img[alt]"],
+            link=["a[href*='/dp/']", "a[href*='/gp/product/']"],
         ),
         wait_for_selector=".zg-grid-general-faceout",
         scroll_iterations=1,

@@ -17,6 +17,8 @@ test('trend discovery hands keyword context to the listing composer', async ({ p
   await expect(page.getByLabel('Niche', { exact: true })).toHaveValue('dog mom');
   await expect(page.getByLabel('Primary Keyword')).toHaveValue('dog mom');
   await expect(page.getByLabel('Product Type')).toHaveValue('T-Shirt');
+  await expect(page.getByText('Dog Mom Shirt Bestseller')).toBeVisible();
+  await expect(page.getByText(/Market signal attached from amazon/)).toBeVisible();
   await expect(page.getByText('Prefilled from trends')).toBeVisible();
 });
 

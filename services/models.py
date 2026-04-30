@@ -22,6 +22,7 @@ class TrendSignal(SQLModel, table=True):
     timestamp: datetime = Field(default_factory=utcnow, index=True)
     engagement_score: int = 0
     category: str = Field(default="other", index=True)
+    metadata_json: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
 
 class Idea(SQLModel, table=True):

@@ -7,6 +7,7 @@ import {
   DraftData,
   DraftListResponse,
   DraftRevision,
+  MarketEvidence,
   PublishQueueListResponse,
   checkListingDraftCompliance,
   exportDraft,
@@ -82,6 +83,7 @@ export default function ListingComposer({ onPublish }: Props) {
   const [publishQueuePage, setPublishQueuePage] = useState(1);
   const [publishQueueFilter, setPublishQueueFilter] = useState('all');
   const [activityStatus, setActivityStatus] = useState('Loading source-backed activity...');
+  const [marketEvidence, setMarketEvidence] = useState<MarketEvidence | null>(null);
   const lastLengthsRef = useRef({ title: 0, description: 0 });
 
   const isTitleInvalid = title.length > 140;
@@ -102,6 +104,7 @@ export default function ListingComposer({ onPublish }: Props) {
     if (draft.holiday) setHoliday(draft.holiday);
     if (draft.recipient) setRecipient(draft.recipient);
     if (draft.style) setStyle(draft.style);
+    if (draft.market_evidence) setMarketEvidence(draft.market_evidence);
   };
 
   const loadHistory = async (draftId: number) => {
@@ -110,7 +113,10 @@ export default function ListingComposer({ onPublish }: Props) {
     setDraftHistory(history);
   };
 
-  const refreshDraftActivity = async (page = draftListPage) => {
+  const refreshDraftActivity = async (
+    page = draftListPage,
+    preferredDraftId = selectedHistoryDraftId
+  ) => {
     const list = await listDrafts({
       page,
       page_size: 3,
@@ -119,8 +125,12 @@ export default function ListingComposer({ onPublish }: Props) {
     });
     setDraftList(list);
     setDraftListPage(list.page);
-    if (list.items[0]?.id) {
-      await loadHistory(list.items[0].id);
+    const nextDraftId = (
+      list.items.find((draft) => draft.id === preferredDraftId)?.id ||
+      list.items[0]?.id
+    );
+    if (nextDraftId) {
+      await loadHistory(nextDraftId);
     } else {
       setDraftHistory([]);
       setSelectedHistoryDraftId(null);
@@ -161,6 +171,7 @@ export default function ListingComposer({ onPublish }: Props) {
   useEffect(() => {
     if (!router.isReady) return;
     const queryValue = (name: string) => stringParam(router.query[name]);
+    const requestedDraftId = Number(queryValue('draft'));
     const nextNiche = queryValue('niche');
     const nextKeyword = queryValue('keyword') || queryValue('q');
     const nextProductType = queryValue('product_type') || queryValue('productType');
@@ -170,6 +181,24 @@ export default function ListingComposer({ onPublish }: Props) {
     const nextStyle = queryValue('style');
     const nextOccasion = queryValue('occasion');
     const nextHoliday = queryValue('holiday');
+    const nextEvidenceTitle = queryValue('evidence_title');
+    const nextEvidenceSource = queryValue('evidence_source');
+    const nextEvidenceUrl = queryValue('evidence_url');
+    const nextEvidenceImageUrl = queryValue('evidence_image_url');
+    const nextEvidenceType = queryValue('evidence_type');
+
+    if (Number.isInteger(requestedDraftId) && requestedDraftId > 0) {
+      loadDraft(requestedDraftId)
+        .then(async (draft: DraftData) => {
+          applyDraft(draft);
+          localStorage.setItem('draftId', String(requestedDraftId));
+          setDraftStatus(`Loaded draft ${requestedDraftId}`);
+          await loadHistory(requestedDraftId);
+        })
+        .catch(() => {
+          setDraftStatus(`Draft ${requestedDraftId} unavailable`);
+        });
+    }
 
     if (nextNiche) setNiche(nextNiche);
     if (nextKeyword) setPrimaryKeyword(nextKeyword);
@@ -184,6 +213,22 @@ export default function ListingComposer({ onPublish }: Props) {
     if (nextHoliday) setHoliday(nextHoliday);
     if (nextTags) {
       setTags(nextTags.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 13));
+    }
+    if (nextEvidenceTitle || nextEvidenceSource || nextEvidenceUrl || nextEvidenceImageUrl) {
+      const evidenceSource = nextEvidenceSource || queryValue('source') || 'trend_handoff';
+      setMarketEvidence({
+        title: nextEvidenceTitle || nextKeyword || nextNiche || 'Market evidence',
+        source: evidenceSource,
+        source_url: nextEvidenceUrl || null,
+        image_url: nextEvidenceImageUrl || null,
+        example_type: nextEvidenceType || 'source_trend',
+        provenance: {
+          source: evidenceSource,
+          is_estimated: !nextEvidenceUrl && !nextEvidenceImageUrl,
+          updated_at: new Date().toISOString(),
+          confidence: nextEvidenceSource ? 0.78 : 0.62,
+        },
+      });
     }
     if (nextNiche || nextKeyword || nextProductType || nextAudience || nextTags) {
       const demo = buildDemoListingDraft({
@@ -240,7 +285,7 @@ export default function ListingComposer({ onPublish }: Props) {
       tone,
       target_audience: targetAudience,
       brand_rules: brandRules,
-      metadata: { materials, occasion, holiday, recipient, style },
+      metadata: { materials, occasion, holiday, recipient, style, market_evidence: marketEvidence },
     });
     setTitle(generated.title);
     setDescription(generated.description);
@@ -289,11 +334,12 @@ export default function ListingComposer({ onPublish }: Props) {
       holiday,
       recipient,
       style,
+      market_evidence: marketEvidence || undefined,
       field_order: ['product', 'keywords', 'title', 'description', 'tags', 'metadata'],
     });
     localStorage.setItem('draftId', String(id));
     setDraftStatus('Draft saved just now');
-    await refreshDraftActivity(1).catch(() => {
+    await refreshDraftActivity(1, id).catch(() => {
       setActivityStatus('Draft saved; source-backed activity refresh failed');
     });
     await refreshScore();
@@ -311,7 +357,8 @@ export default function ListingComposer({ onPublish }: Props) {
       const id = await persistDraft();
       const queued = await queueDraftForPublish(id);
       setQueueStatus(`Queue ${queued.status}: draft ${queued.draft_id}, job ${queued.queue_item_id}`);
-      await refreshPublishQueue(1, publishQueueFilter).catch(() => {
+      setPublishQueueFilter('all');
+      await refreshPublishQueue(1, 'all').catch(() => {
         setActivityStatus('Queue updated; source-backed activity refresh failed');
       });
       onPublish?.({
@@ -329,6 +376,7 @@ export default function ListingComposer({ onPublish }: Props) {
         holiday,
         recipient,
         style,
+        market_evidence: marketEvidence || undefined,
         field_order: steps,
       });
     } catch {
@@ -403,6 +451,8 @@ export default function ListingComposer({ onPublish }: Props) {
               <Button onClick={regenerate} variant="primary">Auto-Fill from Niche</Button>
             </div>
           </Panel>
+
+          <MarketEvidencePanel evidence={marketEvidence} onClear={() => setMarketEvidence(null)} />
 
           <DraftHistoryPanel
             draftList={draftList}
@@ -557,7 +607,11 @@ export default function ListingComposer({ onPublish }: Props) {
 
           <Panel title="Quick Tips">
             <div className="space-y-3 text-sm text-slate-400">
-              <p className="text-blue-200">Preview source: local demo thumbnail, confidence 72%, updated on first paint.</p>
+              <p className="text-blue-200">
+                {marketEvidence
+                  ? `Market signal attached from ${marketEvidence.source}; use it for variation and anti-pattern logic, not as copy-ready artwork.`
+                  : 'Preview source: local demo thumbnail, confidence 72%, updated on first paint.'}
+              </p>
               <p>Use lifestyle mockups to boost conversion.</p>
               <p>Add a short video to increase trust.</p>
               <p>Refresh tags weekly as trends shift.</p>
@@ -605,6 +659,61 @@ export default function ListingComposer({ onPublish }: Props) {
         </div>
       </div>
     </form>
+  );
+}
+
+function MarketEvidencePanel({
+  evidence,
+  onClear,
+}: {
+  evidence: MarketEvidence | null;
+  onClear: () => void;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  if (!evidence) {
+    return (
+      <Panel title="Market Evidence">
+        <p className="text-sm text-slate-500">
+          No source-backed trend example is attached yet. Use a source-backed trend or design idea from Trends to bring product evidence into this draft.
+        </p>
+      </Panel>
+    );
+  }
+
+  const hasImage = Boolean(evidence.image_url && !imageFailed);
+
+  return (
+    <Panel title="Market Evidence" action={<button type="button" onClick={onClear} className="text-xs text-slate-400">Clear</button>}>
+      <div className="space-y-3 text-sm">
+        {hasImage ? (
+          <img
+            src={evidence.image_url || ''}
+            alt={evidence.title}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
+            className="h-36 w-full rounded-md border border-slate-800 bg-slate-950 object-cover"
+          />
+        ) : null}
+        <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Pill tone={evidence.provenance?.is_estimated ? 'orange' : 'green'}>
+              {evidence.source}
+            </Pill>
+            {evidence.source_url ? (
+              <a href={evidence.source_url} target="_blank" rel="noreferrer" className="text-xs text-blue-300">
+                Open source
+              </a>
+            ) : null}
+          </div>
+          <p className="font-medium text-slate-100">{evidence.title}</p>
+          <p className="text-xs text-slate-500">
+            Treat this as market evidence for original variations. Do not copy titles, photos, compositions, brand names, or protected references.
+          </p>
+          <ProvenanceNote provenance={evidence.provenance} />
+        </div>
+      </div>
+    </Panel>
   );
 }
 
@@ -787,6 +896,7 @@ function PublishQueuePanel({
                 </div>
                 <p className="text-xs text-slate-400">{item.message}</p>
                 <p className="text-xs text-blue-200">{summarizeIntegrationStatus(item.integration_status)}</p>
+                <ProvenanceNote provenance={item.provenance} />
               </div>
             ))}
           </div>

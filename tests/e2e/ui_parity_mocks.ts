@@ -32,6 +32,26 @@ const trendKeywords = [
     competition: 38,
     suggested_products: ['T-Shirt', 'Mug', 'Tote Bag'],
     opportunity: 'High',
+    market_examples: [
+      {
+        title: 'Dog Mom Shirt Bestseller',
+        keyword: 'dog mom',
+        source: 'amazon',
+        source_url: 'https://example.com/dog-mom-shirt',
+        image_url: null,
+        engagement_score: 156000,
+        example_type: 'source_product',
+        provenance,
+      },
+    ],
+    strategy: {
+      evidence_summary: 'Dog Mom Shirt Bestseller',
+      variation_prompts: [
+        'Reframe dog mom for a narrower buyer identity or occasion.',
+        'Translate the strongest phrase into an original T-shirt layout.',
+      ],
+      anti_patterns: ['Do not copy source titles, artwork, photos, or protected references.'],
+    },
   },
   {
     rank: 2,
@@ -41,6 +61,23 @@ const trendKeywords = [
     competition: 44,
     suggested_products: ['Hoodie', 'Tumbler'],
     opportunity: 'High',
+    market_examples: [
+      {
+        title: 'Pickleball Life Tumbler Example',
+        keyword: 'pickleball life',
+        source: 'etsy',
+        source_url: 'https://example.com/pickleball-life',
+        image_url: null,
+        engagement_score: 128000,
+        example_type: 'source_product',
+        provenance,
+      },
+    ],
+    strategy: {
+      evidence_summary: 'Pickleball Life Tumbler Example',
+      variation_prompts: ['Pair pickleball life with a court-side buyer identity.'],
+      anti_patterns: ['Avoid generic sports phrasing without a buyer angle.'],
+    },
   },
 ];
 
@@ -262,7 +299,18 @@ export async function setupUiParityApiMocks(page: Page) {
         ],
         product_categories: [{ category: 'T-Shirts', listings: 124510, demand: 89 }],
         keywords: trendKeywords,
-        design_ideas: [{ title: 'Dog Mom Floral Typo', keyword: 'dog mom', niche: 'Dog Mom Gifts', product_type: 'T-Shirt', opportunity: 'High' }],
+        design_ideas: [
+          {
+            title: 'Dog Mom Floral Typo',
+            keyword: 'dog mom',
+            niche: 'Dog Mom Gifts',
+            product_type: 'T-Shirt',
+            opportunity: 'High',
+            market_examples: trendKeywords[0].market_examples,
+            strategy: trendKeywords[0].strategy,
+            provenance,
+          },
+        ],
         tag_clusters: [{ cluster: 'dog mom', tags: ['dog mom', 'fur mama'], volume: 156000 }],
         provenance,
       });
@@ -373,6 +421,7 @@ export async function setupUiParityApiMocks(page: Page) {
     }
 
     if (path === '/api/listing-composer/drafts' && method === 'GET') {
+      const pageNumber = Number(url.searchParams.get('page') || '1');
       return fulfillJson(route, {
         items: [
           {
@@ -384,15 +433,15 @@ export async function setupUiParityApiMocks(page: Page) {
             field_order: ['title', 'description', 'tags'],
             updated_at: '2026-04-25T12:00:00.000Z',
             revision_count: 2,
-            provenance,
+            provenance: { ...provenance, source: 'listingdraft_table' },
           },
         ],
-        total: 1,
-        page: 1,
+        total: 4,
+        page: pageNumber,
         page_size: 3,
         sort_by: 'updated_at',
         sort_order: 'desc',
-        provenance,
+        provenance: { ...provenance, source: 'listingdraft_table' },
       });
     }
 
@@ -404,6 +453,7 @@ export async function setupUiParityApiMocks(page: Page) {
         tags: ['loaded'],
         language: 'en',
         field_order: ['title', 'description', 'tags'],
+        provenance: { ...provenance, source: 'listingdraft_table' },
       });
     }
 
@@ -425,24 +475,27 @@ export async function setupUiParityApiMocks(page: Page) {
     }
 
     if (path === '/api/listing-composer/publish-queue') {
+      const queuePage = Number(url.searchParams.get('page') || '1');
+      const queueStatus = url.searchParams.get('status') || 'queued';
       return fulfillJson(route, {
         items: [
           {
             queue_item_id: 501,
             draft_id: 101,
-            status: 'queued',
-            mode: 'demo',
-            message: 'Draft is queued locally. Etsy and Printify remain credential-gated.',
+            status: queueStatus,
+            mode: 'implementation_required',
+            message: 'Draft is queued locally. Etsy and Printify remain credential-gated and non-blocking.',
             integration_status: {
-              etsy: { status: 'demo' },
-              printify: { status: 'demo' },
+              etsy: { status: 'needs_implementation', blocking: false },
+              printify: { status: 'needs_implementation', blocking: false },
               openai: { status: 'not_required' },
             },
             created_at: '2026-04-25T12:00:00.000Z',
+            provenance: { ...provenance, source: 'automationjob_table' },
           },
         ],
-        total: 1,
-        page: 1,
+        total: 5,
+        page: queuePage,
         page_size: 4,
         provenance: { ...provenance, source: 'automationjob_table' },
       });
@@ -455,10 +508,15 @@ export async function setupUiParityApiMocks(page: Page) {
         queue_item_id: 501,
         draft_id: draftId,
         status: 'queued',
-        mode: 'demo',
-        message: 'Queued in local demo mode.',
-        integration_status: { printify: 'credentials_missing' },
+        mode: 'implementation_required',
+        message: 'Queued locally; live marketplace credentials remain optional for this workflow.',
+        integration_status: {
+          etsy: { status: 'needs_implementation', blocking: false },
+          printify: { status: 'needs_implementation', blocking: false },
+          openai: { status: 'not_required', blocking: false },
+        },
         created_at: '2026-04-25T12:00:00.000Z',
+        provenance: { ...provenance, source: 'automationjob_table' },
       });
     }
 

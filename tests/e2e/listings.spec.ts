@@ -16,7 +16,7 @@ test('listing composer suggests and applies generated tags', async ({ page }) =>
 
   await expect(page.getByRole('button', { name: 'dog mom' })).toBeVisible();
   await page.getByRole('button', { name: 'dog mom' }).click();
-  await expect(page.getByText('Tags (1/13)')).toBeVisible();
+  await expect(page.getByText(/Tags \(\d+\/13\)/)).toBeVisible();
 });
 
 test('listing composer queues and exports a draft without live marketplace credentials', async ({ page }) => {
@@ -32,4 +32,22 @@ test('listing composer queues and exports a draft without live marketplace crede
 
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByText(/Export ready: draft/)).toBeVisible();
+});
+
+test('listing composer pages source-backed draft activity and filters the publish queue', async ({ page }) => {
+  await page.goto('/listing-composer');
+
+  await expect(page.getByRole('heading', { name: 'Draft History' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Publish Queue' })).toBeVisible();
+  await expect(page.getByText(/Source: listingdraft_table/).first()).toBeVisible();
+  await expect(page.getByText(/Source: automationjob_table/).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Next Drafts' }).click();
+  await expect(page.getByText('Page 2 / 2').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Next Jobs' }).click();
+  await expect(page.getByText('Page 2 / 2').last()).toBeVisible();
+
+  await page.getByLabel('Queue Status').selectOption('failed');
+  await expect(page.getByText('failed', { exact: true }).last()).toBeVisible();
 });

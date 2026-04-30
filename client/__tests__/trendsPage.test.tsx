@@ -29,9 +29,52 @@ function trendPayload() {
         competition: 34,
         suggested_products: ['T-Shirt', 'Mug'],
         opportunity: 'High',
+        market_examples: [
+          {
+            title: 'Dog Mom Shirt Bestseller',
+            keyword: 'dog mom',
+            source: 'amazon',
+            source_url: 'https://example.com/dog-mom-shirt',
+            image_url: null,
+            example_type: 'source_product',
+            provenance: {
+              source: 'amazon',
+              is_estimated: false,
+              updated_at: '2026-04-30T00:00:00',
+              confidence: 0.78,
+            },
+          },
+        ],
+        strategy: {
+          evidence_summary: 'Dog Mom Shirt Bestseller',
+          variation_prompts: ['Reframe dog mom for a narrower buyer identity.'],
+          anti_patterns: ['Do not copy source titles or artwork.'],
+        },
       },
     ],
-    design_ideas: [{ title: 'Dog Mom Floral Typo', opportunity: 'High', product_type: 'T-Shirt' }],
+    design_ideas: [
+      {
+        title: 'Dog Mom Floral Typo',
+        keyword: 'dog mom',
+        opportunity: 'High',
+        product_type: 'T-Shirt',
+        market_examples: [
+          {
+            title: 'Dog Mom Shirt Bestseller',
+            keyword: 'dog mom',
+            source: 'amazon',
+            source_url: 'https://example.com/dog-mom-shirt',
+            image_url: null,
+            example_type: 'source_product',
+          },
+        ],
+        strategy: {
+          evidence_summary: 'Dog Mom Shirt Bestseller',
+          variation_prompts: ['Translate dog mom into an original type layout.'],
+          anti_patterns: ['Do not copy source artwork.'],
+        },
+      },
+    ],
     tag_clusters: [{ cluster: 'dog mom', tags: ['dog mom', 'paw mom'], volume: 156000 }],
     provenance: { source: 'trend_insights', is_estimated: true, updated_at: '', confidence: 0.7 },
   };
@@ -66,6 +109,9 @@ describe('trend insights page', () => {
     render(<TrendsPage />);
 
     await screen.findByRole('button', { name: 'dog mom' });
+    expect(screen.getByText('Market Evidence')).toBeInTheDocument();
+    expect(screen.getAllByText('Dog Mom Shirt Bestseller').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Demo Asset')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() =>
       expect(mockedAxios.post).toHaveBeenCalledWith(
@@ -86,7 +132,7 @@ describe('trend insights page', () => {
 
     expect(screen.getByRole('link', { name: 'Compose' })).toHaveAttribute(
       'href',
-      expect.stringContaining('/listing-composer?source=trends&keyword=dog+mom')
+      expect.stringContaining('evidence_title=Dog+Mom+Shirt+Bestseller')
     );
   });
 

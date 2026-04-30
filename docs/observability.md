@@ -37,7 +37,7 @@
    ```bash
    curl "http://localhost:8000/api/trends/live?include_meta=true&sort_by=timestamp&sort_order=desc"
    ```
-   Each returned signal carries provenance fields: `source`, `is_estimated`, `updated_at`, and `confidence`.
+   Each returned signal carries provenance fields: `source`, `is_estimated`, `updated_at`, and `confidence`. When public product or visual references are available, rows also include `market_examples` with the source title, source URL, optional image URL, and its own provenance.
 8. Open Grafana and inspect the `Scraper Health` dashboard for `pod_scrape_method_total`, `pod_scrape_fallback_total`, and `pod_scrape_persisted_total`.
 
 The trend scraper is public-only in this slice. Cookie files, exported browser sessions, usernames, passwords, and login URLs are rejected by configuration before scraping starts.
@@ -55,7 +55,8 @@ Smoke command evidence:
 
 - `POST /api/trends/refresh` completed in live mode with `signals_collected: 4`, `signals_persisted: 3`, `fallback_count: 6`, `skipped_count: 2`, and `blocked_count: 2`.
 - `GET /api/trends/live/status` reported Amazon and TikTok success through `selector_fallback`; Etsy and X/Twitter were blocked/skipped; Pinterest, Instagram, and Google Trends RSS failed with zero persisted rows.
-- `GET /api/trends/live?include_meta=true&sort_by=timestamp&sort_order=desc` returned provenance on every persisted row.
+- `GET /api/trends/live?include_meta=true&sort_by=timestamp&sort_order=desc` returned provenance on every persisted row and source-backed `market_examples` for the Amazon/TikTok rows that exposed public product or hashtag references.
+- `GET /api/trends/insights` now ranks source-backed rows ahead of local fixtures by default, so the Trends table and Related Design Ideas can pass market evidence into the Listing Composer.
 - `GET /metrics` exposed `pod_scrape_method_total`, `pod_scrape_fallback_total`, and `pod_scrape_persisted_total`; Prometheus returned `pod_scrape_persisted_total{source="amazon"} 2` and `{source="tiktok"} 1`.
 - Browser QA loaded `http://127.0.0.1:3000/trends` through Chromium at desktop and mobile viewports with no page errors, no console errors, and no HTTP errors.
 
@@ -73,6 +74,8 @@ Observed source behavior:
 
 Blocked sources should degrade as `status: skipped`, `method: blocked`, and appear in `sources_blocked` with a sanitized `reason`. ScrapeGraphAI is capped by `SCRAPEGRAPH_TIMEOUT_SECONDS` before selector fallback to prevent slow public pages from holding the whole refresh open. No raw page bodies, cookies, browser sessions, usernames, passwords, or login flows should be stored or supplied.
 
+Trend evidence storage is intentionally narrow: only normalized keywords, method/provenance metadata, public source URLs, and optional public image URLs are persisted. The scraper must not store raw page bodies or scrape private/account-backed pages.
+
 ## Local Workflow Smoke
 1. Save a composer draft:
    ```bash
@@ -84,11 +87,30 @@ Blocked sources should degrade as `status: skipped`, `method: blocked`, and appe
    ```bash
    curl -X POST http://localhost:8000/api/listing-composer/drafts/1/publish-queue
    ```
-3. Confirm the queue response reports `mode: implementation_required`, `status: needs_implementation`, `blocking: true` integration status for Etsy/Printify, and a retained `draft_id`. A queue record should never imply that a live Etsy or Printify publish occurred until those integrations are configured and implemented.
+3. Confirm the queue response reports `mode: implementation_required`, a local
+   queue `status` such as `pending`, Etsy/Printify integration entries with
+   `status: needs_implementation` and `blocking: false`, and a retained
+   `draft_id`. A queue record should never imply that a live Etsy or Printify
+   publish occurred until those integrations are configured and implemented.
 4. Inspect local queue visibility:
    ```bash
    curl "http://localhost:8000/api/listing-composer/publish-queue?page=1&page_size=10"
    ```
+5. Inspect source-backed draft activity:
+   ```bash
+   curl "http://localhost:8000/api/listing-composer/drafts?page=1&page_size=5&sort_by=updated_at&sort_order=desc"
+   curl "http://localhost:8000/api/listing-composer/drafts/1/history"
+   ```
+6. Confirm draft lists, revision rows, queue lists, queue items, and export
+   payloads preserve provenance fields: `source`, `is_estimated`,
+   `updated_at`, and `confidence`.
+
+The listing composer UI now surfaces those persisted activity views directly in
+the `Draft History` and `Publish Queue` panels. Missing Etsy, Printify, and
+OpenAI credentials must not block local save, queue, history, or export flows.
+Trend-to-composer handoffs can also attach `market_evidence` from public
+`market_examples`. That evidence is stored with draft revisions for auditability
+and is labeled as inspiration/anti-pattern input, not copy-ready artwork.
 
 ## Capability Status Smoke
 Credential-backed surfaces should fail closed instead of returning local/demo success. Inspect the system contract before QA:

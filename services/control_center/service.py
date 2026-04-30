@@ -320,11 +320,11 @@ async def _integration_status(
             "status": "connected" if is_connected else "needs_implementation",
             "connected": is_connected,
             "mode": "live" if is_connected else "implementation_required",
-            "blocking": not is_connected,
+            "blocking": False,
             "message": (
                 "Connected credentials available."
                 if is_connected
-                else "Missing credentials or integration implementation; live provider behavior is unavailable."
+                else "Missing credentials or integration implementation; local workflows remain available."
             ),
             "provenance": _provenance(
                 (
@@ -371,6 +371,91 @@ def _sparkline(seed: str, points: int = 12) -> list[int]:
         drift = index * 2
         values.append(max(2, base + wave + drift))
     return values
+
+
+def _category_products(category: str, keyword: str = "") -> list[str]:
+    text = f"{category} {keyword}".lower()
+    if any(term in text for term in ["mug", "coffee", "drink", "tumbler", "cup"]):
+        return ["Mugs", "Tumblers", "Stickers"]
+    if any(term in text for term in ["wall", "art", "poster", "print", "canvas", "decor"]):
+        return ["Wall Art", "Canvas Prints", "Stickers"]
+    if any(term in text for term in ["tote", "bag", "teacher"]):
+        return ["Tote Bags", "T-Shirts", "Mugs"]
+    if any(term in text for term in ["hat", "cap", "baseball"]):
+        return ["Caps", "T-Shirts", "Hoodies"]
+    return ["T-Shirts", "Hoodies", "Stickers"]
+
+
+def _normalize_market_examples(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    examples: list[dict[str, Any]] = []
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        title = " ".join(str(raw.get("title") or raw.get("keyword") or "").split())
+        if not title:
+            continue
+        provenance = raw.get("provenance") if isinstance(raw.get("provenance"), dict) else {}
+        source = str(raw.get("source") or provenance.get("source") or "unknown")
+        examples.append(
+            {
+                "title": title[:180],
+                "keyword": str(raw.get("keyword") or title),
+                "source": source,
+                "source_url": raw.get("source_url") if isinstance(raw.get("source_url"), str) else None,
+                "image_url": raw.get("image_url") if isinstance(raw.get("image_url"), str) else None,
+                "engagement_score": int(raw.get("engagement_score") or 0),
+                "example_type": str(raw.get("example_type") or "source_trend"),
+                "provenance": {
+                    "source": str(provenance.get("source") or source),
+                    "is_estimated": bool(provenance.get("is_estimated", False)),
+                    "updated_at": str(provenance.get("updated_at") or _now_iso()),
+                    "confidence": float(provenance.get("confidence") or 0.78),
+                },
+            }
+        )
+        if len(examples) >= 5:
+            break
+    return examples
+
+
+def _market_strategy(keyword: str, examples: list[dict[str, Any]]) -> dict[str, Any]:
+    product_hint = _category_products("", keyword)[0]
+    example_titles = [example["title"] for example in examples[:3]]
+    return {
+        "variation_prompts": [
+            f"Reframe '{keyword}' for a narrower buyer identity or occasion.",
+            f"Translate the strongest phrase into a {product_hint.lower()} layout with original typography.",
+            "Combine the trend with a distinct style system such as retro badge, minimalist line art, or soft botanical accents.",
+        ],
+        "anti_patterns": [
+            "Do not copy source titles, artwork, photos, exact composition, brand names, or protected character references.",
+            "Avoid generic gift-only phrasing unless it is paired with a specific buyer, product, or occasion angle.",
+            "Avoid visual clutter when several source examples already compete on dense typography.",
+        ],
+        "evidence_summary": (
+            " / ".join(example_titles)
+            if example_titles
+            else f"No source visual reference captured yet for {keyword}; use keyword provenance only."
+        ),
+    }
+
+
+def _fallback_market_examples(keyword: str, provenance: dict[str, Any]) -> list[dict[str, Any]]:
+    source = str(provenance.get("source") or "local_estimator")
+    return [
+        {
+            "title": keyword,
+            "keyword": keyword,
+            "source": source,
+            "source_url": None,
+            "image_url": None,
+            "engagement_score": 0,
+            "example_type": "keyword_evidence",
+            "provenance": provenance,
+        }
+    ]
 
 
 def _event_date(month: int, day: int) -> datetime:
@@ -492,6 +577,10 @@ async def _trend_rows(limit: int = 100) -> list[dict[str, Any]]:
                 "category": item["category"],
                 "engagement_score": item["volume"],
                 "timestamp": _now_iso(),
+                "metadata": {
+                    "market_examples": [],
+                    "method": "fixture",
+                },
                 "provenance": _provenance(
                     "local_fixture", estimated=True, confidence=0.68
                 ),
@@ -506,39 +595,120 @@ async def _trend_rows(limit: int = 100) -> list[dict[str, Any]]:
             "category": row.category,
             "engagement_score": row.engagement_score,
             "timestamp": row.timestamp.isoformat(),
-            "provenance": _provenance(row.source, estimated=False, confidence=0.86),
+            "metadata": row.metadata_json or {},
+            "provenance": (
+                (row.metadata_json or {}).get("provenance")
+                if isinstance((row.metadata_json or {}).get("provenance"), dict)
+                else _provenance(row.source, estimated=False, confidence=0.86)
+            ),
         }
         for row in rows
     ]
 
 
 def _keyword_table_from_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    table = []
+    table: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    source_rows = [row for row in rows if row.get("source") != "local_fixture"]
+    for index, row in enumerate(source_rows[:12], start=1):
+        keyword = str(row["keyword"])
+        provenance = row.get("provenance") or _provenance(str(row.get("source") or "trend_signals"))
+        examples = _normalize_market_examples(
+            (row.get("metadata") or {}).get("market_examples")
+        ) or _fallback_market_examples(keyword, provenance)
+        competition = max(18, min(84, 62 - int(row.get("engagement_score") or 0) % 37))
+        growth = round(18 + (int(row.get("engagement_score") or 0) % 47), 1)
+        opportunity = "High" if competition < 45 else "Medium"
+        table.append(
+            {
+                "rank": index,
+                "keyword": keyword,
+                "category": str(row.get("category") or "Uncategorized"),
+                "search_volume": int(row.get("engagement_score") or 0),
+                "growth": growth,
+                "competition": competition,
+                "seasonality": _sparkline(keyword, 8),
+                "suggested_products": _category_products(str(row.get("category") or ""), keyword),
+                "opportunity": opportunity,
+                "source_backed": True,
+                "market_examples": examples,
+                "strategy": _market_strategy(keyword, examples),
+                "provenance": provenance,
+            }
+        )
+        seen.add(keyword.lower())
+
     for index, fixture in enumerate(KEYWORD_FIXTURES, start=1):
+        if fixture["keyword"].lower() in seen:
+            continue
         matching = next(
             (row for row in rows if fixture["keyword"] in row["keyword"]), None
         )
         volume = (
             int(matching["engagement_score"]) if matching else int(fixture["volume"])
         )
+        provenance = (
+            matching["provenance"]
+            if matching
+            else _provenance("local_fixture", confidence=0.68)
+        )
+        examples = (
+            _normalize_market_examples((matching.get("metadata") or {}).get("market_examples"))
+            if matching
+            else []
+        ) or _fallback_market_examples(fixture["keyword"], provenance)
         table.append(
             {
-                "rank": index,
+                "rank": len(table) + 1,
                 "keyword": fixture["keyword"],
+                "category": fixture["category"],
                 "search_volume": volume,
                 "growth": fixture["growth"],
                 "competition": fixture["competition"],
                 "seasonality": _sparkline(fixture["keyword"], 8),
                 "suggested_products": fixture["products"],
                 "opportunity": fixture["opportunity"],
-                "provenance": (
-                    matching["provenance"]
-                    if matching
-                    else _provenance("local_fixture", confidence=0.68)
-                ),
+                "source_backed": bool(matching and matching.get("source") != "local_fixture"),
+                "market_examples": examples,
+                "strategy": _market_strategy(fixture["keyword"], examples),
+                "provenance": provenance,
             }
         )
     return table
+
+
+def _design_ideas_from_keywords(keywords: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ideas: list[dict[str, Any]] = []
+    for item in keywords[:4]:
+        products = item.get("suggested_products") or ["T-Shirts"]
+        product_type = str(products[0])
+        keyword = str(item["keyword"])
+        examples = item.get("market_examples") or []
+        ideas.append(
+            {
+                "title": f"{keyword.title()} Original Variation",
+                "keyword": keyword,
+                "niche": keyword,
+                "product_type": product_type,
+                "trend": item.get("growth", 0),
+                "opportunity": item.get("opportunity", "Medium"),
+                "market_examples": examples,
+                "strategy": item.get("strategy") or _market_strategy(keyword, examples),
+                "provenance": item.get("provenance"),
+            }
+        )
+    if ideas:
+        return ideas
+    return [
+        {
+            **idea,
+            "product_type": "T-Shirt",
+            "market_examples": [],
+            "strategy": _market_strategy(idea["keyword"], []),
+            "provenance": _provenance("local_fixture", confidence=0.68),
+        }
+        for idea in DESIGN_IDEAS
+    ]
 
 
 async def get_overview_dashboard(
@@ -781,6 +951,7 @@ async def get_trend_insights(
         table = sorted(table, key=lambda item: str(item.get(sort_by, "")), reverse=reverse)
     else:
         table = sorted(table, key=lambda item: item.get(sort_by, 0), reverse=reverse)
+    table = sorted(table, key=lambda item: 0 if item.get("source_backed") else 1)
     page_items, pagination = _page_slice(table, page=page, page_size=page_size)
     pagination.update({"sort_by": sort_by, "sort_order": "desc" if reverse else "asc"})
 
@@ -820,7 +991,7 @@ async def get_trend_insights(
         "keywords": page_items,
         "pagination": pagination,
         "product_categories": PRODUCT_CATEGORIES,
-        "design_ideas": DESIGN_IDEAS,
+        "design_ideas": _design_ideas_from_keywords(page_items),
         "tag_clusters": [
             {
                 "cluster": "dog mom",

@@ -50,6 +50,17 @@ def test_scrapegraph_adapter_normalizes_structured_trends():
             "engagement_score": 1250,
             "category": "animals",
             "method": "scrapegraph",
+            "market_examples": [
+                {
+                    "title": "Funny Cat Shirt",
+                    "keyword": "Funny Cat Shirt",
+                    "source": "etsy",
+                    "source_url": None,
+                    "image_url": None,
+                    "engagement_score": 1250,
+                    "example_type": "source_product",
+                }
+            ],
         },
         {
             "source": "etsy",
@@ -57,6 +68,7 @@ def test_scrapegraph_adapter_normalizes_structured_trends():
             "engagement_score": 98,
             "category": "other",
             "method": "scrapegraph",
+            "market_examples": [],
         },
     ]
 
@@ -128,6 +140,17 @@ async def test_refresh_trends_persists_and_updates_status(monkeypatch):
                 "keyword": "funny cat mug",
                 "engagement_score": 42,
                 "category": "animals",
+                "market_examples": [
+                    {
+                        "title": "Funny Cat Mug Bestseller",
+                        "keyword": "funny cat mug",
+                        "source": "rss",
+                        "source_url": "https://example.com/funny-cat-mug",
+                        "image_url": "https://example.com/funny-cat-mug.jpg",
+                        "engagement_score": 42,
+                        "example_type": "source_trend",
+                    }
+                ],
             }
         ], {
             "mode": "live",
@@ -159,6 +182,8 @@ async def test_refresh_trends_persists_and_updates_status(monkeypatch):
         rows = (await session.exec(select(TrendSignal))).all()
     assert len(rows) == 1
     assert rows[0].keyword == "funny cat mug"
+    assert rows[0].metadata_json
+    assert rows[0].metadata_json["market_examples"][0]["title"] == "Funny Cat Mug Bestseller"
 
 
 def test_get_refresh_status_formats_timestamps(monkeypatch):

@@ -15,7 +15,6 @@ import {
   SelectBox,
   formatNumber,
 } from '../components/ControlCenter';
-import { DemoProductArt, variantForText } from '../components/DemoProductArt';
 import {
   DashboardResponse,
   addTagClusterToWatchlist,
@@ -26,6 +25,7 @@ import {
 import {
   LiveTrendSignal,
   LiveTrendsMetaResponse,
+  MarketExample,
   TrendRefreshStatus,
   fetchLiveTrendStatus,
   fetchLiveTrends,
@@ -122,6 +122,7 @@ export default function TrendsPage() {
   };
 
   const useKeywordInComposer = (item: any) => {
+    const example = firstMarketExample(item);
     void router.push(
       composerUrl({
         source: 'trends',
@@ -129,17 +130,20 @@ export default function TrendsPage() {
         niche: item.keyword,
         product_type: item.suggested_products?.[0],
         tags: (item.suggested_products || []).join(','),
+        ...evidencePayload(example),
       })
     );
   };
 
   const useIdeaInComposer = (idea: any) => {
+    const example = firstMarketExample(idea);
     void router.push(
       composerUrl({
         source: 'trend-design-idea',
         keyword: idea.keyword || idea.title,
         niche: idea.niche || idea.title,
         product_type: idea.product_type || 'T-Shirt',
+        ...evidencePayload(example),
       })
     );
   };
@@ -254,7 +258,7 @@ export default function TrendsPage() {
                     <tr>
                       <th className="py-2">#</th>
                       <th>Keyword</th>
-                      <th>Demo Asset</th>
+                      <th>Market Evidence</th>
                       <th>Search Volume</th>
                       <th>Growth</th>
                       <th>Competition</th>
@@ -276,11 +280,9 @@ export default function TrendsPage() {
                           </button>
                         </td>
                         <td className="min-w-[150px]">
-                          <DemoProductArt
-                            title={item.keyword}
-                            subtitle={(item.suggested_products || [])[0] || 'Trend product'}
-                            productType={(item.suggested_products || [])[0]}
-                            variant={variantForText(item.keyword)}
+                          <MarketExamplePreview
+                            example={firstMarketExample(item)}
+                            fallbackTitle={item.keyword}
                             compact
                           />
                         </td>
@@ -304,6 +306,7 @@ export default function TrendsPage() {
                               niche: item.keyword,
                               product_type: item.suggested_products?.[0],
                               tags: (item.suggested_products || []).join(','),
+                              ...evidencePayload(firstMarketExample(item)),
                             })} className="text-orange-300">Compose</a>
                             <button type="button" onClick={() => watchKeyword(item)} className="text-emerald-300">Watch</button>
                           </div>
@@ -315,25 +318,33 @@ export default function TrendsPage() {
               </div>
               {selectedKeyword ? (
                 <div className="mt-4 rounded-md border border-slate-800 bg-slate-950 p-3 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
+                  <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
+                    <div className="space-y-3">
                       <p className="font-medium text-slate-100">{selectedKeyword.keyword}</p>
                       <p className="text-slate-500">
                         {formatNumber(selectedKeyword.search_volume)} searches, {selectedKeyword.competition}/100 competition.
                       </p>
+                      <MarketExamplePreview
+                        example={firstMarketExample(selectedKeyword)}
+                        fallbackTitle={selectedKeyword.keyword}
+                      />
                     </div>
-                    <a
-                      href={composerUrl({
-                        source: 'trends',
-                        keyword: selectedKeyword.keyword,
-                        niche: selectedKeyword.keyword,
-                        product_type: selectedKeyword.suggested_products?.[0],
-                        tags: (selectedKeyword.suggested_products || []).join(','),
-                      })}
-                      className="rounded-md border border-orange-500 bg-orange-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
-                    >
-                      Use in Composer
-                    </a>
+                    <div className="space-y-3">
+                      <MarketStrategyNotes strategy={selectedKeyword.strategy} />
+                      <a
+                        href={composerUrl({
+                          source: 'trends',
+                          keyword: selectedKeyword.keyword,
+                          niche: selectedKeyword.keyword,
+                          product_type: selectedKeyword.suggested_products?.[0],
+                          tags: (selectedKeyword.suggested_products || []).join(','),
+                          ...evidencePayload(firstMarketExample(selectedKeyword)),
+                        })}
+                        className="inline-flex rounded-md border border-orange-500 bg-orange-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
+                      >
+                        Use in Composer
+                      </a>
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -343,15 +354,16 @@ export default function TrendsPage() {
               <Panel title="Related Design Ideas">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(data.design_ideas || []).map((idea: any) => (
-                    <div key={idea.title} className="rounded-md border border-slate-800 bg-slate-950 p-3">
-                      <DemoProductArt
-                        title={idea.title}
-                        subtitle={idea.product_type || 'Design concept'}
-                        productType={idea.product_type || 'T-Shirt'}
-                        variant={variantForText(`${idea.title} ${idea.keyword || ''}`)}
-                        className="mb-3"
+                    <div key={idea.title} className="space-y-3 rounded-md border border-slate-800 bg-slate-950 p-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-100">{idea.title}</p>
+                        <p className="text-xs text-slate-500">{idea.product_type || 'Design concept'} / {idea.keyword || idea.niche}</p>
+                      </div>
+                      <MarketExamplePreview
+                        example={firstMarketExample(idea)}
+                        fallbackTitle={idea.keyword || idea.title}
                       />
-                      <span className="sr-only">{idea.title}</span>
+                      <MarketStrategyNotes strategy={idea.strategy} compact />
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Pill tone={idea.opportunity === 'High' ? 'green' : 'orange'}>{idea.opportunity} opportunity</Pill>
                         <a href={composerUrl({
@@ -359,6 +371,7 @@ export default function TrendsPage() {
                           keyword: idea.keyword || idea.title,
                           niche: idea.niche || idea.title,
                           product_type: idea.product_type || 'T-Shirt',
+                          ...evidencePayload(firstMarketExample(idea)),
                         })} className="text-sm text-orange-300">
                           Use in Composer
                         </a>
@@ -426,7 +439,7 @@ function LiveScrapeRowsPanel({
     >
       <div className="mb-3 grid gap-2 text-sm text-slate-300 md:grid-cols-4">
         <ScrapeStat label="Mode" value={status?.last_mode || 'pending'} />
-        <ScrapeStat label="Persisted" value={String(status?.signals_persisted ?? data?.pagination.total ?? 0)} />
+        <ScrapeStat label="Persisted" value={String(status?.signals_persisted ?? data?.pagination?.total ?? 0)} />
         <ScrapeStat label="Succeeded" value={String(status?.sources_succeeded?.length ?? 0)} />
         <ScrapeStat label="Finished" value={finishedAt} />
       </div>
@@ -438,6 +451,7 @@ function LiveScrapeRowsPanel({
                 <th className="py-2">Keyword</th>
                 <th>Source</th>
                 <th>Method</th>
+                <th>Evidence</th>
                 <th>Category</th>
                 <th>Score</th>
                 <th>Confidence</th>
@@ -493,11 +507,153 @@ function LiveScrapeRow({ row, method }: { row: LiveTrendSignal; method: string }
       <td className="py-3 font-medium text-slate-100">{row.keyword}</td>
       <td>{row.source}</td>
       <td>{method}</td>
+      <td className="min-w-[130px]">
+        <MarketExampleSummary example={firstMarketExample(row)} fallbackTitle={row.keyword} />
+      </td>
       <td>{row.category}</td>
       <td>{formatNumber(row.engagement_score)}</td>
       <td>{typeof confidence === 'number' ? `${Math.round(confidence * 100)}%` : 'n/a'}</td>
       <td className="text-slate-400">{new Date(row.timestamp).toLocaleString()}</td>
     </tr>
+  );
+}
+
+type MarketStrategy = {
+  variation_prompts?: string[];
+  anti_patterns?: string[];
+  evidence_summary?: string;
+};
+
+function firstMarketExample(item: any): MarketExample | null {
+  const examples = Array.isArray(item?.market_examples) ? item.market_examples : [];
+  return examples[0] || null;
+}
+
+function evidencePayload(example: MarketExample | null): Record<string, string | undefined> {
+  if (!example) return {};
+  return {
+    evidence_title: example.title,
+    evidence_source: example.source,
+    evidence_url: example.source_url || undefined,
+    evidence_image_url: example.image_url || undefined,
+    evidence_type: example.example_type || undefined,
+  };
+}
+
+function MarketExamplePreview({
+  example,
+  fallbackTitle,
+  compact = false,
+}: {
+  example: MarketExample | null;
+  fallbackTitle: string;
+  compact?: boolean;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const title = example?.title || fallbackTitle;
+  const source = example?.source || 'keyword_evidence';
+  const isEstimated = example?.provenance?.is_estimated || example?.example_type === 'keyword_evidence';
+  const hasImage = Boolean(example?.image_url && !imageFailed);
+  const label = isEstimated ? 'Keyword evidence' : `Source / ${source}`;
+  const body = (
+    <div className="min-w-0">
+      <p className={`${compact ? 'text-xs' : 'text-sm'} line-clamp-2 font-medium text-slate-100`}>
+        {title}
+      </p>
+      <p className="mt-1 truncate text-xs text-slate-500">{source}</p>
+    </div>
+  );
+
+  return (
+    <div className={`overflow-hidden rounded-md border border-slate-800 bg-slate-950 ${compact ? 'w-36' : ''}`}>
+      {hasImage ? (
+        <img
+          src={example?.image_url || ''}
+          alt={title}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+          className={`${compact ? 'h-20' : 'h-32'} w-full bg-slate-900 object-cover`}
+        />
+      ) : (
+        <div className={`${compact ? 'min-h-[80px]' : 'min-h-[112px]'} flex items-center bg-slate-900 p-3`}>
+          {body}
+        </div>
+      )}
+      <div className="space-y-2 border-t border-slate-800 p-2">
+        {hasImage ? body : null}
+        <div className="flex flex-wrap items-center gap-1">
+          <Pill tone={isEstimated ? 'orange' : 'green'}>{label}</Pill>
+          {example?.source_url ? (
+            <a
+              href={example.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-blue-300"
+            >
+              Open
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketExampleSummary({
+  example,
+  fallbackTitle,
+}: {
+  example: MarketExample | null;
+  fallbackTitle: string;
+}) {
+  const title = example?.title || fallbackTitle;
+  const source = example?.source || 'keyword';
+  return (
+    <div className="max-w-[180px]">
+      <p className="line-clamp-1 text-xs text-slate-200">{title}</p>
+      <p className="truncate text-xs text-slate-500">{source}</p>
+    </div>
+  );
+}
+
+function MarketStrategyNotes({
+  strategy,
+  compact = false,
+}: {
+  strategy?: MarketStrategy;
+  compact?: boolean;
+}) {
+  const variations = strategy?.variation_prompts || [];
+  const antiPatterns = strategy?.anti_patterns || [];
+  if (!strategy && !variations.length && !antiPatterns.length) return null;
+
+  return (
+    <div className="space-y-2 rounded-md border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">
+      {strategy?.evidence_summary ? (
+        <p className="text-slate-300">{strategy.evidence_summary}</p>
+      ) : null}
+      {variations.length ? (
+        <div>
+          <p className="font-medium uppercase text-slate-500">Variation logic</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {variations.slice(0, compact ? 1 : 2).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {antiPatterns.length && !compact ? (
+        <div>
+          <p className="font-medium uppercase text-slate-500">Avoid</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {antiPatterns.slice(0, 2).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

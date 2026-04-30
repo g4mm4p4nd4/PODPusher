@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Sequence
+from urllib.parse import urljoin, urlparse
 from uuid import uuid4
 
 import httpx
@@ -468,6 +469,105 @@ def _signal_confidence(
     return round(min(base, 0.94), 2)
 
 
+def _valid_public_asset_url(value: str | None, base_url: str) -> str | None:
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate or candidate.startswith(("data:", "blob:", "javascript:")):
+        return None
+    absolute = urljoin(base_url, candidate)
+    parsed = urlparse(absolute)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return absolute
+
+
+def _market_example_from_signal(
+    signal: Dict[str, Any],
+    *,
+    title: str | None = None,
+    source_url: str | None = None,
+    image_url: str | None = None,
+) -> Dict[str, Any] | None:
+    source = str(signal.get("source") or "unknown")
+    keyword = str(signal.get("keyword") or signal.get("term") or "").strip()
+    label = " ".join(str(title or keyword).split()).strip()
+    if not label:
+        return None
+    provenance = signal.get("provenance") if isinstance(signal.get("provenance"), dict) else {}
+    confidence = float(provenance.get("confidence", 0.78))
+    return {
+        "title": label[:180],
+        "keyword": keyword,
+        "source": source,
+        "source_url": source_url,
+        "image_url": image_url,
+        "engagement_score": int(signal.get("engagement_score") or 0),
+        "example_type": "source_product" if source in {"amazon", "etsy"} else "source_trend",
+        "provenance": {
+            "source": source,
+            "is_estimated": False,
+            "updated_at": utcnow().isoformat(),
+            "confidence": min(0.94, max(0.6, confidence)),
+        },
+    }
+
+
+def _normalize_market_examples(
+    value: Any,
+    *,
+    fallback_signal: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    examples = value if isinstance(value, list) else []
+    normalized: List[Dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in examples:
+        if not isinstance(raw, dict):
+            continue
+        title = " ".join(str(raw.get("title") or raw.get("keyword") or "").split())
+        if not title:
+            continue
+        source = str(raw.get("source") or (fallback_signal or {}).get("source") or "unknown")
+        source_url = (
+            _valid_public_asset_url(raw.get("source_url"), str(raw.get("source_url") or ""))
+            if isinstance(raw.get("source_url"), str)
+            else None
+        )
+        image_url = (
+            _valid_public_asset_url(raw.get("image_url"), source_url or str(raw.get("image_url") or ""))
+            if isinstance(raw.get("image_url"), str)
+            else None
+        )
+        key = (source, title.lower(), str(source_url or image_url or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        provenance = raw.get("provenance") if isinstance(raw.get("provenance"), dict) else {}
+        normalized.append(
+            {
+                "title": title[:180],
+                "keyword": str(raw.get("keyword") or (fallback_signal or {}).get("keyword") or title),
+                "source": source,
+                "source_url": source_url,
+                "image_url": image_url,
+                "engagement_score": int(raw.get("engagement_score") or (fallback_signal or {}).get("engagement_score") or 0),
+                "example_type": str(raw.get("example_type") or ("source_product" if source in {"amazon", "etsy"} else "source_trend")),
+                "provenance": {
+                    "source": str(provenance.get("source") or source),
+                    "is_estimated": bool(provenance.get("is_estimated", False)),
+                    "updated_at": str(provenance.get("updated_at") or utcnow().isoformat()),
+                    "confidence": float(provenance.get("confidence") or 0.78),
+                },
+            }
+        )
+        if len(normalized) >= 5:
+            break
+    if normalized or not fallback_signal:
+        return normalized
+    fallback = _market_example_from_signal(fallback_signal)
+    return [fallback] if fallback else []
+
+
 def normalize_signal(
     signal: Dict[str, Any],
     *,
@@ -498,6 +598,10 @@ def normalize_signal(
         signal.get("confidence")
         or _signal_confidence(method, keyword, engagement_score)
     )
+    market_examples = _normalize_market_examples(
+        signal.get("market_examples"),
+        fallback_signal={**signal, "source": source, "keyword": keyword, "engagement_score": engagement_score},
+    )
     return {
         **signal,
         "source": source,
@@ -505,6 +609,7 @@ def normalize_signal(
         "engagement_score": engagement_score,
         "category": category,
         "method": method,
+        "market_examples": market_examples,
         "provenance": {
             "source": source,
             "is_estimated": method in {"rss_fallback", "stub", "unknown"},
@@ -625,6 +730,29 @@ async def _collect_texts(handle, selectors: Sequence[str]) -> List[str]:
             if text:
                 values.append(text)
     return values
+
+
+async def _first_attr(
+    handle,
+    selectors: Sequence[str],
+    attributes: Sequence[str],
+    base_url: str,
+) -> str | None:
+    for selector in selectors:
+        try:
+            nodes = await handle.query_selector_all(selector)
+        except Exception:
+            nodes = []
+        for node in nodes:
+            for attribute in attributes:
+                try:
+                    value = await node.get_attribute(attribute)
+                except Exception:
+                    value = None
+                normalized = _valid_public_asset_url(value, base_url)
+                if normalized:
+                    return normalized
+    return None
 
 
 async def _readable_node_text(node) -> str:
@@ -820,6 +948,12 @@ async def _scrape_source(
             likes_text = await _first_text(handle, config.selectors.likes)
             shares_text = await _first_text(handle, config.selectors.shares)
             comments_text = await _first_text(handle, config.selectors.comments)
+            image_url = await _first_attr(
+                handle, config.selectors.image, ("src", "data-src"), page.url
+            )
+            source_url = await _first_attr(
+                handle, config.selectors.link, ("href",), page.url
+            )
             keyword = normalize_text(
                 " ".join(filter(None, [title, " ".join(hashtags)]))
             )
@@ -835,6 +969,22 @@ async def _scrape_source(
                     "source": name,
                     "keyword": keyword,
                     "engagement_score": engagement,
+                    "market_examples": [
+                        example
+                        for example in [
+                            _market_example_from_signal(
+                                {
+                                    "source": name,
+                                    "keyword": keyword,
+                                    "engagement_score": engagement,
+                                },
+                                title=title or keyword,
+                                source_url=source_url or page.url,
+                                image_url=image_url,
+                            )
+                        ]
+                        if example
+                    ],
                 },
                 default_method="selector_fallback",
             )
@@ -1359,6 +1509,11 @@ async def refresh_trends() -> Dict[str, Any]:
                         engagement_score=signal["engagement_score"],
                         category=signal["category"],
                         timestamp=utcnow(),
+                        metadata_json={
+                            "method": signal.get("method"),
+                            "provenance": signal.get("provenance"),
+                            "market_examples": signal.get("market_examples", []),
+                        },
                     )
                 )
                 SCRAPE_PERSISTED.labels(signal["source"]).inc()
@@ -1465,11 +1620,18 @@ async def get_live_trends(
                 "category": row.category,
                 "engagement_score": row.engagement_score,
                 "timestamp": row.timestamp.isoformat(),
+                "market_examples": (row.metadata_json or {}).get("market_examples", []),
+                "method": (row.metadata_json or {}).get("method"),
                 "provenance": {
                     "source": row.source,
                     "is_estimated": row.source in {"google_trends_rss", "stub_seed"},
                     "updated_at": row.timestamp.isoformat(),
-                    "confidence": 0.72 if row.source == "google_trends_rss" else 0.86,
+                    "confidence": float(
+                        ((row.metadata_json or {}).get("provenance") or {}).get(
+                            "confidence",
+                            0.72 if row.source == "google_trends_rss" else 0.86,
+                        )
+                    ),
                 },
             }
         )
