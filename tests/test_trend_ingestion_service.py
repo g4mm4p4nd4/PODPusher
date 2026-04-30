@@ -6,9 +6,13 @@ from sqlmodel import select
 from services.common.database import get_session, init_db
 from services.models import TrendSignal
 from services.trend_ingestion import service
+from services.trend_ingestion import scrapegraph_adapter
 from services.trend_ingestion.scrapegraph_adapter import (
     PublicOnlyConfigError,
+    ScrapeGraphUnavailable,
+    _graph_config,
     normalize_scrapegraph_result,
+    scrape_with_scrapegraph,
     validate_public_only_config,
 )
 from services.trend_ingestion.circuit_breaker import CircuitBreaker
@@ -62,6 +66,55 @@ def test_public_only_config_rejects_session_settings(monkeypatch):
 
     with pytest.raises(PublicOnlyConfigError):
         validate_public_only_config()
+
+
+def test_scrapegraph_config_maps_opencode_go_to_openai_compatible(monkeypatch):
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_MODEL", "opencode-go/kimi-k2.6")
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_API_KEY", "opencode-test-key")
+    monkeypatch.setattr(scrapegraph_adapter, "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1")
+
+    config = _graph_config()
+
+    assert config["llm"]["model_instance"].model_name == "kimi-k2.6"
+    assert str(config["llm"]["model_instance"].openai_api_base).rstrip("/") == "https://opencode.ai/zen/go/v1"
+    assert config["llm"]["model_tokens"] == scrapegraph_adapter.SCRAPEGRAPH_MODEL_TOKENS
+
+
+def test_scrapegraph_config_requires_opencode_go_key(monkeypatch):
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_MODEL", "opencode-go/deepseek-v4-flash")
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_API_KEY", "")
+
+    with pytest.raises(ScrapeGraphUnavailable):
+        _graph_config()
+
+
+@pytest.mark.asyncio
+async def test_scrapegraph_adapter_times_out_slow_public_sources(monkeypatch):
+    def _slow_run(_source_name, _config):
+        import time
+
+        time.sleep(0.1)
+        return {"trends": ["Funny Cat Shirt"]}
+
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_ENABLED", True)
+    monkeypatch.setattr(scrapegraph_adapter, "SCRAPEGRAPH_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(scrapegraph_adapter, "_run_scrapegraph", _slow_run)
+
+    config = SourceConfig(
+        url="https://example.com/trends",
+        selectors=SelectorSet(
+            item=["article"],
+            title=["h1"],
+            hashtags=[],
+            likes=[],
+            shares=[],
+            comments=[],
+        ),
+        wait_for_selector="article",
+    )
+
+    with pytest.raises(ScrapeGraphUnavailable, match="timed out"):
+        await scrape_with_scrapegraph("example", config)
 
 
 @pytest.mark.asyncio
@@ -137,6 +190,8 @@ async def test_gather_trends_falls_back_when_playwright_boot_fails(monkeypatch):
         return []
 
     monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "RSS_FALLBACK_ENABLED", True)
+    monkeypatch.setattr(service, "ALLOW_STUB_FALLBACK", True)
     monkeypatch.setattr(service, "scraper_circuit_breaker", CircuitBreaker())
     monkeypatch.setattr(service, "PLATFORM_CONFIG", {"tiktok": object()})
     monkeypatch.setattr(service, "async_playwright", lambda: _BrokenPlaywrightCtx())
@@ -148,6 +203,31 @@ async def test_gather_trends_falls_back_when_playwright_boot_fails(monkeypatch):
     assert metadata["sources_failed"]["playwright"] == "playwright unavailable"
     assert metadata["source_diagnostics"]["playwright"]["status"] == "failed"
     assert signals
+
+
+@pytest.mark.asyncio
+async def test_gather_trends_can_disable_rss_and_stub_fallback(monkeypatch):
+    class _BrokenPlaywrightCtx:
+        async def __aenter__(self):
+            raise RuntimeError("playwright unavailable")
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "RSS_FALLBACK_ENABLED", False)
+    monkeypatch.setattr(service, "ALLOW_STUB_FALLBACK", False)
+    monkeypatch.setattr(service, "scraper_circuit_breaker", CircuitBreaker())
+    monkeypatch.setattr(service, "PLATFORM_CONFIG", {"tiktok": object()})
+    monkeypatch.setattr(service, "async_playwright", lambda: _BrokenPlaywrightCtx())
+
+    signals, metadata = await service._gather_trends()
+
+    assert signals == []
+    assert metadata["mode"] == "live_empty"
+    assert metadata["source_methods"]["google_trends_rss"] == "skipped"
+    assert metadata["source_diagnostics"]["google_trends_rss"]["reason"] == "RSS fallback disabled"
+    assert metadata["skipped_count"] == 1
 
 
 @pytest.mark.asyncio
@@ -190,6 +270,8 @@ async def test_gather_trends_uses_scrapegraph_before_selector(monkeypatch):
     )
 
     monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "RSS_FALLBACK_ENABLED", True)
+    monkeypatch.setattr(service, "ALLOW_STUB_FALLBACK", True)
     monkeypatch.setattr(service, "PLATFORM_CONFIG", {"public": config})
     monkeypatch.setattr(service, "async_playwright", lambda: _DummyPlaywrightCtx())
     monkeypatch.setattr(service, "scrape_with_scrapegraph", _fake_scrapegraph)
@@ -244,6 +326,8 @@ async def test_gather_trends_falls_back_from_scrapegraph_to_selector(monkeypatch
     )
 
     monkeypatch.setattr(service, "STUB_ONLY", False)
+    monkeypatch.setattr(service, "RSS_FALLBACK_ENABLED", True)
+    monkeypatch.setattr(service, "ALLOW_STUB_FALLBACK", True)
     monkeypatch.setattr(service, "PLATFORM_CONFIG", {"public": config})
     monkeypatch.setattr(service, "async_playwright", lambda: _DummyPlaywrightCtx())
     monkeypatch.setattr(service, "scrape_with_scrapegraph", _fake_scrapegraph)

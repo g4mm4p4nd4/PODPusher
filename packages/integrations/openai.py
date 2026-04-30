@@ -1,9 +1,9 @@
 """OpenAI integration helpers using the official 1.x SDK.
 
-These helpers centralise access to chat, image, and tag suggestions. When
-OPENAI_USE_STUB is truthy (the default in tests) or the API key is missing,
-stub responses are returned so the rest of the pipeline can run without
-external calls.
+These helpers centralise access to chat, image, and tag suggestions. Explicit
+stub mode is still available for tests, but missing live credentials should
+raise so callers can return needs_implementation metadata instead of fake
+production success.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from typing import Any, Awaitable, Callable, Optional
 from openai import APIError, APITimeoutError, AsyncOpenAI, RateLimitError
 
 API_KEY = os.getenv("OPENAI_API_KEY")
-USE_STUB = os.getenv("OPENAI_USE_STUB", "1").lower() in {"1", "true", "yes"}
+USE_STUB = os.getenv("OPENAI_USE_STUB", "0").lower() in {"1", "true", "yes"}
 CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
 IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
 IMAGE_SIZE = os.getenv("OPENAI_IMAGE_SIZE", "1024x1024")
@@ -99,7 +99,7 @@ def _coerce_text(content: Any) -> str:
 
 
 async def generate_caption(prompt: str) -> str:
-    if USE_STUB or not API_KEY:
+    if USE_STUB:
         return f"Caption for: {prompt}"
 
     async def _call() -> Any:
@@ -118,7 +118,7 @@ async def generate_caption(prompt: str) -> str:
 
 
 async def generate_brief(prompt: str) -> str:
-    if USE_STUB or not API_KEY:
+    if USE_STUB:
         return f"Idea brief: {prompt}"
 
     async def _call() -> Any:
@@ -140,7 +140,7 @@ async def generate_brief(prompt: str) -> str:
 
 
 async def generate_image(prompt: str) -> str:
-    if USE_STUB or not API_KEY:
+    if USE_STUB:
         return "http://example.com/image.png"
 
     async def _call() -> Any:

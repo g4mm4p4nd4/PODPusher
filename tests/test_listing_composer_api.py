@@ -45,7 +45,7 @@ async def test_listing_draft_crud():
 
 
 @pytest.mark.asyncio
-async def test_publish_queue_creates_demo_job_and_retains_draft_id():
+async def test_publish_queue_marks_live_publish_as_implementation_required():
     await init_db()
     transport = ASGITransport(app=gateway_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -68,9 +68,9 @@ async def test_publish_queue_creates_demo_job_and_retains_draft_id():
         assert body["draft_id"] == draft_id
         assert body["queue_item_id"] > 0
         assert body["status"] == "pending"
-        assert body["mode"] == "demo"
-        assert body["integration_status"]["etsy"]["status"] == "demo"
-        assert body["integration_status"]["etsy"]["blocking"] is False
+        assert body["mode"] == "implementation_required"
+        assert body["integration_status"]["etsy"]["status"] == "needs_implementation"
+        assert body["integration_status"]["etsy"]["blocking"] is True
 
         queue = await client.get("/api/listing-composer/publish-queue")
         assert queue.status_code == 200
@@ -111,7 +111,10 @@ async def test_export_payload_shape_for_json_and_csv():
         assert body["tags"] == payload["tags"]
         assert body["metadata"]["language"] == "en"
         assert body["metadata"]["revision_count"] == 1
-        assert body["metadata"]["integration_contract"]["etsy"] == "credential_gated_non_blocking"
+        assert (
+            body["metadata"]["integration_contract"]["etsy"]
+            == "needs_live_publish_implementation_or_credentials"
+        )
         assert "optimization_score" in body["score"]
         assert "status" in body["compliance"]
         assert body["provenance"]["source"] == "local_estimator"

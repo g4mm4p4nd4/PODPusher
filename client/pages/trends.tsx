@@ -23,6 +23,14 @@ import {
   saveTrendKeyword,
   watchTrendKeyword,
 } from '../services/controlCenter';
+import {
+  LiveTrendSignal,
+  LiveTrendsMetaResponse,
+  TrendRefreshStatus,
+  fetchLiveTrendStatus,
+  fetchLiveTrends,
+  refreshLiveTrends,
+} from '../services/trends';
 import { getCommonStaticProps } from '../utils/translationProps';
 
 export default function TrendsPage() {
@@ -37,6 +45,9 @@ export default function TrendsPage() {
   const [selectedKeyword, setSelectedKeyword] = useState<any>(null);
   const [actionStatus, setActionStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [liveData, setLiveData] = useState<LiveTrendsMetaResponse | null>(null);
+  const [liveStatus, setLiveStatus] = useState<TrendRefreshStatus | null>(null);
+  const [liveLoading, setLiveLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -55,6 +66,52 @@ export default function TrendsPage() {
   useEffect(() => {
     void load();
   }, [marketplace, category, country, language, dateRange]);
+
+  const loadLiveRows = async () => {
+    setLiveLoading(true);
+    try {
+      const result = await fetchLiveTrends({
+        includeMeta: true,
+        page: 1,
+        pageSize: 10,
+        limit: 10,
+        sortBy: 'timestamp',
+        sortOrder: 'desc',
+      });
+      setLiveData(result);
+    } finally {
+      setLiveLoading(false);
+    }
+  };
+
+  const loadLiveStatus = async () => {
+    const status = await fetchLiveTrendStatus();
+    setLiveStatus(status);
+  };
+
+  const refreshLiveRows = async () => {
+    setLiveLoading(true);
+    try {
+      const status = await refreshLiveTrends();
+      setLiveStatus(status);
+      const result = await fetchLiveTrends({
+        includeMeta: true,
+        page: 1,
+        pageSize: 10,
+        limit: 10,
+        sortBy: 'timestamp',
+        sortOrder: 'desc',
+      });
+      setLiveData(result);
+    } finally {
+      setLiveLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadLiveRows();
+    void loadLiveStatus();
+  }, []);
 
   const composerUrl = (payload: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
@@ -156,6 +213,14 @@ export default function TrendsPage() {
         </Panel>
       ) : null}
       {actionStatus ? <EmptyState message={actionStatus} /> : null}
+
+      <LiveScrapeRowsPanel
+        data={liveData}
+        status={liveStatus}
+        loading={liveLoading}
+        onRefresh={refreshLiveRows}
+        onReload={loadLiveRows}
+      />
 
       {loading || !data ? (
         <LoadingState />
@@ -326,6 +391,113 @@ export default function TrendsPage() {
         </>
       )}
     </div>
+  );
+}
+
+function LiveScrapeRowsPanel({
+  data,
+  status,
+  loading,
+  onRefresh,
+  onReload,
+}: {
+  data: LiveTrendsMetaResponse | null;
+  status: TrendRefreshStatus | null;
+  loading: boolean;
+  onRefresh: () => void;
+  onReload: () => void;
+}) {
+  const rows = Object.entries(data?.items_by_category || {}).flatMap(([category, items]) =>
+    items.map((item) => ({ ...item, category: item.category || category }))
+  );
+  const diagnostics = status?.source_diagnostics || {};
+  const diagnosticEntries = Object.entries(diagnostics);
+  const finishedAt = status?.last_finished_at ? new Date(status.last_finished_at).toLocaleString() : 'Not run yet';
+
+  return (
+    <Panel
+      title="Live Scrape Rows"
+      action={
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onReload} disabled={loading}>Reload Rows</Button>
+          <Button onClick={onRefresh} loading={loading} variant="primary">Refresh Scrape</Button>
+        </div>
+      }
+    >
+      <div className="mb-3 grid gap-2 text-sm text-slate-300 md:grid-cols-4">
+        <ScrapeStat label="Mode" value={status?.last_mode || 'pending'} />
+        <ScrapeStat label="Persisted" value={String(status?.signals_persisted ?? data?.pagination.total ?? 0)} />
+        <ScrapeStat label="Succeeded" value={String(status?.sources_succeeded?.length ?? 0)} />
+        <ScrapeStat label="Finished" value={finishedAt} />
+      </div>
+      {rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="text-left text-slate-500">
+              <tr>
+                <th className="py-2">Keyword</th>
+                <th>Source</th>
+                <th>Method</th>
+                <th>Category</th>
+                <th>Score</th>
+                <th>Confidence</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <LiveScrapeRow
+                  key={`${row.source}-${row.keyword}-${row.timestamp}`}
+                  row={row}
+                  method={diagnostics[row.source]?.method || status?.source_methods?.[row.source] || row.source}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState message={loading ? 'Refreshing live scrape rows...' : 'No persisted live scrape rows yet.'} />
+      )}
+      {diagnosticEntries.length ? (
+        <div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-2 xl:grid-cols-3">
+          {diagnosticEntries.map(([source, diagnostic]) => (
+            <div key={source} className="rounded-md border border-slate-800 bg-slate-950 p-2">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="font-medium text-slate-200">{source}</span>
+                <Pill tone={diagnostic.status === 'success' ? 'green' : 'orange'}>{diagnostic.method}</Pill>
+              </div>
+              <p>{diagnostic.status}: {diagnostic.persisted} persisted from {diagnostic.collected} collected</p>
+              {diagnostic.reason ? <p className="mt-1 line-clamp-2 text-slate-500">{diagnostic.reason}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {data?.provenance ? <ProvenanceNote provenance={data.provenance} /> : null}
+    </Panel>
+  );
+}
+
+function ScrapeStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-slate-800 bg-slate-950 p-2">
+      <p className="text-xs uppercase text-slate-500">{label}</p>
+      <p className="truncate font-medium text-slate-100">{value}</p>
+    </div>
+  );
+}
+
+function LiveScrapeRow({ row, method }: { row: LiveTrendSignal; method: string }) {
+  const confidence = row.provenance?.confidence;
+  return (
+    <tr className="border-t border-slate-800">
+      <td className="py-3 font-medium text-slate-100">{row.keyword}</td>
+      <td>{row.source}</td>
+      <td>{method}</td>
+      <td>{row.category}</td>
+      <td>{formatNumber(row.engagement_score)}</td>
+      <td>{typeof confidence === 'number' ? `${Math.round(confidence * 100)}%` : 'n/a'}</td>
+      <td className="text-slate-400">{new Date(row.timestamp).toLocaleString()}</td>
+    </tr>
   );
 }
 

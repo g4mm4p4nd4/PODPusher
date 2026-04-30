@@ -305,17 +305,11 @@ async def usage_ledger(user_id: int | None = Depends(optional_user_id)):
         ).all()
     if not rows:
         return {
-            "items": [
-                {
-                    "resource_type": "image_generation",
-                    "quantity": 17500,
-                    "source": "demo_usage_estimate",
-                    "created_at": utcnow().isoformat(),
-                    "provenance": _provenance("demo_usage_estimate", estimated=True),
-                }
-            ],
-            "demo_state": True,
-            "provenance": _provenance("usageledger_table", estimated=True),
+            "items": [],
+            "demo_state": False,
+            "implementation_status": "needs_implementation",
+            "message": "No usage ledger rows exist yet; synthetic usage estimates have been disabled for production readiness.",
+            "provenance": _provenance("usageledger_table"),
         }
     return {
         "items": [
@@ -330,6 +324,7 @@ async def usage_ledger(user_id: int | None = Depends(optional_user_id)):
             for item in rows
         ],
         "demo_state": False,
+        "implementation_status": "live",
         "provenance": _provenance("usageledger_table"),
     }
 
@@ -342,11 +337,12 @@ async def configure_integration(
 ):
     return {
         "provider": provider,
-        "status": "credentials_missing",
+        "status": "needs_implementation",
         "action": payload.action,
         "configured": False,
-        "is_demo": True,
-        "message": f"{provider.title()} credentials are not configured in local mode; dashboard data remains available with fallback status.",
+        "is_demo": False,
+        "implementation_status": "needs_implementation",
+        "message": f"{provider.title()} configuration is not implemented/configured for this environment.",
         "user_id": _user_id(user_id),
-        "provenance": _provenance("integration_placeholder", estimated=True),
+        "provenance": _provenance("integration_status_contract", estimated=False),
     }

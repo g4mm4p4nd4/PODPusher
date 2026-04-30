@@ -1,14 +1,20 @@
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Button, Panel, Pill, ProgressBar } from './ControlCenter';
+import { Button, Panel, Pill, ProgressBar, ProvenanceNote } from './ControlCenter';
 import { DemoProductArt, variantForText } from './DemoProductArt';
 import {
   DraftData,
+  DraftListResponse,
+  DraftRevision,
+  PublishQueueListResponse,
   checkListingDraftCompliance,
   exportDraft,
+  fetchDraftHistory,
   fetchTagSuggestions,
   generateListingDraft,
+  listDrafts,
+  listPublishQueue,
   loadDraft,
   queueDraftForPublish,
   saveDraft,
@@ -68,32 +74,88 @@ export default function ListingComposer({ onPublish }: Props) {
   const [draftStatus, setDraftStatus] = useState('Demo/local draft loaded');
   const [queueStatus, setQueueStatus] = useState('Publish queue idle');
   const [exportStatus, setExportStatus] = useState('Export ready');
+  const [draftList, setDraftList] = useState<DraftListResponse | null>(null);
+  const [draftListPage, setDraftListPage] = useState(1);
+  const [draftHistory, setDraftHistory] = useState<DraftRevision[]>([]);
+  const [selectedHistoryDraftId, setSelectedHistoryDraftId] = useState<number | null>(null);
+  const [publishQueue, setPublishQueue] = useState<PublishQueueListResponse | null>(null);
+  const [publishQueuePage, setPublishQueuePage] = useState(1);
+  const [publishQueueFilter, setPublishQueueFilter] = useState('all');
+  const [activityStatus, setActivityStatus] = useState('Loading source-backed activity...');
   const lastLengthsRef = useRef({ title: 0, description: 0 });
 
   const isTitleInvalid = title.length > 140;
   const isDescriptionInvalid = description.length > 5000;
   const isFormInvalid = isTitleInvalid || isDescriptionInvalid || !title.trim();
 
+  const applyDraft = (draft: DraftData) => {
+    if (draft.title) setTitle(draft.title);
+    if (draft.description) setDescription(draft.description);
+    if (draft.tags?.length) setTags(draft.tags);
+    setLanguage(draft.language || 'en');
+    if (draft.niche) setNiche(draft.niche);
+    if (draft.primary_keyword) setPrimaryKeyword(draft.primary_keyword);
+    if (draft.product_type) setProductType(draft.product_type);
+    if (draft.target_audience) setTargetAudience(draft.target_audience);
+    if (draft.materials) setMaterials(draft.materials);
+    if (draft.occasion) setOccasion(draft.occasion);
+    if (draft.holiday) setHoliday(draft.holiday);
+    if (draft.recipient) setRecipient(draft.recipient);
+    if (draft.style) setStyle(draft.style);
+  };
+
+  const loadHistory = async (draftId: number) => {
+    setSelectedHistoryDraftId(draftId);
+    const history = await fetchDraftHistory(draftId);
+    setDraftHistory(history);
+  };
+
+  const refreshDraftActivity = async (page = draftListPage) => {
+    const list = await listDrafts({
+      page,
+      page_size: 3,
+      sort_by: 'updated_at',
+      sort_order: 'desc',
+    });
+    setDraftList(list);
+    setDraftListPage(list.page);
+    if (list.items[0]?.id) {
+      await loadHistory(list.items[0].id);
+    } else {
+      setDraftHistory([]);
+      setSelectedHistoryDraftId(null);
+    }
+    setActivityStatus('Source-backed activity loaded');
+  };
+
+  const refreshPublishQueue = async (page = publishQueuePage, status = publishQueueFilter) => {
+    const queue = await listPublishQueue({
+      page,
+      page_size: 4,
+      status,
+    });
+    setPublishQueue(queue);
+    setPublishQueuePage(queue.page);
+    setActivityStatus('Source-backed activity loaded');
+  };
+
   useEffect(() => {
     const id = localStorage.getItem('draftId');
     if (!id) return;
     loadDraft(Number(id))
       .then((draft: DraftData) => {
-        if (draft.title) setTitle(draft.title);
-        if (draft.description) setDescription(draft.description);
-        if (draft.tags?.length) setTags(draft.tags);
-        setLanguage(draft.language);
-        if (draft.niche) setNiche(draft.niche);
-        if (draft.primary_keyword) setPrimaryKeyword(draft.primary_keyword);
-        if (draft.product_type) setProductType(draft.product_type);
-        if (draft.target_audience) setTargetAudience(draft.target_audience);
-        if (draft.materials) setMaterials(draft.materials);
-        if (draft.occasion) setOccasion(draft.occasion);
-        if (draft.holiday) setHoliday(draft.holiday);
-        if (draft.recipient) setRecipient(draft.recipient);
-        if (draft.style) setStyle(draft.style);
+        applyDraft(draft);
       })
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      refreshDraftActivity(1),
+      refreshPublishQueue(1, publishQueueFilter),
+    ]).catch(() => {
+      setActivityStatus('Source-backed activity unavailable');
+    });
   }, []);
 
   useEffect(() => {
@@ -231,6 +293,9 @@ export default function ListingComposer({ onPublish }: Props) {
     });
     localStorage.setItem('draftId', String(id));
     setDraftStatus('Draft saved just now');
+    await refreshDraftActivity(1).catch(() => {
+      setActivityStatus('Draft saved; source-backed activity refresh failed');
+    });
     await refreshScore();
     return id;
   };
@@ -246,6 +311,9 @@ export default function ListingComposer({ onPublish }: Props) {
       const id = await persistDraft();
       const queued = await queueDraftForPublish(id);
       setQueueStatus(`Queue ${queued.status}: draft ${queued.draft_id}, job ${queued.queue_item_id}`);
+      await refreshPublishQueue(1, publishQueueFilter).catch(() => {
+        setActivityStatus('Queue updated; source-backed activity refresh failed');
+      });
       onPublish?.({
         id,
         title,
@@ -310,30 +378,63 @@ export default function ListingComposer({ onPublish }: Props) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.75fr_1.6fr_0.95fr]">
+        <div className="space-y-4">
           <Panel title="Product Inputs">
             <div className="space-y-3">
               <div className="rounded-md border border-blue-500/30 bg-blue-950/30 p-3 text-xs text-blue-100">
                 Default copy and thumbnails are local demo evidence. Live Etsy, Printify, OpenAI, and marketplace generation stay non-blocking until credentials are connected.
               </div>
               <Field label="Niche" value={niche} onChange={setNiche} />
-            <Field label="Primary Keyword" value={primaryKeyword} onChange={setPrimaryKeyword} />
-            <SelectField label="Product Type" value={productType} onChange={setProductType} options={withCurrent(productType, ['Canvas Print', 'T-Shirt', 'Mug', 'Tote Bag', 'Apparel', 'Drinkware', 'Bags'])} />
-            <SelectField label="Tone" value={tone} onChange={setTone} options={['Warm & Inviting', 'Humorous, Positive', 'Minimal, Calm']} />
-            <SelectField label="Target Audience" value={targetAudience} onChange={setTargetAudience} options={withCurrent(targetAudience, ['Home Decor Enthusiasts', 'Dog Lovers', 'Teachers', 'Outdoor Buyers', 'Marketplace Buyers'])} />
-            <SelectField label="Language" value={language} onChange={setLanguage} options={['en', 'es']} />
-            <label className="block text-sm text-slate-300">
-              Brand Rules
-              <textarea
-                value={brandRules}
-                onChange={(event) => setBrandRules(event.target.value)}
-                maxLength={500}
-                className="mt-1 h-24 w-full rounded-md border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 outline-none"
-              />
-              <span className="mt-1 block text-xs text-slate-500">{brandRules.length}/500</span>
-            </label>
-            <Button onClick={regenerate} variant="primary">Auto-Fill from Niche</Button>
-          </div>
-        </Panel>
+              <Field label="Primary Keyword" value={primaryKeyword} onChange={setPrimaryKeyword} />
+              <SelectField label="Product Type" value={productType} onChange={setProductType} options={withCurrent(productType, ['Canvas Print', 'T-Shirt', 'Mug', 'Tote Bag', 'Apparel', 'Drinkware', 'Bags'])} />
+              <SelectField label="Tone" value={tone} onChange={setTone} options={['Warm & Inviting', 'Humorous, Positive', 'Minimal, Calm']} />
+              <SelectField label="Target Audience" value={targetAudience} onChange={setTargetAudience} options={withCurrent(targetAudience, ['Home Decor Enthusiasts', 'Dog Lovers', 'Teachers', 'Outdoor Buyers', 'Marketplace Buyers'])} />
+              <SelectField label="Language" value={language} onChange={setLanguage} options={['en', 'es']} />
+              <label className="block text-sm text-slate-300">
+                Brand Rules
+                <textarea
+                  value={brandRules}
+                  onChange={(event) => setBrandRules(event.target.value)}
+                  maxLength={500}
+                  className="mt-1 h-24 w-full rounded-md border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 outline-none"
+                />
+                <span className="mt-1 block text-xs text-slate-500">{brandRules.length}/500</span>
+              </label>
+              <Button onClick={regenerate} variant="primary">Auto-Fill from Niche</Button>
+            </div>
+          </Panel>
+
+          <DraftHistoryPanel
+            draftList={draftList}
+            draftHistory={draftHistory}
+            selectedHistoryDraftId={selectedHistoryDraftId}
+            activityStatus={activityStatus}
+            onLoadDraft={async (draftId) => {
+              const draft = await loadDraft(draftId);
+              applyDraft(draft);
+              localStorage.setItem('draftId', String(draftId));
+              setDraftStatus(`Loaded draft ${draftId}`);
+              await loadHistory(draftId);
+            }}
+            onShowHistory={(draftId) => {
+              void loadHistory(draftId).catch(() => {
+                setActivityStatus('Draft history unavailable');
+              });
+            }}
+            onPreviousPage={() => {
+              const nextPage = Math.max(1, draftListPage - 1);
+              void refreshDraftActivity(nextPage).catch(() => {
+                setActivityStatus('Draft history unavailable');
+              });
+            }}
+            onNextPage={() => {
+              const nextPage = draftListPage + 1;
+              void refreshDraftActivity(nextPage).catch(() => {
+                setActivityStatus('Draft history unavailable');
+              });
+            }}
+          />
+        </div>
 
         <div className="space-y-4">
           <Panel title="Generated Title" action={<Button onClick={regenerate}>Regenerate</Button>}>
@@ -462,6 +563,29 @@ export default function ListingComposer({ onPublish }: Props) {
               <p>Refresh tags weekly as trends shift.</p>
             </div>
           </Panel>
+
+          <PublishQueuePanel
+            publishQueue={publishQueue}
+            filter={publishQueueFilter}
+            onFilterChange={(nextFilter) => {
+              setPublishQueueFilter(nextFilter);
+              void refreshPublishQueue(1, nextFilter).catch(() => {
+                setActivityStatus('Publish queue unavailable');
+              });
+            }}
+            onPreviousPage={() => {
+              const nextPage = Math.max(1, publishQueuePage - 1);
+              void refreshPublishQueue(nextPage, publishQueueFilter).catch(() => {
+                setActivityStatus('Publish queue unavailable');
+              });
+            }}
+            onNextPage={() => {
+              const nextPage = publishQueuePage + 1;
+              void refreshPublishQueue(nextPage, publishQueueFilter).catch(() => {
+                setActivityStatus('Publish queue unavailable');
+              });
+            }}
+          />
         </div>
       </div>
 
@@ -481,6 +605,224 @@ export default function ListingComposer({ onPublish }: Props) {
         </div>
       </div>
     </form>
+  );
+}
+
+function DraftHistoryPanel({
+  draftList,
+  draftHistory,
+  selectedHistoryDraftId,
+  activityStatus,
+  onLoadDraft,
+  onShowHistory,
+  onPreviousPage,
+  onNextPage,
+}: {
+  draftList: DraftListResponse | null;
+  draftHistory: DraftRevision[];
+  selectedHistoryDraftId: number | null;
+  activityStatus: string;
+  onLoadDraft: (draftId: number) => void | Promise<void>;
+  onShowHistory: (draftId: number) => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+}) {
+  const page = draftList?.page || 1;
+  const pageSize = draftList?.page_size || 3;
+  const total = draftList?.total || 0;
+  const hasPrevious = page > 1;
+  const hasNext = page * pageSize < total;
+
+  return (
+    <Panel title="Draft History">
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">{activityStatus}</p>
+        {draftList?.items.length ? (
+          <div className="divide-y divide-slate-800 rounded-md border border-slate-800">
+            {draftList.items.map((draft) => (
+              <div key={draft.id} className="space-y-2 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-100">{draft.title || 'Untitled draft'}</p>
+                    <p className="text-xs text-slate-500">
+                      {draft.revision_count || 0} revisions / updated {formatDate(draft.updated_at)}
+                    </p>
+                  </div>
+                  <Pill tone={draft.provenance?.is_estimated ? 'orange' : 'green'}>
+                    {draft.provenance?.is_estimated ? 'Est' : 'Live'}
+                  </Pill>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => draft.id && void onLoadDraft(draft.id)}
+                    className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                  >
+                    Load Draft {draft.id}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => draft.id && onShowHistory(draft.id)}
+                    className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-300"
+                  >
+                    Show History
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-md border border-slate-800 p-3 text-sm text-slate-500">
+            No persisted drafts yet.
+          </p>
+        )}
+
+        <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+          <span>
+            Page {page} / {Math.max(1, Math.ceil(total / pageSize))}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onPreviousPage}
+              disabled={!hasPrevious}
+              className="rounded-md border border-slate-700 px-2 py-1 disabled:opacity-40"
+            >
+              Previous Drafts
+            </button>
+            <button
+              type="button"
+              onClick={onNextPage}
+              disabled={!hasNext}
+              className="rounded-md border border-slate-700 px-2 py-1 disabled:opacity-40"
+            >
+              Next Drafts
+            </button>
+          </div>
+        </div>
+
+        {selectedHistoryDraftId ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-300">Revision trail for draft {selectedHistoryDraftId}</p>
+            {draftHistory.length ? (
+              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                {draftHistory.map((revision) => (
+                  <div key={revision.id} className="rounded-md border border-slate-800 p-2 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate font-medium text-slate-200">{revision.title}</p>
+                      <span className="shrink-0 text-slate-500">{formatDate(revision.created_at)}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-slate-500">{revision.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {revision.tags.slice(0, 4).map((tag) => (
+                        <span key={tag} className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <ProvenanceNote provenance={revision.provenance} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">No revisions recorded for this draft.</p>
+            )}
+          </div>
+        ) : null}
+
+        <ProvenanceNote provenance={draftList?.provenance} />
+      </div>
+    </Panel>
+  );
+}
+
+function PublishQueuePanel({
+  publishQueue,
+  filter,
+  onFilterChange,
+  onPreviousPage,
+  onNextPage,
+}: {
+  publishQueue: PublishQueueListResponse | null;
+  filter: string;
+  onFilterChange: (value: string) => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+}) {
+  const page = publishQueue?.page || 1;
+  const pageSize = publishQueue?.page_size || 4;
+  const total = publishQueue?.total || 0;
+  const hasPrevious = page > 1;
+  const hasNext = page * pageSize < total;
+
+  return (
+    <Panel title="Publish Queue">
+      <div className="space-y-3">
+        <label className="block text-xs text-slate-400">
+          Queue Status
+          <select
+            aria-label="Queue Status"
+            value={filter}
+            onChange={(event) => onFilterChange(event.target.value)}
+            className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 p-2 text-sm text-slate-100 outline-none"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="queued">Queued</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </label>
+
+        {publishQueue?.items.length ? (
+          <div className="divide-y divide-slate-800 rounded-md border border-slate-800">
+            {publishQueue.items.map((item) => (
+              <div key={item.queue_item_id} className="space-y-2 p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-100">Draft {item.draft_id}</p>
+                    <p className="text-xs text-slate-500">Job {item.queue_item_id} / {formatDate(item.created_at)}</p>
+                  </div>
+                  <Pill tone={item.status === 'failed' ? 'red' : 'green'}>{item.status}</Pill>
+                </div>
+                <p className="text-xs text-slate-400">{item.message}</p>
+                <p className="text-xs text-blue-200">{summarizeIntegrationStatus(item.integration_status)}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-md border border-slate-800 p-3 text-sm text-slate-500">
+            No queued publish jobs for this filter.
+          </p>
+        )}
+
+        <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+          <span>
+            Page {page} / {Math.max(1, Math.ceil(total / pageSize))}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onPreviousPage}
+              disabled={!hasPrevious}
+              className="rounded-md border border-slate-700 px-2 py-1 disabled:opacity-40"
+            >
+              Previous Jobs
+            </button>
+            <button
+              type="button"
+              onClick={onNextPage}
+              disabled={!hasNext}
+              className="rounded-md border border-slate-700 px-2 py-1 disabled:opacity-40"
+            >
+              Next Jobs
+            </button>
+          </div>
+        </div>
+
+        <ProvenanceNote provenance={publishQueue?.provenance} />
+      </div>
+    </Panel>
   );
 }
 
@@ -539,6 +881,31 @@ function stringParam(value: string | string[] | undefined) {
 
 function withCurrent(current: string, options: string[]) {
   return options.includes(current) ? options : [current, ...options].filter(Boolean);
+}
+
+function formatDate(value?: string) {
+  if (!value) return 'unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function summarizeIntegrationStatus(status: Record<string, unknown>) {
+  const entries = Object.entries(status || {});
+  if (!entries.length) return 'Live marketplace publish still needs implementation/configuration.';
+  return entries
+    .map(([provider, value]) => {
+      if (value && typeof value === 'object' && 'status' in value) {
+        return `${provider}: ${String((value as { status?: unknown }).status)}`;
+      }
+      return `${provider}: ${String(value)}`;
+    })
+    .join(' / ');
 }
 
 function buildDemoListingDraft({

@@ -37,6 +37,8 @@ async def test_generate_image_for_idea_persists_product(monkeypatch):
     assert images[0]["image_url"] == "https://example.com/generated.png"
     assert images[0]["provider"] == "openai"
     assert images[0]["generation_source"] == "openai"
+    assert images[0]["implementation_status"] == "live"
+    assert images[0]["requires_attention"] is False
 
     listed = await list_images(idea_id)
     assert listed
@@ -53,6 +55,8 @@ async def test_generate_image_for_idea_supports_stub_provider_and_delete():
     assert images
     assert images[0]["provider"] == "stub"
     assert images[0]["generation_source"] == "stub"
+    assert images[0]["implementation_status"] == "needs_implementation"
+    assert images[0]["requires_attention"] is True
 
     listed = await list_images(idea_id)
     assert listed and listed[0]["id"] == images[0]["id"]

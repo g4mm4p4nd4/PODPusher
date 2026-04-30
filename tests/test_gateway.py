@@ -25,6 +25,20 @@ from services.gateway.api import app as gateway_app
 
 
 @pytest.mark.asyncio
+async def test_system_capabilities_reports_missing_live_integrations():
+    await init_db()
+    transport = ASGITransport(app=gateway_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/system/capabilities")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["capabilities"]["etsy_listing_publish"]["status"] == "needs_implementation"
+    assert data["capabilities"]["printify_product_creation"]["blocking"] is True
+    assert data["capabilities"]["stripe_billing"]["required"]
+
+
+@pytest.mark.asyncio
 async def test_generate_response_without_oauth():
     await init_db()
     transport = ASGITransport(app=gateway_app)

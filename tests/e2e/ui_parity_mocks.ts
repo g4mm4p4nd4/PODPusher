@@ -372,6 +372,30 @@ export async function setupUiParityApiMocks(page: Page) {
       return fulfillJson(route, { id: nextDraftId++ });
     }
 
+    if (path === '/api/listing-composer/drafts' && method === 'GET') {
+      return fulfillJson(route, {
+        items: [
+          {
+            id: 101,
+            title: 'Retro Dog Mom T-Shirt',
+            description: 'A trend-aware shirt for dog moms.',
+            tags: ['dog mom', 'summer tee'],
+            language: 'en',
+            field_order: ['title', 'description', 'tags'],
+            updated_at: '2026-04-25T12:00:00.000Z',
+            revision_count: 2,
+            provenance,
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 3,
+        sort_by: 'updated_at',
+        sort_order: 'desc',
+        provenance,
+      });
+    }
+
     if (/^\/api\/listing-composer\/drafts\/\d+$/.test(path) && method === 'GET') {
       return fulfillJson(route, {
         id: Number(path.split('/').pop()),
@@ -380,6 +404,47 @@ export async function setupUiParityApiMocks(page: Page) {
         tags: ['loaded'],
         language: 'en',
         field_order: ['title', 'description', 'tags'],
+      });
+    }
+
+    if (/^\/api\/listing-composer\/drafts\/\d+\/history$/.test(path)) {
+      const segments = path.split('/');
+      const draftId = Number(segments[segments.length - 2]);
+      return fulfillJson(route, [
+        {
+          id: 301,
+          draft_id: draftId,
+          title: 'Retro Dog Mom T-Shirt',
+          description: 'Revision sourced from listingdraftrevision_table.',
+          tags: ['dog mom', 'summer tee'],
+          metadata: { product_type: 'T-Shirt' },
+          created_at: '2026-04-25T12:00:00.000Z',
+          provenance: { ...provenance, source: 'listingdraftrevision_table' },
+        },
+      ]);
+    }
+
+    if (path === '/api/listing-composer/publish-queue') {
+      return fulfillJson(route, {
+        items: [
+          {
+            queue_item_id: 501,
+            draft_id: 101,
+            status: 'queued',
+            mode: 'demo',
+            message: 'Draft is queued locally. Etsy and Printify remain credential-gated.',
+            integration_status: {
+              etsy: { status: 'demo' },
+              printify: { status: 'demo' },
+              openai: { status: 'not_required' },
+            },
+            created_at: '2026-04-25T12:00:00.000Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 4,
+        provenance: { ...provenance, source: 'automationjob_table' },
       });
     }
 

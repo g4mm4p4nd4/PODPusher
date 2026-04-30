@@ -18,6 +18,8 @@ async def test_generate_ideas_marks_stub_source(monkeypatch):
 
     assert ideas
     assert ideas[0]["generation_source"] == "stub"
+    assert ideas[0]["implementation_status"] == "needs_implementation"
+    assert ideas[0]["requires_attention"] is True
 
 
 @pytest.mark.asyncio
@@ -33,6 +35,8 @@ async def test_generate_ideas_marks_fallback_source_on_exception(monkeypatch):
 
     assert ideas
     assert ideas[0]["generation_source"] == "fallback"
+    assert ideas[0]["implementation_status"] == "needs_implementation"
+    assert ideas[0]["requires_attention"] is True
 
 
 @pytest.mark.asyncio
@@ -48,6 +52,8 @@ async def test_generate_images_marks_stub_source(monkeypatch):
 
     assert images
     assert images[0]["generation_source"] == "stub"
+    assert images[0]["implementation_status"] == "needs_implementation"
+    assert images[0]["requires_attention"] is True
 
 
 @pytest.mark.asyncio
@@ -63,3 +69,5 @@ async def test_generate_images_marks_fallback_source_on_exception(monkeypatch):
 
     assert images
     assert images[0]["generation_source"] == "fallback"
+    assert images[0]["implementation_status"] == "needs_implementation"
+    assert images[0]["requires_attention"] is True

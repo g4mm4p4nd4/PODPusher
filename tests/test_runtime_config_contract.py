@@ -7,6 +7,7 @@ ENV_EXAMPLE_PATH = ROOT / ".env.example"
 DOCKERFILE_PATH = ROOT / "Dockerfile"
 PROMETHEUS_PATH = ROOT / "prometheus" / "prometheus.yml"
 GRAFANA_DATASOURCE_PATH = ROOT / "grafana" / "provisioning" / "datasources" / "prometheus.yml"
+TIMESCALE_MIGRATION_PATH = ROOT / "alembic" / "versions" / "0003_timescale_trend_aggregates.py"
 
 
 def _compose_content() -> str:
@@ -47,7 +48,22 @@ def test_local_compose_has_trend_observability_stack() -> None:
 
     assert "dockerfile: Dockerfile" in content
     assert "TREND_INGESTION_STUB: ${TREND_INGESTION_STUB:-0}" in content
+    assert "TREND_INGESTION_RSS_FALLBACK: ${TREND_INGESTION_RSS_FALLBACK:-1}" in content
+    assert "TREND_INGESTION_ALLOW_STUB_FALLBACK: ${TREND_INGESTION_ALLOW_STUB_FALLBACK:-1}" in content
+    assert "TREND_INGESTION_MAX_SOURCE_URLS: ${TREND_INGESTION_MAX_SOURCE_URLS:-2}" in content
+    assert "OPENCODE_GO_BASE_URL: ${OPENCODE_GO_BASE_URL:-https://opencode.ai/zen/go/v1}" in content
+    assert "SCRAPEGRAPH_TIMEOUT_SECONDS: ${SCRAPEGRAPH_TIMEOUT_SECONDS:-45}" in content
     assert "DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://user:pass@db:5432/pod}" in content
+    assert "BILLING_STUB_MODE: ${BILLING_STUB_MODE:-false}" in content
+    assert "OPENAI_USE_STUB: ${OPENAI_USE_STUB:-0}" in content
+
+
+def test_timescale_migration_degrades_on_plain_postgres() -> None:
+    content = TIMESCALE_MIGRATION_PATH.read_text(encoding="utf-8")
+
+    assert "pg_available_extensions" in content
+    assert "name = 'timescaledb'" in content
+    assert "if not _timescaledb_available():" in content
 
 
 def test_env_example_documents_no_key_trend_defaults() -> None:
@@ -56,8 +72,15 @@ def test_env_example_documents_no_key_trend_defaults() -> None:
     assert "DATABASE_URL=postgresql+psycopg://user:pass@db:5432/pod" in content
     assert "TREND_INGESTION_STUB=0" in content
     assert "TREND_INGESTION_SCRAPEGRAPH=1" in content
+    assert "TREND_INGESTION_RSS_FALLBACK=1" in content
+    assert "TREND_INGESTION_ALLOW_STUB_FALLBACK=1" in content
+    assert "TREND_INGESTION_MAX_SOURCE_URLS=2" in content
     assert "SCRAPEGRAPH_MODEL=ollama/llama3.2" in content
+    assert "SCRAPEGRAPH_TIMEOUT_SECONDS=45" in content
+    assert "OPENCODE_GO_BASE_URL=https://opencode.ai/zen/go/v1" in content
     assert "OLLAMA_BASE_URL=http://ollama:11434" in content
+    assert "BILLING_STUB_MODE=false" in content
+    assert "OPENAI_USE_STUB=0" in content
 
 
 def test_dockerfile_installs_playwright_and_scrapegraphai_dependency() -> None:

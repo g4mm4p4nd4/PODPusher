@@ -69,25 +69,24 @@ class TestBillingService:
 
     @pytest.mark.asyncio
     async def test_get_or_create_customer_stub_mode(self):
-        """Test customer creation in stub mode."""
+        """Stub mode reports billing as unimplemented instead of fake customer success."""
         with patch.dict('os.environ', {'BILLING_STUB_MODE': 'true'}):
             # Re-import to pick up stub mode
             from services.billing import service
             service.STUB_MODE = True
 
-            customer_id = await service.get_or_create_customer(123, "test@example.com")
-            assert customer_id == "cus_stub_123"
+            with pytest.raises(service.BillingError, match="Stripe billing is not configured"):
+                await service.get_or_create_customer(123, "test@example.com")
 
     @pytest.mark.asyncio
     async def test_create_portal_session_stub_mode(self):
-        """Test portal session creation in stub mode."""
+        """Stub mode reports portal as unavailable instead of returning a fake URL."""
         with patch.dict('os.environ', {'BILLING_STUB_MODE': 'true'}):
             from services.billing import service
             service.STUB_MODE = True
 
-            portal_url = await service.create_portal_session("cus_123", "/settings")
-            assert "/settings" in portal_url
-            assert "stub_portal=true" in portal_url
+            with pytest.raises(service.BillingError, match="Stripe billing portal is not configured"):
+                await service.create_portal_session("cus_123", "/settings")
 
     @pytest.mark.asyncio
     async def test_get_subscription_for_customer_stub_mode(self):
@@ -97,10 +96,7 @@ class TestBillingService:
             service.STUB_MODE = True
 
             subscription = await service.get_subscription_for_customer("cus_123")
-            assert subscription is not None
-            assert subscription["id"] == "sub_stub"
-            assert subscription["status"] == "active"
-            assert subscription["plan_tier"] == "starter"
+            assert subscription is None
 
     @pytest.mark.asyncio
     async def test_get_user_plan_tier_stub_mode(self):
@@ -110,7 +106,7 @@ class TestBillingService:
             service.STUB_MODE = True
 
             tier = await service.get_user_plan_tier(123)
-            assert tier == PlanTier.STARTER
+            assert tier == PlanTier.FREE
 
     @pytest.mark.asyncio
     async def test_update_user_quotas_from_subscription(self):

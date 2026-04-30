@@ -33,6 +33,8 @@ class SubscriptionResponse(BaseModel):
     status: Optional[str] = None
     current_period_end: Optional[int] = None
     limits: dict
+    implementation_status: str = "live"
+    message: Optional[str] = None
 
 
 class PortalResponse(BaseModel):
@@ -50,6 +52,8 @@ class QuotaResponse(BaseModel):
     monthly_ideas: int
     team_seats: int
     priority_support: bool
+    implementation_status: str = "live"
+    message: Optional[str] = None
 
 
 class WebhookResponse(BaseModel):
@@ -78,6 +82,12 @@ async def get_subscription(user_id: int = Depends(require_user_id)):
                 "team_seats": limits.team_seats,
                 "priority_support": limits.priority_support,
             },
+            implementation_status="needs_implementation" if STUB_MODE else "live",
+            message=(
+                "Stripe billing is not configured; subscription data is unavailable and free limits are shown."
+                if STUB_MODE
+                else None
+            ),
         )
 
         # If not on free tier, try to get subscription details
@@ -106,6 +116,12 @@ async def get_quota(user_id: int = Depends(require_user_id)):
             monthly_ideas=limits.monthly_ideas,
             team_seats=limits.team_seats,
             priority_support=limits.priority_support,
+            implementation_status="needs_implementation" if STUB_MODE else "live",
+            message=(
+                "Stripe billing is not configured; quota limits are free-tier defaults."
+                if STUB_MODE
+                else None
+            ),
         )
 
     except BillingError as e:
@@ -119,6 +135,14 @@ async def create_customer_portal(
     user_id: int = Depends(require_user_id),
 ):
     """Create a Stripe Customer Portal session for subscription management."""
+    if STUB_MODE:
+        raise HTTPException(
+            status_code=424,
+            detail={
+                "implementation_status": "needs_implementation",
+                "message": "Stripe billing portal is not configured; set STRIPE_SECRET_KEY and complete billing integration.",
+            },
+        )
     try:
         # Get user email from somewhere - placeholder for now
         # In a full implementation, we would look up the user's email

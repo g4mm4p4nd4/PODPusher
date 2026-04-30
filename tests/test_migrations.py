@@ -1,4 +1,5 @@
 import os
+import ast
 import sqlite3
 from pathlib import Path
 
@@ -107,6 +108,18 @@ def _run_upgrade(db_url: str) -> None:
 def _drop_db(path: Path) -> None:
     if path.exists():
         path.unlink()
+
+
+def test_alembic_revision_ids_fit_postgres_version_column():
+    for path in sorted((ROOT / "alembic" / "versions").glob("*.py")):
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "revision" for target in node.targets):
+                continue
+            revision = ast.literal_eval(node.value)
+            assert len(revision) <= 32, f"{path.name} revision exceeds Alembic's VARCHAR(32)"
 
 
 def test_alembic_upgrade_repeatability():

@@ -47,6 +47,7 @@ def _serialize_product_image(
     provider: str,
     generation_source: str,
 ) -> Dict[str, Any]:
+    live = generation_source == "openai"
     return {
         "id": product.id,
         "idea_id": product.idea_id,
@@ -55,6 +56,13 @@ def _serialize_product_image(
         "category": category,
         "provider": provider,
         "generation_source": generation_source,
+        "implementation_status": "live" if live else "needs_implementation",
+        "requires_attention": not live,
+        "message": (
+            "Generated through configured OpenAI image integration."
+            if live
+            else "OpenAI image generation is not configured; this image is placeholder/fallback output."
+        ),
     }
 
 

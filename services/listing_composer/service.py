@@ -334,16 +334,16 @@ async def queue_publish_job(
 
         integration_status = {
             "etsy": {
-                "status": "demo",
-                "blocking": False,
+                "status": "needs_implementation",
+                "blocking": True,
                 "credential_required_for_live_publish": True,
-                "message": "Etsy credentials are not required for local queueing.",
+                "message": "Live Etsy draft publishing is not implemented/configured for this environment.",
             },
             "printify": {
-                "status": "demo",
-                "blocking": False,
+                "status": "needs_implementation",
+                "blocking": True,
                 "credential_required_for_live_publish": True,
-                "message": "Printify credentials are not required for local queueing.",
+                "message": "Live Printify product creation is not implemented/configured for this environment.",
             },
             "openai": {
                 "status": "not_required",
@@ -361,7 +361,7 @@ async def queue_publish_job(
             category="listing_publish",
             metadata_json={
                 "draft_id": draft.id,
-                "mode": "demo",
+                "mode": "implementation_required",
                 "source": "listing_composer",
                 "integration_status": integration_status,
             },
@@ -373,8 +373,8 @@ async def queue_publish_job(
             queue_item_id=job.id,
             draft_id=draft.id,
             status=job.status,
-            mode="demo",
-            message="Draft queued for demo publish. Connect Etsy and Printify to publish live.",
+            mode="implementation_required",
+            message="Draft saved locally only. Live marketplace publishing still needs Etsy and Printify implementation/configuration.",
             integration_status=integration_status,
             created_at=job.created_at,
         )
@@ -409,9 +409,9 @@ async def list_publish_queue(
                 queue_item_id=job.id,
                 draft_id=int(metadata.get("draft_id") or 0),
                 status=job.status,
-                mode=str(metadata.get("mode") or "demo"),
+                mode=str(metadata.get("mode") or "implementation_required"),
                 message=(
-                    "Draft is queued locally. Etsy and Printify remain credential-gated."
+                    "Draft is local only. Live Etsy/Printify publishing still needs implementation/configuration."
                 ),
                 integration_status=integration_status,
                 created_at=job.created_at,
@@ -513,14 +513,14 @@ async def build_export_payload(draft_id: int) -> ExportPayload | None:
                     {
                         "queue_item_id": job.id,
                         "status": job.status,
-                        "mode": (job.metadata_json or {}).get("mode") or "demo",
+                        "mode": (job.metadata_json or {}).get("mode") or "implementation_required",
                         "created_at": job.created_at.isoformat(),
                     }
                     for job in draft_jobs[:5]
                 ],
                 "integration_contract": {
-                    "etsy": "credential_gated_non_blocking",
-                    "printify": "credential_gated_non_blocking",
+                    "etsy": "needs_live_publish_implementation_or_credentials",
+                    "printify": "needs_live_product_implementation_or_credentials",
                     "openai": "not_required_for_manual_export",
                 },
             },

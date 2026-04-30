@@ -13,7 +13,7 @@ Owner: Data-Seeder (per DEVELOPMENT_PLAN.md Technical Debt TD-01)
 from __future__ import annotations
 
 from alembic import op
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 
 revision = "0003_timescale_trend_aggregates"
@@ -33,6 +33,17 @@ def _has_index(table_name: str, index_name: str) -> bool:
     if not inspector.has_table(table_name):
         return False
     return any(index.get("name") == index_name for index in inspector.get_indexes(table_name))
+
+
+def _timescaledb_available() -> bool:
+    """Return true only when the connected PostgreSQL server can enable TimescaleDB."""
+    if not _is_postgresql():
+        return False
+
+    result = op.get_bind().execute(
+        text("SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb'")
+    )
+    return result.scalar_one_or_none() == 1
 
 
 def upgrade() -> None:
@@ -57,8 +68,9 @@ def upgrade() -> None:
                 ["category", "created_at"],
             )
 
-    # TimescaleDB-specific operations (PostgreSQL only)
-    if not _is_postgresql():
+    # TimescaleDB-specific operations. Local Compose intentionally uses plain
+    # PostgreSQL, so keep this migration useful there by applying only indexes.
+    if not _timescaledb_available():
         return
 
     # Enable TimescaleDB extension
@@ -136,7 +148,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if _is_postgresql():
+    if _timescaledb_available():
         op.execute("SELECT remove_retention_policy('trendsignal', if_exists => true)")
         op.execute("SELECT remove_continuous_aggregate_policy('trend_daily', if_not_exists => true)")
         op.execute("SELECT remove_continuous_aggregate_policy('trend_hourly', if_not_exists => true)")

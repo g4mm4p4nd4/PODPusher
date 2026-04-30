@@ -42,22 +42,66 @@
 
 The trend scraper is public-only in this slice. Cookie files, exported browser sessions, usernames, passwords, and login URLs are rejected by configuration before scraping starts.
 
+### April 30, 2026 Source Evidence
+
+The latest local Docker smoke used the full Compose stack after fixing two local
+Postgres migration issues: Timescale rollups now skip cleanly when the
+`timescaledb` extension is unavailable, and Alembic revision IDs stay within
+Postgres' default `alembic_version.version_num` length. Gateway, trend
+ingestion, Prometheus, Grafana, frontend, Redis, Postgres, Ollama, and worker
+containers reached healthy/running state.
+
+Smoke command evidence:
+
+- `POST /api/trends/refresh` completed in live mode with `signals_collected: 4`, `signals_persisted: 3`, `fallback_count: 6`, `skipped_count: 2`, and `blocked_count: 2`.
+- `GET /api/trends/live/status` reported Amazon and TikTok success through `selector_fallback`; Etsy and X/Twitter were blocked/skipped; Pinterest, Instagram, and Google Trends RSS failed with zero persisted rows.
+- `GET /api/trends/live?include_meta=true&sort_by=timestamp&sort_order=desc` returned provenance on every persisted row.
+- `GET /metrics` exposed `pod_scrape_method_total`, `pod_scrape_fallback_total`, and `pod_scrape_persisted_total`; Prometheus returned `pod_scrape_persisted_total{source="amazon"} 2` and `{source="tiktok"} 1`.
+- Browser QA loaded `http://127.0.0.1:3000/trends` through Chromium at desktop and mobile viewports with no page errors, no console errors, and no HTTP errors.
+
+Observed source behavior:
+
+| Source | Evidence | Runtime handling |
+| --- | --- | --- |
+| TikTok Creative Center | HTTP 200 public shell, but mostly navigation labels such as Trend Discovery, Top Ads, and Creative Insights in static text. | Keep as a live candidate, but noise filtering prevents shell labels from persisting. |
+| Instagram explore tags | HTTP 200 shell with robot-gated content indicators. | Classified as blocked/login gated when Playwright sees bot or login markers. |
+| X/Twitter explore | Redirected to `x.com/i/flow/login` and reported JavaScript/login gating. | Classified as blocked and counted in `sources_blocked`/`sources_skipped`. |
+| Pinterest Today | Public page may either expose captcha markers or return no selector-safe POD rows. | Classified as blocked when captcha markers appear; otherwise records a normal selector failure with zero persisted rows. |
+| Etsy trends and hubs | HTTP 403 captcha/JS gate. | Classified as blocked, not as a fresh selector failure. |
+| Amazon movers and shakers | HTTP 200 public product pages; useful titles are available through `img alt` text. | Primary Amazon source is now Arts/Crafts, then Handmade, Home/Garden, and Fashion candidates. Selectors read `img[alt]`, and normalization condenses long product titles while rejecting brand/UI/bodywear noise and gift-only phrases. |
+| Google Trends RSS | Current RSS sample was news/noise heavy and produced zero POD-oriented candidates after filtering. | RSS fallback only persists terms with concrete POD product nouns such as shirt, mug, poster, decor, hat, tote, bag, jewelry, or sticker. |
+
+Blocked sources should degrade as `status: skipped`, `method: blocked`, and appear in `sources_blocked` with a sanitized `reason`. ScrapeGraphAI is capped by `SCRAPEGRAPH_TIMEOUT_SECONDS` before selector fallback to prevent slow public pages from holding the whole refresh open. No raw page bodies, cookies, browser sessions, usernames, passwords, or login flows should be stored or supplied.
+
 ## Local Workflow Smoke
-1. Save a composer draft with local/demo copy:
+1. Save a composer draft:
    ```bash
    curl -X POST http://localhost:8000/api/listing-composer/drafts \
      -H "Content-Type: application/json" \
-     -d '{"title":"Dog Mom Tee","description":"Local demo draft","tags":["dog mom"],"language":"en","field_order":["title","description","tags"]}'
+     -d '{"title":"Dog Mom Tee","description":"Internal draft","tags":["dog mom"],"language":"en","field_order":["title","description","tags"]}'
    ```
 2. Queue the draft with the returned ID:
    ```bash
    curl -X POST http://localhost:8000/api/listing-composer/drafts/1/publish-queue
    ```
-3. Confirm the queue response reports `mode: demo`, `blocking: false` integration status for Etsy/Printify, and a retained `draft_id`.
+3. Confirm the queue response reports `mode: implementation_required`, `status: needs_implementation`, `blocking: true` integration status for Etsy/Printify, and a retained `draft_id`. A queue record should never imply that a live Etsy or Printify publish occurred until those integrations are configured and implemented.
 4. Inspect local queue visibility:
    ```bash
    curl "http://localhost:8000/api/listing-composer/publish-queue?page=1&page_size=10"
    ```
+
+## Capability Status Smoke
+Credential-backed surfaces should fail closed instead of returning local/demo success. Inspect the system contract before QA:
+
+```bash
+curl http://localhost:8000/api/system/capabilities
+```
+
+Expected no-key local evidence:
+
+- `trend_refresh.status` is `live_public_only` when `TREND_INGESTION_STUB=0`.
+- OpenAI, Etsy, Printify, and Stripe entries report `status: needs_implementation`, `configured: false`, and concrete `required` configuration when credentials are missing.
+- Billing portal calls return HTTP `424` with `implementation_status: needs_implementation` rather than a fake portal URL.
 
 ## Instrumentation Checklist
 1. Import `register_observability` in any new FastAPI service and call it immediately after instantiating the app.

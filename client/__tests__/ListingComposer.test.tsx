@@ -40,10 +40,89 @@ jest.mock('../services/listings', () => ({
       queue_item_id: 9,
       draft_id: 1,
       status: 'pending',
-      mode: 'demo',
+      mode: 'implementation_required',
       integration_status: {},
       message: 'queued',
       created_at: '2026-04-24T00:00:00',
+    })
+  ),
+  listDrafts: jest.fn(() =>
+    Promise.resolve({
+      items: [
+        {
+          id: 1,
+          title: 'Persisted Draft Title',
+          description: 'Persisted draft description',
+          tags: ['persisted'],
+          language: 'en',
+          field_order: [],
+          updated_at: '2026-04-24T00:00:00',
+          revision_count: 2,
+          provenance: {
+            source: 'listingdraft_table',
+            is_estimated: false,
+            updated_at: '2026-04-24T00:00:00',
+            confidence: 0.96,
+          },
+        },
+      ],
+      total: 6,
+      page: 1,
+      page_size: 3,
+      sort_by: 'updated_at',
+      sort_order: 'desc',
+      provenance: {
+        source: 'listingdraft_table',
+        is_estimated: false,
+        updated_at: '2026-04-24T00:00:00',
+        confidence: 0.96,
+      },
+    })
+  ),
+  fetchDraftHistory: jest.fn(() =>
+    Promise.resolve([
+      {
+        id: 11,
+        draft_id: 1,
+        title: 'Revision Draft Title',
+        description: 'Revision draft description',
+        tags: ['revision'],
+        metadata: {},
+        created_at: '2026-04-24T00:00:00',
+        provenance: {
+          source: 'listingdraftrevision_table',
+          is_estimated: false,
+          updated_at: '2026-04-24T00:00:00',
+          confidence: 0.96,
+        },
+      },
+    ])
+  ),
+  listPublishQueue: jest.fn(() =>
+    Promise.resolve({
+      items: [
+        {
+          queue_item_id: 9,
+          draft_id: 1,
+          status: 'pending',
+          mode: 'implementation_required',
+          integration_status: {
+            etsy: { status: 'needs_implementation' },
+            printify: { status: 'needs_implementation' },
+          },
+          message: 'Draft is local only.',
+          created_at: '2026-04-24T00:00:00',
+        },
+      ],
+      total: 8,
+      page: 1,
+      page_size: 4,
+      provenance: {
+        source: 'automationjob_table',
+        is_estimated: false,
+        updated_at: '2026-04-24T00:00:00',
+        confidence: 0.94,
+      },
     })
   ),
   exportDraft: jest.fn(() =>
@@ -81,8 +160,13 @@ beforeEach(() => {
   mockRouter.query = {};
 });
 
-test('shows character counts and adds tags', async () => {
+async function renderComposer() {
   render(<ListingComposer onPublish={onPublish} />);
+  await screen.findByText('Persisted Draft Title');
+}
+
+test('shows character counts and adds tags', async () => {
+  await renderComposer();
   const titleInput = screen.getByLabelText(/Title/);
   fireEvent.change(titleInput, { target: { value: 'Hello' } });
   expect(screen.getByText(/5\/140/)).toBeInTheDocument();
@@ -94,7 +178,7 @@ test('shows character counts and adds tags', async () => {
 });
 
 test('saves draft', async () => {
-  render(<ListingComposer onPublish={onPublish} />);
+  await renderComposer();
   fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
   await waitFor(() => expect(services.saveDraft).toHaveBeenCalled());
 });
@@ -103,6 +187,10 @@ test('automatically fetches suggestions when length threshold is reached', async
   jest.useFakeTimers();
   try {
     render(<ListingComposer onPublish={onPublish} />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
 
     const titleInput = screen.getByLabelText(/Title/);
     fireEvent.change(titleInput, { target: { value: 'a'.repeat(12) } });
@@ -123,8 +211,8 @@ test('automatically fetches suggestions when length threshold is reached', async
   }
 });
 
-test('blocks publishing when limits are exceeded', () => {
-  render(<ListingComposer onPublish={onPublish} />);
+test('blocks publishing when limits are exceeded', async () => {
+  await renderComposer();
 
   const titleInput = screen.getByLabelText(/Title/);
   fireEvent.change(titleInput, { target: { value: 'a'.repeat(150) } });
@@ -139,8 +227,8 @@ test('blocks publishing when limits are exceeded', () => {
   expect(onPublish).not.toHaveBeenCalled();
 });
 
-test('renders localized language options', () => {
-  render(<ListingComposer onPublish={onPublish} />);
+test('renders localized language options', async () => {
+  await renderComposer();
 
   expect(screen.getByDisplayValue('en')).toBeInTheDocument();
 });
@@ -157,7 +245,7 @@ test('prefills composer from handoff query params', async () => {
     style: 'Retro Summer',
   };
 
-  render(<ListingComposer onPublish={onPublish} />);
+  await renderComposer();
 
   expect(screen.getByRole('textbox', { name: 'Niche' })).toHaveValue('Dog Lovers');
   expect(screen.getByLabelText('Primary Keyword')).toHaveValue('retro dog mom shirt');
@@ -168,8 +256,31 @@ test('prefills composer from handoff query params', async () => {
   expect(screen.getByText('Prefilled from search')).toBeInTheDocument();
 });
 
+test('renders persisted draft history and publish queue from API', async () => {
+  await renderComposer();
+
+  expect(screen.getByText('Persisted Draft Title')).toBeInTheDocument();
+  expect(screen.getByText('Revision Draft Title')).toBeInTheDocument();
+  expect(screen.getByText('Draft 1')).toBeInTheDocument();
+  expect(screen.getAllByText(/Source: listingdraft/).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Source: automationjob_table/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load Draft 1' }));
+  await waitFor(() => expect(services.loadDraft).toHaveBeenCalledWith(1));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next Drafts' }));
+  await waitFor(() => expect(services.listDrafts).toHaveBeenCalledWith(
+    expect.objectContaining({ page: 2, page_size: 3 })
+  ));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next Jobs' }));
+  await waitFor(() => expect(services.listPublishQueue).toHaveBeenCalledWith(
+    expect.objectContaining({ page: 2, page_size: 4 })
+  ));
+});
+
 test('queues publish after saving and shows draft/job status', async () => {
-  render(<ListingComposer onPublish={onPublish} />);
+  await renderComposer();
 
   fireEvent.click(screen.getByRole('button', { name: 'Auto-Fill from Niche' }));
   await screen.findByDisplayValue('Generated Title');
@@ -185,7 +296,7 @@ test('queues publish after saving and shows draft/job status', async () => {
 });
 
 test('exports after saving and shows draft status', async () => {
-  render(<ListingComposer onPublish={onPublish} />);
+  await renderComposer();
 
   fireEvent.click(screen.getByRole('button', { name: 'Auto-Fill from Niche' }));
   await screen.findByDisplayValue('Generated Title');

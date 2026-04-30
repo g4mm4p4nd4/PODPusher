@@ -6,7 +6,7 @@ from sqlalchemy import inspect
 
 
 revision = "0006_wireframe_control_center"
-down_revision = "0005_merge_trend_and_user_pref_heads"
+down_revision = "0005_merge_trend_user"
 branch_labels = None
 depends_on = None
 

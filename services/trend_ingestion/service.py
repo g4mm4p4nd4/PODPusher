@@ -7,6 +7,7 @@ import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from dataclasses import dataclass
+from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Sequence
 from uuid import uuid4
@@ -69,15 +70,199 @@ USER_AGENTS = [
 
 STOPWORDS = {"the", "and", "a", "of", "to", "in"}
 EMOJI_RE = re.compile(r"[\U00010000-\U0010FFFF]", flags=re.UNICODE)
+TEXT_FALLBACK_STOPWORDS = {
+    "about",
+    "access",
+    "actions",
+    "ads",
+    "all",
+    "api",
+    "blog",
+    "browse",
+    "business",
+    "cart",
+    "contact",
+    "content",
+    "cookie",
+    "create",
+    "english",
+    "find",
+    "help",
+    "home",
+    "inspiration",
+    "location",
+    "login",
+    "main",
+    "more",
+    "popular",
+    "privacy",
+    "profile",
+    "search",
+    "service",
+    "settings",
+    "shop",
+    "sign",
+    "skip",
+    "terms",
+    "tools",
+    "trend",
+    "trending",
+    "trends",
+    "upload",
+}
+NAVIGATION_OR_TECH_TOKENS = {
+    "account",
+    "advertising",
+    "amazon",
+    "arrow",
+    "black",
+    "cart",
+    "center",
+    "checkout",
+    "comment",
+    "desktop",
+    "explore",
+    "facebook",
+    "fff",
+    "griditemroot",
+    "instagram",
+    "javascript",
+    "navbar",
+    "navarrow",
+    "nprogress",
+    "placeholder",
+    "react",
+    "sponsored",
+    "tiktok",
+    "twitter",
+    "white",
+}
+POD_ORIENTED_TERMS = {
+    "art",
+    "bag",
+    "blanket",
+    "cap",
+    "canvas",
+    "coffee",
+    "cup",
+    "decor",
+    "drink",
+    "fascinator",
+    "gift",
+    "hat",
+    "hoodie",
+    "interior",
+    "jewelry",
+    "mug",
+    "party",
+    "pillow",
+    "poster",
+    "print",
+    "shirt",
+    "sticker",
+    "style",
+    "sweatshirt",
+    "tea",
+    "tee",
+    "tote",
+    "tumbler",
+    "wall",
+    "water bottle",
+    "wedding",
+}
+STRONG_POD_TERMS = {
+    "bag",
+    "blanket",
+    "cap",
+    "canvas",
+    "decor",
+    "fascinator",
+    "hat",
+    "hoodie",
+    "jewelry",
+    "mug",
+    "pillow",
+    "poster",
+    "print",
+    "shirt",
+    "sticker",
+    "sweatshirt",
+    "tee",
+    "tote",
+    "tumbler",
+    "wall art",
+    "water bottle",
+}
+WEAK_PUBLIC_SOURCES_REQUIRE_POD = {"amazon", "google_trends_rss", "pinterest"}
+NON_POD_KEYWORD_MARKERS = {
+    "appetizer",
+    "available",
+    "earthquake",
+    "gift basket",
+    "heels",
+    "lift style",
+    "nail art",
+    "near me",
+    "photography",
+    "postpartum",
+    "present",
+    "underwear",
+}
+AMAZON_LEADING_NOISE_TERMS = {
+    "ankis",
+    "ecosmart",
+    "frida",
+    "hanes",
+    "men",
+    "mens",
+    "s",
+    "women",
+    "womens",
+}
+RSS_NEWS_NOISE_TERMS = {
+    "injury",
+    "playoffs",
+    "roster",
+    "schedule",
+    "score",
+    "standings",
+    "trade",
+}
+BLOCKED_PAGE_MARKERS = (
+    "access denied",
+    "are you a robot",
+    "captcha",
+    "enable javascript and cookies",
+    "enable js and disable",
+    "javascript is not available",
+    "login?redirect",
+    "robot check",
+    "unusual traffic",
+)
 
 SCRAPE_INTERVAL_HOURS = int(os.getenv("SCRAPE_INTERVAL_HOURS", "6"))
 PLAYWRIGHT_PROXY = os.getenv("PLAYWRIGHT_PROXY")
 TOP_K = int(os.getenv("TREND_INGESTION_TOP_K", "5"))
 SCRAPER_TIMEOUT_MS = int(os.getenv("TREND_INGESTION_TIMEOUT_MS", "15000"))
 STUB_ONLY = os.getenv("TREND_INGESTION_STUB", "0").lower() in {"1", "true", "yes"}
-TREND_RSS_URL = os.getenv("TREND_INGESTION_RSS_URL", "https://trends.google.com/trending/rss?geo=US")
+TREND_RSS_URL = os.getenv(
+    "TREND_INGESTION_RSS_URL", "https://trends.google.com/trending/rss?geo=US"
+)
+RSS_FALLBACK_ENABLED = os.getenv("TREND_INGESTION_RSS_FALLBACK", "1").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+ALLOW_STUB_FALLBACK = os.getenv("TREND_INGESTION_ALLOW_STUB_FALLBACK", "1").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 DEFAULT_LOOKBACK_HOURS = int(os.getenv("TREND_INGESTION_LOOKBACK_HOURS", "72"))
 MAX_LIVE_TRENDS_PER_GROUP = int(os.getenv("TREND_INGESTION_MAX_LIVE_PER_GROUP", "50"))
+MAX_SOURCE_URLS = int(os.getenv("TREND_INGESTION_MAX_SOURCE_URLS", "2"))
 RANDOM_SEED = os.getenv("TREND_INGESTION_RANDOM_SEED")
 
 
@@ -114,11 +299,102 @@ _refresh_status: Dict[str, Any] = {
 }
 
 
+class SourceBlockedError(RuntimeError):
+    """Raised when a public page is login, bot, captcha, or access gated."""
+
+
 def normalize_text(text: str) -> str:
     """Lowercase text, remove emojis and stopwords."""
     text = EMOJI_RE.sub("", text).lower()
     words = [word for word in re.split(r"\W+", text) if word and word not in STOPWORDS]
     return " ".join(words)
+
+
+def _contains_term(keyword: str, term: str) -> bool:
+    if " " in term:
+        return f" {term} " in f" {keyword} "
+    return term in keyword.split()
+
+
+def _contains_pod_signal(keyword: str) -> bool:
+    return any(_contains_term(keyword, term) for term in POD_ORIENTED_TERMS)
+
+
+def _contains_strong_pod_signal(keyword: str) -> bool:
+    return any(_contains_term(keyword, term) for term in STRONG_POD_TERMS)
+
+
+def _looks_like_noise_keyword(
+    keyword: str, *, method: str | None = None, source: str | None = None
+) -> bool:
+    words = keyword.split()
+    if not words:
+        return True
+    compact = "".join(words)
+    if any(marker in keyword for marker in NON_POD_KEYWORD_MARKERS):
+        return True
+    if re.fullmatch(r"[a-f0-9]{6,8}", compact):
+        return True
+    if re.fullmatch(r"[a-z]*\d+[a-z\d]*", compact) and len(words) <= 2:
+        return True
+    if any(word in NAVIGATION_OR_TECH_TOKENS for word in words):
+        return True
+    if len(words) == 1 and words[0] in TEXT_FALLBACK_STOPWORDS:
+        return True
+    if method == "rss_fallback":
+        if any(term in words for term in RSS_NEWS_NOISE_TERMS):
+            return True
+        if not _contains_strong_pod_signal(keyword):
+            return True
+    if source in WEAK_PUBLIC_SOURCES_REQUIRE_POD:
+        if not _contains_strong_pod_signal(keyword):
+            return True
+    return False
+
+
+def _condense_keyword(keyword: str, source: str) -> str:
+    words = keyword.split()
+    if source == "amazon":
+        while len(words) > 1 and words[0] in AMAZON_LEADING_NOISE_TERMS:
+            words = words[1:]
+        keyword = " ".join(words)
+    if len(words) <= 8:
+        return keyword
+    if source == "amazon":
+        product_terms = {term for term in POD_ORIENTED_TERMS if " " not in term}
+        for index, word in enumerate(words):
+            if word in product_terms:
+                start = max(0, index - 2)
+                condensed_words = words[start : index + 5]
+                while (
+                    len(condensed_words) > 1
+                    and condensed_words[0] in AMAZON_LEADING_NOISE_TERMS
+                ):
+                    condensed_words = condensed_words[1:]
+                return " ".join(condensed_words)
+    return " ".join(words[:8])
+
+
+def _sanitize_reason(reason: Any) -> str:
+    text = str(reason or "").replace("\r", " ").replace("\n", " ")
+    if "Executable doesn't exist" in text and "ms-playwright" in text:
+        text = "Playwright browser executable unavailable"
+    if "╔" in text:
+        text = text.split("╔", 1)[0].strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:280] if len(text) > 280 else text
+
+
+def _is_blocked_page(
+    url: str, title: str, body_text: str, status: int | None = None
+) -> bool:
+    combined = " ".join([url, title, body_text[:3000]]).lower()
+    if status in {401, 403, 429}:
+        return True
+    if any(marker in combined for marker in BLOCKED_PAGE_MARKERS):
+        return True
+    login_url_markers = ("/login", "/accounts/login", "/i/flow/login")
+    return any(marker in url.lower() for marker in login_url_markers)
 
 
 def compute_engagement(likes: int, shares: int, comments: int) -> int:
@@ -175,7 +451,9 @@ def normalize_category(raw_category: str | None, keyword: str) -> str:
     return inferred if inferred != "other" else "uncategorized"
 
 
-def _signal_confidence(method: str | None, keyword: str, engagement_score: int) -> float:
+def _signal_confidence(
+    method: str | None, keyword: str, engagement_score: int
+) -> float:
     base = {
         "scrapegraph": 0.86,
         "selector_fallback": 0.78,
@@ -197,7 +475,14 @@ def normalize_signal(
     default_method: str | None = None,
 ) -> Dict[str, Any] | None:
     keyword = normalize_text(str(signal.get("keyword") or signal.get("term") or ""))
+    method = str(signal.get("method") or default_method or "unknown")
+    source = str(signal.get("source") or default_source or "unknown")
+    keyword = _condense_keyword(keyword, source)
     if len(keyword) < 3:
+        return None
+    if re.fullmatch(r"\d+(?:\.\d+)?[km]?", keyword):
+        return None
+    if _looks_like_noise_keyword(keyword, method=method, source=source):
         return None
     raw_score = signal.get("engagement_score") or signal.get("score") or 0
     if isinstance(raw_score, str):
@@ -208,8 +493,6 @@ def normalize_signal(
         except (TypeError, ValueError):
             engagement_score = 0
     engagement_score = max(0, engagement_score)
-    method = str(signal.get("method") or default_method or "unknown")
-    source = str(signal.get("source") or default_source or "unknown")
     category = normalize_category(str(signal.get("category") or ""), keyword)
     confidence = float(
         signal.get("confidence")
@@ -289,14 +572,18 @@ def _new_rng() -> random.Random:
     return random.Random(seed)
 
 
-def build_scrape_plan(source_names: Sequence[str] | None = None, rng: random.Random | None = None) -> List[str]:
+def build_scrape_plan(
+    source_names: Sequence[str] | None = None, rng: random.Random | None = None
+) -> List[str]:
     names = list(source_names or PLATFORM_CONFIG.keys())
     active_rng = rng or _new_rng()
     active_rng.shuffle(names)
     return names
 
 
-def build_scrape_profile(config: SourceConfig, rng: random.Random | None = None) -> ScrapeProfile:
+def build_scrape_profile(
+    config: SourceConfig, rng: random.Random | None = None
+) -> ScrapeProfile:
     active_rng = rng or _new_rng()
     configured_scrolls = int(getattr(config, "scroll_iterations", 0) or 0)
     return ScrapeProfile(
@@ -304,7 +591,9 @@ def build_scrape_profile(config: SourceConfig, rng: random.Random | None = None)
         viewport_width=active_rng.randint(1200, 1600),
         viewport_height=active_rng.randint(720, 1000),
         locale=active_rng.choice(["en-US", "en-GB"]),
-        timezone_id=active_rng.choice(["America/New_York", "America/Chicago", "America/Los_Angeles"]),
+        timezone_id=active_rng.choice(
+            ["America/New_York", "America/Chicago", "America/Los_Angeles"]
+        ),
         scroll_iterations=max(0, configured_scrolls + active_rng.randint(0, 1)),
         scroll_pixels=active_rng.randint(1600, 2800),
         delay_ms=active_rng.randint(250, 1250),
@@ -318,10 +607,7 @@ async def _first_text(handle, selectors: Sequence[str]) -> str:
         except Exception:
             node = None
         if node:
-            try:
-                text = (await node.inner_text()).strip()
-            except Exception:
-                text = ""
+            text = await _readable_node_text(node)
             if text:
                 return text
     return ""
@@ -335,13 +621,27 @@ async def _collect_texts(handle, selectors: Sequence[str]) -> List[str]:
         except Exception:
             nodes = []
         for node in nodes:
-            try:
-                text = (await node.inner_text()).strip()
-            except Exception:
-                text = ""
+            text = await _readable_node_text(node)
             if text:
                 values.append(text)
     return values
+
+
+async def _readable_node_text(node) -> str:
+    try:
+        text = (await node.inner_text()).strip()
+    except Exception:
+        text = ""
+    if text:
+        return text
+    for attribute in ("aria-label", "title", "alt"):
+        try:
+            value = await node.get_attribute(attribute)
+        except Exception:
+            value = None
+        if value and value.strip():
+            return value.strip()
+    return ""
 
 
 def _parse_metric(value: str) -> int:
@@ -357,6 +657,90 @@ def _parse_metric(value: str) -> int:
     elif "k" in cleaned:
         base *= 1_000
     return int(base)
+
+
+def _keyword_candidates_from_text(text: str, source: str) -> List[Dict[str, Any]]:
+    if not text:
+        return []
+    cleaned = re.sub(r"#\s+", "#", text)
+    candidates: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for match in re.finditer(
+        r"#\s*([A-Za-z][A-Za-z0-9_]{2,40})(?:\s+([\d,.]+[KMkm]?)\s+Posts?)?", cleaned
+    ):
+        keyword = match.group(1).replace("_", " ")
+        score = (
+            _parse_metric(match.group(2) or "")
+            if match.group(2)
+            else max(10, 100 - len(candidates))
+        )
+        normalized = normalize_text(keyword)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            candidates.append(
+                {"source": source, "keyword": keyword, "engagement_score": score}
+            )
+
+    sentence_phrases = re.findall(
+        r"\b([A-Z][A-Za-z0-9]+(?:[- ][A-Za-z0-9]+){1,5})(?=\s+[A-Z#]|\s*$)",
+        cleaned,
+    )
+    cleaned = cleaned + "\n" + "\n".join(sentence_phrases)
+
+    lines = re.split(r"[\n\r]+| {2,}|(?<=\d\sPosts)\s+", cleaned)
+    for line in lines:
+        phrase = " ".join(line.split()).strip(" -|•·")
+        if not phrase or len(phrase) > 90:
+            continue
+        lower = phrase.lower()
+        if any(
+            token in lower
+            for token in ["log in", "sign up", "privacy policy", "terms of service"]
+        ):
+            continue
+        normalized = normalize_text(phrase)
+        words = normalized.split()
+        if not (2 <= len(words) <= 6):
+            continue
+        if any(word in TEXT_FALLBACK_STOPWORDS for word in words):
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        candidates.append(
+            {
+                "source": source,
+                "keyword": phrase,
+                "engagement_score": max(10, 100 - len(candidates)),
+            }
+        )
+        if len(candidates) >= TOP_K * 3:
+            break
+    return candidates
+
+
+async def _extract_text_fallback_signals(page, source: str) -> List[Dict[str, Any]]:
+    texts: List[str] = []
+    for selector in [
+        "h1",
+        "h2",
+        "h3",
+        "a[href*='hashtag']",
+        "a[href*='/explore/tags/']",
+        "body",
+    ]:
+        try:
+            values = await page.locator(selector).all_text_contents(timeout=3000)
+        except Exception:
+            values = []
+        texts.extend(value for value in values if value)
+    signals: List[Dict[str, Any]] = []
+    for candidate in _keyword_candidates_from_text("\n".join(texts), source):
+        signal = normalize_signal(candidate, default_method="selector_text_fallback")
+        if signal:
+            signals.append(signal)
+    return signals
 
 
 async def _collect_items(page, selectors: SelectorSet) -> List[Any]:
@@ -398,11 +782,34 @@ async def _scrape_source(
     results: List[Dict[str, Any]] = []
     try:
         await page.wait_for_timeout(active_profile.delay_ms)
-        await page.goto(config.url, wait_until="networkidle", timeout=SCRAPER_TIMEOUT_MS)
+        response = await page.goto(
+            config.url,
+            wait_until="domcontentloaded",
+            timeout=SCRAPER_TIMEOUT_MS,
+        )
         try:
-            await page.wait_for_selector(config.wait_for_selector, timeout=SCRAPER_TIMEOUT_MS)
+            await page.wait_for_selector(
+                config.wait_for_selector, timeout=SCRAPER_TIMEOUT_MS
+            )
         except Exception:
             pass
+        try:
+            await page.wait_for_load_state("load", timeout=SCRAPER_TIMEOUT_MS)
+        except Exception:
+            pass
+        try:
+            title = await page.title()
+        except Exception:
+            title = ""
+        try:
+            body_text = await page.locator("body").inner_text(timeout=3000)
+        except Exception:
+            body_text = ""
+        status = response.status if response is not None else None
+        if _is_blocked_page(page.url, title, body_text, status):
+            raise SourceBlockedError(
+                f"Public page blocked or login gated status={status} url={page.url}"
+            )
         for _ in range(active_profile.scroll_iterations):
             await page.mouse.wheel(0, active_profile.scroll_pixels)
             await page.wait_for_timeout(active_profile.delay_ms)
@@ -413,7 +820,9 @@ async def _scrape_source(
             likes_text = await _first_text(handle, config.selectors.likes)
             shares_text = await _first_text(handle, config.selectors.shares)
             comments_text = await _first_text(handle, config.selectors.comments)
-            keyword = normalize_text(" ".join(filter(None, [title, " ".join(hashtags)])))
+            keyword = normalize_text(
+                " ".join(filter(None, [title, " ".join(hashtags)]))
+            )
             if not keyword:
                 continue
             engagement = compute_engagement(
@@ -431,6 +840,8 @@ async def _scrape_source(
             )
             if signal:
                 results.append(signal)
+        if not results:
+            results.extend(await _extract_text_fallback_signals(page, name))
     finally:
         await context.close()
         await browser.close()
@@ -468,7 +879,12 @@ async def _scrape_with_circuit_breaker(
         SCRAPE_DURATION.labels(name).observe(duration)
         SCRAPE_TOTAL.labels(name, "failure").inc()
         SCRAPE_METHOD_TOTAL.labels(name, "selector_fallback", "failure").inc()
-        logger.error("Scrape failed for %s after %.1fs: %s", name, duration, exc)
+        logger.error(
+            "Scrape failed for %s after %.1fs: %s",
+            name,
+            duration,
+            _sanitize_reason(exc),
+        )
         raise
 
     duration = time.monotonic() - started
@@ -500,7 +916,7 @@ async def _scrape_with_scrapegraph_method(
             name,
             run_id,
             duration,
-            exc,
+            _sanitize_reason(exc),
         )
         raise
 
@@ -527,27 +943,47 @@ async def _scrape_source_chain(
     profile: ScrapeProfile,
     run_id: str,
 ) -> tuple[List[Dict[str, Any]], str | None, str | None]:
-    scrapegraph_error: str | None = None
-    try:
-        results = await _scrape_with_scrapegraph_method(name, config, run_id)
-        if results:
-            return results, "scrapegraph", None
-        scrapegraph_error = "No ScrapeGraphAI trend items collected"
-    except Exception as exc:
-        scrapegraph_error = str(exc)
+    errors: List[str] = []
+    for index, url in enumerate(config.urls()[: max(1, MAX_SOURCE_URLS)]):
+        candidate_config = replace(config, url=url, candidate_urls=None)
+        scrapegraph_error: str | None = None
+        try:
+            results = await _scrape_with_scrapegraph_method(
+                name, candidate_config, run_id
+            )
+            if results:
+                return (
+                    results,
+                    "scrapegraph",
+                    None if index == 0 else f"primary_url_empty; used {url}",
+                )
+            scrapegraph_error = f"{url}: No ScrapeGraphAI trend items collected"
+        except Exception as exc:
+            scrapegraph_error = f"{url}: {_sanitize_reason(exc)}"
 
-    SCRAPE_FALLBACK_TOTAL.labels(name, "scrapegraph", "selector_fallback").inc()
-    try:
-        selector_results = await _scrape_with_circuit_breaker(playwright, name, config, profile)
-        if selector_results:
-            for result in selector_results:
-                result.setdefault("method", "selector_fallback")
-            return selector_results, "selector_fallback", scrapegraph_error
-        return [], None, "No selector trend items collected"
-    except Exception as exc:
-        if scrapegraph_error:
-            return [], None, f"scrapegraph: {scrapegraph_error}; selector_fallback: {exc}"
-        return [], None, str(exc)
+        SCRAPE_FALLBACK_TOTAL.labels(name, "scrapegraph", "selector_fallback").inc()
+        try:
+            selector_results = await _scrape_with_circuit_breaker(
+                playwright, name, candidate_config, profile
+            )
+            if selector_results:
+                for result in selector_results:
+                    result.setdefault("method", "selector_fallback")
+                return selector_results, "selector_fallback", scrapegraph_error
+            errors.append(
+                f"scrapegraph: {scrapegraph_error}; selector_fallback: No selector trend items collected"
+            )
+        except SourceBlockedError as exc:
+            return (
+                [],
+                "blocked",
+                f"scrapegraph: {scrapegraph_error}; blocked: {_sanitize_reason(exc)}",
+            )
+        except Exception as exc:
+            errors.append(
+                f"scrapegraph: {scrapegraph_error}; selector_fallback: {_sanitize_reason(exc)}"
+            )
+    return [], None, " | ".join(errors[-3:]) or "No trend items collected"
 
 
 def _extract_rss_signals(xml_text: str) -> List[Dict[str, Any]]:
@@ -655,7 +1091,9 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
             for name in build_scrape_plan(rng=rng):
                 config = PLATFORM_CONFIG[name]
                 if not scraper_circuit_breaker.allow_request(name):
-                    logger.warning("Circuit breaker OPEN for %s - skipping scrape", name)
+                    logger.warning(
+                        "Circuit breaker OPEN for %s - skipping scrape", name
+                    )
                     SCRAPE_TOTAL.labels(name, "circuit_open").inc()
                     SCRAPE_METHOD_TOTAL.labels(name, "circuit", "skipped").inc()
                     sources_failed[name] = "Circuit breaker open"
@@ -671,38 +1109,68 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
                 allowed_source_names.append(name)
                 profile = build_scrape_profile(config, rng)
                 tasks.append(_scrape_source_chain(pw, name, config, profile, run_id))
-            results = await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+            results = (
+                await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+            )
     except PublicOnlyConfigError:
         raise
     except Exception as exc:
         for name in allowed_source_names:
             scraper_circuit_breaker.record_failure(name)
-        sources_failed["playwright"] = str(exc)
+        sources_failed["playwright"] = _sanitize_reason(exc)
         source_methods["playwright"] = "failed"
         source_diagnostics["playwright"] = _diagnostic(
             status="failed",
             method="playwright",
-            reason=str(exc),
+            reason=_sanitize_reason(exc),
         )
-        logger.warning("Playwright trend collection failed: %s", exc)
+        logger.warning("Playwright trend collection failed: %s", _sanitize_reason(exc))
     else:
         for name, result in zip(allowed_source_names, results):
             if isinstance(result, Exception):
                 scraper_circuit_breaker.record_failure(name)
-                sources_failed[name] = str(result)
+                sources_failed[name] = _sanitize_reason(result)
                 source_methods[name] = "failed"
                 source_diagnostics[name] = _diagnostic(
                     status="failed",
                     method="unknown",
-                    reason=str(result),
+                    reason=_sanitize_reason(result),
                 )
-                logger.warning("Trend scrape failed for %s: %s", name, result)
+                logger.warning(
+                    "Trend scrape failed for %s: %s", name, _sanitize_reason(result)
+                )
                 continue
             source_results, method, upstream_error = result
             if upstream_error:
                 fallback_count += 1
+            if method == "blocked":
+                scraper_circuit_breaker.record_failure(name)
+                source_methods[name] = "skipped"
+                sources_failed[name] = (
+                    upstream_error or "Public page blocked or login gated"
+                )
+                sources_skipped.append(name)
+                sources_blocked.append(name)
+                source_diagnostics[name] = _diagnostic(
+                    status="skipped",
+                    method="blocked",
+                    reason=upstream_error or "Public page blocked or login gated",
+                )
+                continue
             if source_results and method:
                 source_results = _normalize_signal_batch(source_results)
+                if not source_results:
+                    scraper_circuit_breaker.record_failure(name)
+                    source_methods[name] = "failed"
+                    sources_failed[name] = (
+                        upstream_error or "No viable POD-oriented trend items collected"
+                    )
+                    source_diagnostics[name] = _diagnostic(
+                        status="failed",
+                        method=method,
+                        reason=sources_failed[name],
+                    )
+                    continue
                 scraper_circuit_breaker.record_success(name)
                 aggregated.extend(source_results)
                 sources_succeeded.append(name)
@@ -727,53 +1195,80 @@ async def _gather_trends() -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
                 reason=upstream_error or "No trend items collected",
             )
 
-    try:
-        rss_signals = await _fetch_rss_signals()
-        if rss_signals:
-            rss_signals = _normalize_signal_batch(rss_signals)
-            for signal in rss_signals:
-                signal.setdefault("method", "rss_fallback")
-            aggregated.extend(rss_signals)
-            sources_succeeded.append("google_trends_rss")
-            source_methods["google_trends_rss"] = "rss_fallback"
-            source_diagnostics["google_trends_rss"] = _diagnostic(
-                status="success",
-                method="rss_fallback",
-                collected=len(rss_signals),
-                fallback_from="public_sources"
-                if any(method == "failed" for method in source_methods.values())
-                else None,
-                fallback_to="rss_fallback",
-            )
-            SCRAPE_TOTAL.labels("google_trends_rss", "success").inc()
-            SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "success").inc()
-            SCRAPE_KEYWORDS.labels("google_trends_rss").inc(len(rss_signals))
-            if any(method == "failed" for method in source_methods.values()):
-                fallback_count += 1
-        else:
-            sources_failed["google_trends_rss"] = "No RSS trend items collected"
+    if RSS_FALLBACK_ENABLED:
+        try:
+            rss_signals = await _fetch_rss_signals()
+            if rss_signals:
+                rss_signals = _normalize_signal_batch(rss_signals)
+                for signal in rss_signals:
+                    signal.setdefault("method", "rss_fallback")
+                aggregated.extend(rss_signals)
+                sources_succeeded.append("google_trends_rss")
+                source_methods["google_trends_rss"] = "rss_fallback"
+                source_diagnostics["google_trends_rss"] = _diagnostic(
+                    status="success",
+                    method="rss_fallback",
+                    collected=len(rss_signals),
+                    fallback_from=(
+                        "public_sources"
+                        if any(method == "failed" for method in source_methods.values())
+                        else None
+                    ),
+                    fallback_to="rss_fallback",
+                )
+                SCRAPE_TOTAL.labels("google_trends_rss", "success").inc()
+                SCRAPE_METHOD_TOTAL.labels(
+                    "google_trends_rss", "rss_fallback", "success"
+                ).inc()
+                SCRAPE_KEYWORDS.labels("google_trends_rss").inc(len(rss_signals))
+                if any(method == "failed" for method in source_methods.values()):
+                    fallback_count += 1
+            else:
+                sources_failed["google_trends_rss"] = "No RSS trend items collected"
+                source_methods["google_trends_rss"] = "failed"
+                source_diagnostics["google_trends_rss"] = _diagnostic(
+                    status="failed",
+                    method="rss_fallback",
+                    reason="No RSS trend items collected",
+                )
+                SCRAPE_METHOD_TOTAL.labels(
+                    "google_trends_rss", "rss_fallback", "failure"
+                ).inc()
+        except Exception as exc:
+            sources_failed["google_trends_rss"] = str(exc)
             source_methods["google_trends_rss"] = "failed"
             source_diagnostics["google_trends_rss"] = _diagnostic(
                 status="failed",
                 method="rss_fallback",
-                reason="No RSS trend items collected",
+                reason=str(exc),
             )
-            SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
-    except Exception as exc:
-        sources_failed["google_trends_rss"] = str(exc)
-        source_methods["google_trends_rss"] = "failed"
+            SCRAPE_METHOD_TOTAL.labels(
+                "google_trends_rss", "rss_fallback", "failure"
+            ).inc()
+    else:
+        source_methods["google_trends_rss"] = "skipped"
+        sources_skipped.append("google_trends_rss")
         source_diagnostics["google_trends_rss"] = _diagnostic(
-            status="failed",
+            status="skipped",
             method="rss_fallback",
-            reason=str(exc),
+            reason="RSS fallback disabled",
         )
-        SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "failure").inc()
+        SCRAPE_METHOD_TOTAL.labels("google_trends_rss", "rss_fallback", "skipped").inc()
 
     if not aggregated:
-        fallback = _stub_signals()
-        logger.warning("Live trend collection fell back to stub data: %s", sources_failed)
+        fallback = _stub_signals() if ALLOW_STUB_FALLBACK else []
+        mode = "fallback_stub" if fallback else "live_empty"
+        if fallback:
+            logger.warning(
+                "Live trend collection fell back to stub data: %s", sources_failed
+            )
+        else:
+            logger.warning(
+                "Live trend collection returned no persisted candidates: %s",
+                sources_failed,
+            )
         return fallback, {
-            "mode": "fallback_stub",
+            "mode": mode,
             "sources_succeeded": sources_succeeded,
             "sources_failed": sources_failed,
             "source_methods": source_methods,
@@ -930,15 +1425,22 @@ async def get_live_trends(
         if (
             existing is None
             or row.engagement_score > existing.engagement_score
-            or (row.engagement_score == existing.engagement_score and row.timestamp > existing.timestamp)
+            or (
+                row.engagement_score == existing.engagement_score
+                and row.timestamp > existing.timestamp
+            )
         ):
             deduped_rows[key] = row
 
     reverse = sort_order.lower() != "asc"
     if sort_by == "timestamp":
-        sorted_rows = sorted(deduped_rows.values(), key=lambda row: row.timestamp, reverse=reverse)
+        sorted_rows = sorted(
+            deduped_rows.values(), key=lambda row: row.timestamp, reverse=reverse
+        )
     elif sort_by == "keyword":
-        sorted_rows = sorted(deduped_rows.values(), key=lambda row: row.keyword.lower(), reverse=reverse)
+        sorted_rows = sorted(
+            deduped_rows.values(), key=lambda row: row.keyword.lower(), reverse=reverse
+        )
     else:
         sorted_rows = sorted(
             deduped_rows.values(),
@@ -1003,7 +1505,9 @@ async def _periodic_refresh_wrapper() -> None:
 def start_scheduler() -> None:
     if scheduler.running:
         return
-    scheduler.add_job(_periodic_refresh_wrapper, "interval", hours=SCRAPE_INTERVAL_HOURS)
+    scheduler.add_job(
+        _periodic_refresh_wrapper, "interval", hours=SCRAPE_INTERVAL_HOURS
+    )
     scheduler.start()
     logger.info(
         "Trend ingestion scheduler started interval_hours=%s stub=%s",

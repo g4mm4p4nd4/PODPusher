@@ -317,14 +317,14 @@ async def _integration_status(
         )
         statuses[provider] = {
             "provider": provider,
-            "status": "connected" if is_connected else "demo_fallback",
+            "status": "connected" if is_connected else "needs_implementation",
             "connected": is_connected,
-            "mode": "live" if is_connected else "demo",
-            "blocking": False,
+            "mode": "live" if is_connected else "implementation_required",
+            "blocking": not is_connected,
             "message": (
                 "Connected credentials available."
                 if is_connected
-                else "Missing credentials; returning demo/fallback data."
+                else "Missing credentials or integration implementation; live provider behavior is unavailable."
             ),
             "provenance": _provenance(
                 (
@@ -2179,11 +2179,11 @@ async def get_settings_dashboard(user_id: int | None = None) -> dict[str, Any]:
         or [
             {
                 "provider": "etsy",
-                "account_name": "pdpusher.etsy.com",
+                "account_name": None,
                 "status": "not_connected",
             },
             {"provider": "printify", "account_name": None, "status": "not_connected"},
-            {"provider": "stripe", "account_name": None, "status": "stub"},
+            {"provider": "stripe", "account_name": None, "status": "needs_implementation"},
             {
                 "provider": "scheduler",
                 "account_name": "Every day at 2:00 AM UTC",

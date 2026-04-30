@@ -32,6 +32,20 @@ def _classify_idea_source(text: str) -> str:
     return "openai"
 
 
+def _implementation_status(source: str) -> dict[str, str | bool]:
+    if source == "openai":
+        return {
+            "implementation_status": "live",
+            "requires_attention": False,
+            "message": "Generated through configured OpenAI integration.",
+        }
+    return {
+        "implementation_status": "needs_implementation",
+        "requires_attention": True,
+        "message": "OpenAI ideation is not configured; this idea is not production-generated.",
+    }
+
+
 async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
     """Generate product ideas for the supplied trend signals."""
 
@@ -93,6 +107,7 @@ async def generate_ideas(trends: List[TrendInput]) -> List[Dict]:
                     "term": item['term'],
                     "category": item['category'],
                     "generation_source": source,
+                    **_implementation_status(source),
                 }
             )
     return ideas

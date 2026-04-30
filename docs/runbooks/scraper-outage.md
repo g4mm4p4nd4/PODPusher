@@ -8,7 +8,7 @@
 
 ## Overview
 
-PODPusher's trend ingestion system scrapes 5 platforms (TikTok, Instagram, Twitter, Pinterest, Etsy) on a configurable schedule (default: every 6 hours via APScheduler). Each platform is protected by a per-platform **circuit breaker** that prevents cascading failures.
+PODPusher's trend ingestion system scrapes public-only trend sources on a configurable schedule (default: every 6 hours via APScheduler). Current local sources are TikTok Creative Center, Instagram, X/Twitter, Pinterest, Etsy, Amazon, and Google Trends RSS fallback. Each live platform is protected by a per-platform **circuit breaker** that prevents cascading failures.
 
 This runbook covers diagnosing and resolving scraper outages.
 
@@ -107,6 +107,7 @@ Check:
 3. `source_diagnostics` should show per-source `status`, `method`, `collected`, `persisted`, and `updated_at`.
 4. Fallbacks should include `fallback_from`, `fallback_to`, and `reason`.
 5. Circuit-open sources should be listed in `sources_blocked` and `sources_skipped`; they increment `blocked_count` and `skipped_count` rather than being treated as fresh scrape failures.
+6. Login, captcha, robot, HTTP 401/403/429, and forced login redirects should also appear as blocked/skipped sources with `method: blocked`. This is expected public-only degradation, not a reason to add cookies, exported browser sessions, usernames, passwords, or login URLs.
 
 ### Step 4: Review Prometheus Metrics
 
@@ -130,6 +131,8 @@ docker compose logs trend_ingestion | grep "tiktok" | tail -50
 # - "Navigation failed" → URL changed or site down
 # - "Circuit breaker OPEN" → threshold exceeded
 # - "ScrapeGraphAI failed" → local Ollama/ScrapeGraphAI path unavailable
+# - "Public page blocked or login gated" → source is refusing public extraction; verify it is counted in sources_blocked/sources_skipped
+# - "Playwright browser executable unavailable" → local host is missing Playwright browsers; Docker image should provide them, while bare-host runs must not install browsers unless explicitly approved
 ```
 
 ---
@@ -241,7 +244,7 @@ If scrapes succeed but extract zero keywords (`ScraperLowKeywordExtraction` aler
    ```python
    # Each platform has a SourceConfig with a SelectorSet:
    # - item: CSS selectors for content cards
-   # - title: selectors for trend titles
+   # - title: selectors for trend titles; image/ARIA/title attributes are used when visible text is empty
    # - hashtags: selectors for hashtag elements
    # - likes/shares/comments: selectors for engagement counts
    ```
@@ -261,6 +264,22 @@ If scrapes succeed but extract zero keywords (`ScraperLowKeywordExtraction` aler
 
 5. **Deploy** the updated selectors and monitor for keyword extraction recovery.
 
+### April 30, 2026 Tuning Notes
+
+Use this evidence when triaging local public-source failures:
+
+| Source | Current behavior | Action |
+|--------|------------------|--------|
+| TikTok Creative Center | Public HTTP 200, but static text is mostly navigation and product-shell labels. | Do not persist shell labels; rely on ScrapeGraph/selector output only when keywords survive normalization. |
+| Instagram | Public request returns a robot-gated shell. | Treat as blocked/skipped; do not add account-backed scraping. |
+| X/Twitter | Explore redirects to login and JavaScript-gated flow. | Treat as blocked/skipped. |
+| Pinterest | Today page exposes captcha markers in some runs and no selector-safe POD rows in others. | Treat captcha as blocked/skipped; otherwise accept a zero-persist selector failure and avoid CAPTCHA or account-backed workarounds. |
+| Etsy | Trends and hub pages returned HTTP 403 captcha/JS gate. | Treat as blocked/skipped; keep Etsy API credentials out of this public trend slice. |
+| Amazon | Movers and Shakers pages returned public product cards with useful `img alt` titles. | Keep Amazon Arts/Crafts first, then Handmade, Home/Garden, and Fashion; verify selectors still read `img[alt]` and reject brand/UI/bodywear noise plus gift-only phrases. |
+| Google Trends RSS | Latest sample contained news/noise terms only. | RSS fallback should persist only concrete POD product nouns and otherwise report no usable RSS items. |
+
+Latest Docker smoke evidence: a live refresh persisted 3 rows from Amazon/TikTok, skipped 2 blocked sources, failed 3 weak/noisy sources with zero persisted rows, and exposed `pod_scrape_method_total`, `pod_scrape_fallback_total`, and `pod_scrape_persisted_total` in Prometheus. Expected tuned behavior: blocked sources increase `blocked_count` and `skipped_count`, weak shell pages produce zero persisted rows instead of navigation keywords, ScrapeGraphAI attempts time out before selector fallback, and public product pages such as Amazon produce condensed POD-oriented phrases with provenance preserved in the live API.
+
 ---
 
 ## 8. Environment Variables
@@ -271,7 +290,16 @@ If scrapes succeed but extract zero keywords (`ScraperLowKeywordExtraction` aler
 | `PLAYWRIGHT_PROXY` | (unset) | Proxy URL for Playwright browser (e.g., `http://proxy:8080`) |
 | `TREND_INGESTION_TOP_K` | `5` | Max trends to persist per platform per cycle |
 | `TREND_INGESTION_TIMEOUT_MS` | `15000` | Page load timeout in milliseconds |
+| `TREND_INGESTION_MAX_SOURCE_URLS` | `2` | Max public candidate URLs to try per source during one refresh |
 | `TREND_INGESTION_STUB` | `0` in local Compose | Set to `1` only for explicit stub mode |
+| `TREND_INGESTION_RSS_FALLBACK` | `1` in local Compose | Set to `0` for strict live-source smoke tests with no Google Trends RSS rows |
+| `TREND_INGESTION_ALLOW_STUB_FALLBACK` | `1` in local Compose | Set to `0` to return `live_empty` instead of seeded demo rows when all live sources fail |
+| `SCRAPEGRAPH_MODEL` | `ollama/llama3.2` | Use `opencode-go/<model-id>` to route ScrapeGraphAI through OpenCode Go |
+| `SCRAPEGRAPH_TIMEOUT_SECONDS` | `45` | Max ScrapeGraphAI wait before selector fallback for a public source URL |
+| `OPENCODE_GO_API_KEY` | (unset) | API key for OpenCode Go ScrapeGraphAI model requests |
+| `OPENCODE_GO_BASE_URL` | `https://opencode.ai/zen/go/v1` | OpenAI-compatible OpenCode Go API base URL used by ScrapeGraphAI |
+| `SCRAPEGRAPH_OPENAI_BASE_URL` | (unset) | Generic OpenAI-compatible base URL for `oneapi/<model>` ScrapeGraphAI requests |
+| `SCRAPEGRAPH_API_KEY` | (unset) | Generic API key for `oneapi/<model>` ScrapeGraphAI requests |
 
 ---
 

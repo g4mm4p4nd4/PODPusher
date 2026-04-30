@@ -134,7 +134,9 @@ async def get_or_create_customer(user_id: int, email: str) -> str:
     Returns the Stripe customer ID.
     """
     if STUB_MODE:
-        return f"cus_stub_{user_id}"
+        raise BillingError(
+            "Stripe billing is not configured; set STRIPE_SECRET_KEY and complete billing integration before creating customers"
+        )
 
     try:
         # Preferred path: metadata search by internal user ID.
@@ -180,7 +182,9 @@ async def create_portal_session(customer_id: str, return_url: str) -> str:
     Returns the portal URL.
     """
     if STUB_MODE:
-        return f"{return_url}?stub_portal=true"
+        raise BillingError(
+            "Stripe billing portal is not configured; set STRIPE_SECRET_KEY and complete billing integration before opening the portal"
+        )
 
     try:
         session = stripe.billing_portal.Session.create(
@@ -197,12 +201,7 @@ async def create_portal_session(customer_id: str, return_url: str) -> str:
 async def get_subscription_for_customer(customer_id: str) -> Optional[dict]:
     """Get the active subscription for a customer."""
     if STUB_MODE:
-        return {
-            "id": "sub_stub",
-            "status": "active",
-            "current_period_end": int(datetime.now().timestamp()) + 86400 * 30,
-            "plan_tier": PlanTier.STARTER.value,
-        }
+        return None
 
     try:
         subscriptions = stripe.Subscription.list(
@@ -236,7 +235,7 @@ async def get_user_plan_tier(user_id: int) -> PlanTier:
     subscription info rather than calling Stripe directly.
     """
     if STUB_MODE:
-        return PlanTier.STARTER
+        return PlanTier.FREE
 
     # This is a simplified version - in production, we would query our database
     # which is updated by webhooks

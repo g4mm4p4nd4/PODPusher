@@ -24,6 +24,37 @@ export interface DraftData {
   holiday?: string;
   recipient?: string;
   style?: string;
+  updated_at?: string;
+  revision_count?: number;
+  provenance?: Provenance;
+}
+
+export interface Provenance {
+  source: string;
+  is_estimated: boolean;
+  updated_at: string;
+  confidence: number;
+}
+
+export interface DraftRevision {
+  id: number;
+  draft_id: number;
+  title: string;
+  description: string;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+  provenance: Provenance;
+}
+
+export interface DraftListResponse {
+  items: DraftData[];
+  total: number;
+  page: number;
+  page_size: number;
+  sort_by: string;
+  sort_order: string;
+  provenance: Provenance;
 }
 
 export interface PublishQueueResult {
@@ -34,6 +65,14 @@ export interface PublishQueueResult {
   message: string;
   integration_status: Record<string, unknown>;
   created_at: string;
+}
+
+export interface PublishQueueListResponse {
+  items: PublishQueueResult[];
+  total: number;
+  page: number;
+  page_size: number;
+  provenance: Provenance;
 }
 
 export interface ExportResult {
@@ -57,9 +96,44 @@ export async function loadDraft(id: number): Promise<DraftData> {
   return res.data as DraftData;
 }
 
+export async function listDrafts(params: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  sort_by?: 'updated_at' | 'title';
+  sort_order?: 'asc' | 'desc';
+} = {}): Promise<DraftListResponse> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  });
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await axios.get(resolveApiUrl(`/api/listing-composer/drafts${suffix}`));
+  return res.data as DraftListResponse;
+}
+
+export async function fetchDraftHistory(draftId: number): Promise<DraftRevision[]> {
+  const res = await axios.get(resolveApiUrl(`/api/listing-composer/drafts/${draftId}/history`));
+  return res.data as DraftRevision[];
+}
+
 export async function queueDraftForPublish(draftId: number): Promise<PublishQueueResult> {
   const res = await axios.post(resolveApiUrl(`/api/listing-composer/drafts/${draftId}/publish-queue`));
   return res.data as PublishQueueResult;
+}
+
+export async function listPublishQueue(params: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+} = {}): Promise<PublishQueueListResponse> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '' && value !== 'all') query.set(key, String(value));
+  });
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await axios.get(resolveApiUrl(`/api/listing-composer/publish-queue${suffix}`));
+  return res.data as PublishQueueListResponse;
 }
 
 export async function exportDraft(draftId: number, format: 'json' | 'csv' = 'json'): Promise<ExportResult | string> {

@@ -11,6 +11,8 @@ type GeneratedImage = {
   url?: string;
   provider?: string;
   generation_source?: string;
+  implementation_status?: string;
+  message?: string;
 };
 
 const DEFAULT_IDEA_ID = 1;
@@ -159,6 +161,11 @@ export default function Images() {
                 <p className="text-sm text-gray-600">
                   {t('images.source')}: {source}
                 </p>
+                {image.implementation_status && image.implementation_status !== 'live' ? (
+                  <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-sm text-amber-800">
+                    {image.message || 'This provider still needs implementation/configuration.'}
+                  </p>
+                ) : null}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => remove(image.id)} className="text-red-600">
                     {t('images.delete')}

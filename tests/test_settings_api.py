@@ -82,8 +82,9 @@ async def test_settings_localization_brand_user_and_integration_mutations():
             headers={"X-User-Id": "1"},
         )
         assert integration_resp.status_code == 200
-        assert integration_resp.json()["status"] == "credentials_missing"
-        assert integration_resp.json()["is_demo"] is True
+        assert integration_resp.json()["status"] == "needs_implementation"
+        assert integration_resp.json()["implementation_status"] == "needs_implementation"
+        assert integration_resp.json()["is_demo"] is False
 
     async with get_session() as session:
         user = await session.get(User, 1)
@@ -95,11 +96,12 @@ async def test_settings_localization_brand_user_and_integration_mutations():
 
 
 @pytest.mark.asyncio
-async def test_usage_ledger_returns_explicit_demo_state_when_empty():
+async def test_usage_ledger_reports_empty_state_without_demo_usage():
     await init_db()
     transport = _transport()
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/usage-ledger", headers={"X-User-Id": "1"})
     assert resp.status_code == 200
-    assert resp.json()["demo_state"] is True
-    assert resp.json()["items"][0]["provenance"]["is_estimated"] is True
+    assert resp.json()["demo_state"] is False
+    assert resp.json()["implementation_status"] == "needs_implementation"
+    assert resp.json()["items"] == []

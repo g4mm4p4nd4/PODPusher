@@ -53,7 +53,14 @@ test('loads and regenerates images with a provider override', async () => {
       data: [{ id: 1, idea_id: 1, url: 'https://example.com/original.png', provider: 'openai' }],
     })
     .mockResolvedValueOnce({
-      data: [{ id: 2, idea_id: 1, url: 'http://example.com/image.png', provider: 'stub' }],
+      data: [{
+        id: 2,
+        idea_id: 1,
+        url: 'http://example.com/image.png',
+        provider: 'stub',
+        implementation_status: 'needs_implementation',
+        message: 'OpenAI image generation is not configured.',
+      }],
     });
   mockedAxios.post.mockResolvedValueOnce({ data: [] });
 
@@ -84,6 +91,7 @@ test('loads and regenerates images with a provider override', async () => {
   );
 
   expect(await screen.findByText('Source: stub')).toBeInTheDocument();
+  expect(await screen.findByText('OpenAI image generation is not configured.')).toBeInTheDocument();
 });
 
 test('deletes an image and shows the empty state', async () => {

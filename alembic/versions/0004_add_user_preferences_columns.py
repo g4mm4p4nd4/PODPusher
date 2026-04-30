@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 
-revision = "0004_add_user_preferences_columns"
+revision = "0004_user_pref_columns"
 down_revision = "0003_timescale_trend_aggregates"
 branch_labels = None
 depends_on = None

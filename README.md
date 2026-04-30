@@ -12,8 +12,9 @@ Implemented in the current slice:
 - Trend discovery uses a deterministic provider chain:
   1. ScrapeGraphAI with Playwright and local Ollama.
   2. Existing selector-based source scraping.
-  3. Google Trends RSS fallback.
+  3. Optional Google Trends RSS fallback.
 - Public-only mode rejects cookie files, exported browser sessions, login URLs, usernames, and passwords.
+- RSS and stub/demo fallback can be disabled for strict live-source smoke testing.
 - Scraper refresh status reports per-source method and counts for collected, persisted, failed, fallback, and skipped work.
 - Prometheus and Grafana are included in Compose for local observability.
 - Postgres uses the installed async driver through `postgresql+psycopg://...`.
@@ -96,13 +97,43 @@ Important defaults:
 DATABASE_URL=postgresql+psycopg://user:pass@db:5432/pod
 TREND_INGESTION_STUB=0
 TREND_INGESTION_SCRAPEGRAPH=1
+TREND_INGESTION_RSS_FALLBACK=1
+TREND_INGESTION_ALLOW_STUB_FALLBACK=1
 SCRAPEGRAPH_MODEL=ollama/llama3.2
+SCRAPEGRAPH_TIMEOUT_SECONDS=45
+SCRAPEGRAPH_OPENAI_BASE_URL=
+SCRAPEGRAPH_API_KEY=
+OPENCODE_API_KEY=
+OPENCODE_GO_API_KEY=
+OPENCODE_GO_BASE_URL=https://opencode.ai/zen/go/v1
 OLLAMA_BASE_URL=http://ollama:11434
-BILLING_STUB_MODE=true
-OPENAI_USE_STUB=1
+BILLING_STUB_MODE=false
+OPENAI_USE_STUB=0
 ```
 
+Credential-backed features now report `needs_implementation` or `needs_implementation`-style status instead of returning fake success when credentials are missing. Use `GET /api/system/capabilities` to see which internal-tool surfaces are live and which still need implementation/configuration.
+
 Do not configure cookies, exported sessions, login URLs, usernames, or passwords for trend ingestion in this phase. The service rejects those settings before scraping starts.
+
+For a strict live-only scrape audit with no Google RSS and no demo/stub rows, set:
+
+```text
+TREND_INGESTION_RSS_FALLBACK=0
+TREND_INGESTION_ALLOW_STUB_FALLBACK=0
+```
+
+To use OpenCode Go for ScrapeGraphAI instead of local Ollama, provide an OpenCode Go API key and set the ScrapeGraph model to an OpenCode Go model id:
+
+```text
+TREND_INGESTION_SCRAPEGRAPH=1
+SCRAPEGRAPH_MODEL=opencode-go/kimi-k2.6
+OPENCODE_GO_API_KEY=<your OpenCode Go key>
+OPENCODE_GO_BASE_URL=https://opencode.ai/zen/go/v1
+TREND_INGESTION_RSS_FALLBACK=0
+TREND_INGESTION_ALLOW_STUB_FALLBACK=0
+```
+
+The adapter maps `opencode-go/<model-id>` to ScrapeGraphAI's OpenAI-compatible `oneapi` provider and sends requests to the configured `OPENCODE_GO_BASE_URL`.
 
 ## Local Python Development
 

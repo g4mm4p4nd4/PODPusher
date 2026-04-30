@@ -8,8 +8,12 @@ client/.next/
 .pip-cache/
 .tmp/
 .pydeps/
+.env
+.env.*
+!.env.example
 .codex-venv/
 .codex-venv-wsl/
 .codex-tools/
 .playwright-wsl/
+output/playwright/
 *.tsbuildinfo
